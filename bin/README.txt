@@ -1,14 +1,14 @@
 Datasets must reside in /data/$DATASETNAME$/ on HDFS.
 
 First, create a database for the dataset. In our experience,using Hue works best. The name of the database must be the name of your dataset file without any file extensions. 
-E.g. /data/bsbm/berlin_2000k.nt will be stored in the database berlinn_2000k 
+E.g. /data/bsbm/berlin_2000k.nt will be stored in the database berlin_2000k 
 
 
 $DATASETNAME$ is either sp2bench, bsbm or lubm. E.g. /data/bsbm/berlin_2000k.nt
 
 The Python scripts can be used to load the RDF datasets and query execution. Tables can be loaded, e.g. with the following command: 
 
-python ./scripts/LoadBigtableImpala.py -omitparttable TRUE -d berlin_2000k -dn berlin
+python ./scripts/LoadBigtableImpala.py -user username -omitparttable TRUE -d berlin_2000k -dn bsbm
 
 Options:
 -d: dataset name, corresponds to filename on HDFS
