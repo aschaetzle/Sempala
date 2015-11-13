@@ -136,7 +136,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>de.uni_freiburg.informatik.dbis.SempalaNativeLoader</mainClass>
+                            <mainClass>de.uni_freiburg.informatik.dbis.sempala.loader.impala.SempalaNativeLoader</mainClass>
                         </manifest>
                     </archive>
                       <outputDirectory>${project.basedir}/bin</outputDirectory>

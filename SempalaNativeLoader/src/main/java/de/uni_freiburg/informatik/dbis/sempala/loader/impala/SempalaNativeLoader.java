@@ -1,13 +1,10 @@
-package de.uni_freiburg.informatik.dbis;
+package de.uni_freiburg.informatik.dbis.sempala.loader.impala;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,22 +15,42 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.NotImplementedException;
+
+import de.uni_freiburg.informatik.dbis.sempala.impala.DataType;
+import de.uni_freiburg.informatik.dbis.sempala.impala.FileFormat;
+import de.uni_freiburg.informatik.dbis.sempala.impala.Impala;
+import de.uni_freiburg.informatik.dbis.sempala.impala.QueryOption;
+import de.uni_freiburg.informatik.dbis.sempala.impala.SelectStatement;
 
 
 /**
+ * 
  * @author schneidm
+ *
  */
 public class SempalaNativeLoader {
 
-	public enum TableFormat {
-		TRIPLESTORE, PROPERTY_TABLE, EXT_VERT_PART, BIGTABLE
-	}
+	private static final String column_name_subject = "ID";	
+	private static final String column_name_predicate= "predicate";	
+	private static final String column_name_object = "object";
 
-	public static String column_name_subject = "ID";
-	public static String column_name_predicate= "predicate";
-	public static String column_name_object = "object";
+	private static String hdfs_input = null;
+	private static String nt_separator = null;
+	private static String impala_output = null;
+	private static String prefixfile = null;
+	private static String host = null;
+	private static String port = null;
+	private static String database = null;
+	private static Map<String, String> prefixes = null;
 	
-	public static void main(String[] args) throws Exception {
+	
+	
+	/**
+	 * The main routine.
+	 * @param args The arguments passed to the program
+	 */
+	public static void main(String[] args) {
 	
 	    // Create the options
 		Options options = buildOptions();
@@ -43,83 +60,92 @@ public class SempalaNativeLoader {
 		try {
 			CommandLineParser parser = new DefaultParser();
 			commandLine = parser.parse(options, args);
-		} catch (ParseException exp) {
-			System.err.println("Parsing failed. Reason: " + exp.getMessage());
+		} catch (ParseException e) {
+			System.err.println("Parsing failed. Reason: " + e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp( "SempalaNativeLoader", options );
 			return;
 		}
-			
-        // Dynamically load the impala driver // Why is this not necessary?
-//		try {
-//	    	Class.forName("com.cloudera.impala.jdbc41.Driver");
-//		} catch (ClassNotFoundException e) {
-//			System.out.println("Where is your JDBC Driver?");
-//			e.printStackTrace();
-//			return;
-//		}
-//	    Enumeration<Driver> d = DriverManager.getDrivers();
-//		while (d.hasMoreElements()) {
-//			System.out.println(d.nextElement());
-//		}
 
 		try {
-			// Build the impalad url
-			String impalad_url = String.format("jdbc:impala://%s:%s/%s",
-					commandLine.getOptionValue("host"),
-					commandLine.getOptionValue("port", "21050"),
-					commandLine.getOptionValue("database"));
-			
-			// Establish the connection to impalad
-			System.out.println(String.format("Connecting to impalad (%s)", impalad_url));
-			Connection connection = DriverManager.getConnection(impalad_url);
-			Statement stmt = connection.createStatement();
+			// Get opts
+			hdfs_input    = commandLine.getOptionValue("input");
+			nt_separator  = commandLine.getOptionValue("separator", "\\t");
+			impala_output = commandLine.getOptionValue("output");
+			prefixfile    = commandLine.getOptionValue("prefixfile", null);
+			host          = commandLine.getOptionValue("host");
+			port          = commandLine.getOptionValue("port", "21050");
+			database      = commandLine.getOptionValue("database");
+		    
+		    // Read the prefix file if there is one
+			if (prefixfile != null){
+				Map<String, String> prefixes = new HashMap<String, String>();
+				// Get the prefixes and remove braces from long format 
+				try {
+					BufferedReader br = new BufferedReader(new FileReader(prefixfile));
+				    for(String line; (line = br.readLine()) != null; ) {
+				    	String[] splited = line.split("\\s+");
+				    	prefixes.put(splited[2].substring(1, splited[2].length()-1), splited[1]);
+				    }
+				    br.close();
+				} catch (IOException e) {
+			        e.getLocalizedMessage();
+			        System.exit(1);
+				}
+			}
+
+			// Connect to impalad
+			Impala impala = new Impala(host, port, database);
 		    
 			// Set impala compression type to snappy
-			System.out.println("Setting impala compression type");
-			stmt.executeUpdate("set COMPRESSION_CODEC=snappy;");
-			
-			// Begin performing the requested action
-		    String hdfs_input = commandLine.getOptionValue("input");
-		    String nt_separator = commandLine.getOptionValue("separator", "\\t");
-		    String impala_output = commandLine.getOptionValue("output");
-		    String prefixfile = commandLine.getOptionValue("prefixfile", null);
+			impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
+		    
 		    switch (commandLine.getOptionValue("format")) {
 			case "raw":
-				createPrefixedTriplestoreFromHDFSDataset(stmt, hdfs_input, nt_separator, impala_output, prefixfile);
+				// Create a table in triple store format from hdfs data
+				createPrefixedTriplestoreFromHDFSDataset(impala, hdfs_input, nt_separator, impala_output, prefixfile);
 				break;
+				
 			case "prop":
+				final String temporary_table= "sempalaloader_temporary_table";
+
+				// Warn the user if no prefix file is given. Propertytable need prefixded data.
 				if (prefixfile==null)
 					System.out.println("[WARNING]: Building a property table needs prefixed data.");
-				final String temporary_table= "sempalaloader_temporary_table";
-				createPrefixedTriplestoreFromHDFSDataset(stmt, hdfs_input, nt_separator, temporary_table, prefixfile);
-				createPropertyTable(stmt, temporary_table, impala_output);
-				// Drop the tmp table
-				System.out.println(String.format("Dropping %s", temporary_table));
-				stmt.executeUpdate(String.format("DROP TABLE %s;", temporary_table));
 				
+				// Create a table in triple store format from hdfs data
+				createPrefixedTriplestoreFromHDFSDataset(impala, hdfs_input, nt_separator, temporary_table, prefixfile);
+				
+				// Create a property table from the triple store
+				createPropertyTable(impala, temporary_table, impala_output);
+				
+				// Drop the tmp table
+				impala.dropTable(temporary_table);
 				break;
+				
 			case "extvp":
 				// TODO
-				break;
+				throw new NotImplementedException("EXT_VP gibts noch nicht.");
+				
 			case "big":
 				// TODO
-				break;
+				throw new NotImplementedException("BigTable gibts noch nicht.");
+				
 			default:
 				System.out.println("Format hst to be one of : raw, prop, extvp, big" );
 				System.exit(1);
 			}
-			connection.close();
+			impala.disconnect();
 		}
 		catch (SQLException e)
 		{
 			System.out.println(e.getLocalizedMessage());
-			e.printStackTrace();
 			System.exit(1);
 		} 
 	}
 	
 
+	
 	/**
 	 * Loads RDF data into an impala parquet table.
 	 * 
@@ -137,88 +163,67 @@ public class SempalaNativeLoader {
 	 * @param prefixfile The file containing the prefixes
 	 * @throws SQLException 
 	 */
-	public static void createPrefixedTriplestoreFromHDFSDataset (Statement stmt, String hdfs_input, String nt_separator, String impala_output, String prefixfile) throws SQLException {
+	public static void createPrefixedTriplestoreFromHDFSDataset (Impala impala, String hdfs_input, String nt_separator, String impala_output, String prefixfile) throws SQLException {
 		final String tablename_external_raw = "sempalaloader_external_table";
 		
 		// Import the table from hdfs into impala
 	    System.out.println(String.format("Creating external table '%s' from hdfs location '%s'", tablename_external_raw, hdfs_input));
-		stmt.executeUpdate(String.format("CREATE EXTERNAL TABLE %s	 ( %s STRING, %s STRING, %s STRING )\n"
-				+ "ROW FORMAT DELIMITED FIELDS TERMINATED BY '%s'\nLOCATION '%s';",
-				tablename_external_raw,
-				column_name_subject,
-				column_name_predicate,
-				column_name_object,
-				nt_separator,
-				hdfs_input));
-
+	    impala.createExternalTable(tablename_external_raw)
+		.addColumnDefinition(column_name_subject, DataType.STRING)
+		.addColumnDefinition(column_name_predicate, DataType.STRING)
+		.addColumnDefinition(column_name_object, DataType.STRING)
+		.fieldTermintor(nt_separator)
+		.location(hdfs_input)
+		.execute();
+		
 		// Create a new parquet table, partitioned by predicate");
 	    System.out.println(String.format("Creating parquet triplestore table '%s' from '%s'", impala_output, tablename_external_raw));
-		stmt.executeUpdate(String.format("CREATE TABLE %s ( %s STRING, %s STRING )\nPARTITIONED BY ( %s STRING ) STORED AS PARQUET;",
-				impala_output,
-				column_name_subject,
-				column_name_object,
-				column_name_predicate));
+	    impala.createTable(impala_output)
+		.addColumnDefinition(column_name_subject, DataType.STRING)
+		.addColumnDefinition(column_name_object, DataType.STRING)
+		.addPartitionDefinition(column_name_predicate, DataType.STRING)
+		.storedAs(FileFormat.PARQUET)
+		.execute();
 		
-		
-		// Copy the contents from the external into the internal parquet formatted table
-		String insert_stmt;
+	    // First create a select statement for the INSERT statement.
+		SelectStatement ss;
 		if (prefixfile != null){
-			
-			// Get the prefixes and remove braces from long format 
-			Map<String, String> prefixes = new HashMap<String, String>();
-			try {
-				BufferedReader br = new BufferedReader(new FileReader(prefixfile));
-			    for(String line; (line = br.readLine()) != null; ) {
-			    	String[] splited = line.split("\\s+");
-			    	prefixes.put(splited[2].substring(1, splited[2].length()-1), splited[1]);
-			    }
-			    br.close();
-			} catch (IOException e) {
-		        e.printStackTrace();
-		        System.exit(1);
-			}
-				
-			// Build the insert statement
-			insert_stmt = String.format(
-					"INSERT OVERWRITE %s PARTITION (%s)\nSELECT %s, %s, %s\nFROM %s;",
-					impala_output,
-					column_name_predicate,
-					prefixHelper(column_name_subject, prefixes),
-					prefixHelper(column_name_object, prefixes),
-					prefixHelper(column_name_predicate, prefixes),
-					tablename_external_raw
-					);
+			// Build a select statement _WITH_ prefix replaced values
+			ss = impala.select(prefixHelper(column_name_subject, prefixes))
+					.addProjection(prefixHelper(column_name_object, prefixes))
+					.addProjection(prefixHelper(column_name_predicate, prefixes));
 		} else {
-			insert_stmt = String.format(
-					"INSERT OVERWRITE %1$s PARTITION (%3$s)\nSELECT %2$s, %4$s, %3$s\nFROM %5$s;",
-					impala_output,
-					column_name_subject,
-					column_name_predicate,
-					column_name_object,
-					tablename_external_raw);
+			// Build a select statement _WITH_OUT_ prefix replaced values
+			ss = impala.select(column_name_subject)
+					.addProjection(column_name_object)
+					.addProjection(column_name_predicate);
 		}
+		ss.from(tablename_external_raw);
 		
-		stmt.executeUpdate(insert_stmt);
-		
-		// Drop the external table
-		System.out.println(String.format("Dropping '%s'", tablename_external_raw));
-		stmt.executeUpdate(String.format("DROP TABLE %s;", tablename_external_raw));
+		// Now insert the data into the new table
+		impala.insertOverwrite(impala_output).addPartition(column_name_predicate).selectStatement(ss).execute();
 
+		// Drop the external table
+		impala.dropTable(tablename_external_raw);
+		
 		// Precompute optimization stats
-		System.out.println(String.format("Precomputing optimization stats for '%s'", impala_output));
-		stmt.executeUpdate(String.format("COMPUTE STATS %s;", impala_output));
+		impala.computeStats(impala_output);
 	}
+	
 	
 	
 	/**
 	 * Creates the enourmous prefix replace case statements for
 	 * createPrefixedTriplestoreFromHDFSDataset.
+	 * 
 	 * createPrefixedTriplestoreFromHDFSDataset makes use of regex_replace in
 	 * its select clause which is dynamically created for each column. This
-	 * function takes over this part to not violate DRY priciple. 
+	 * function takes over this part to not violate DRY priciple.
+	 *  
 	 * @param column_name The column name for which to create the case statement
 	 * @param prefixes The map of prefixes to replace
 	 * @return The complete CASE statement for this column
+	 * @deprecated
 	 */
 	public static String prefixHelper(String column_name, Map<String, String> prefixes) {
 		// For each prefix append a case with a regex_replace stmt
@@ -246,40 +251,39 @@ public class SempalaNativeLoader {
 	 * @param impala_output The name of the impala table to create
 	 * @throws SQLException 
 	 */
-	public static void createPropertyTable(Statement stmt, String impala_input, String impala_output) throws SQLException  {
+	public static void createPropertyTable(Impala impala, String impala_input, String impala_output) throws SQLException  {
 		final String tablename_distinct_subjects = "distinct_subjects";
 
+		
 		// Create distinct subjects
 		System.out.println(String.format("Creating table '%s'", tablename_distinct_subjects));
-		stmt.executeUpdate(String.format(
-				"CREATE TABLE %s STORED AS PARQUET\nAS SELECT DISTINCT %s\nFROM %s;",
-				tablename_distinct_subjects,
-				column_name_subject,
-				impala_input));
+		impala.createTable(tablename_distinct_subjects)
+		.storedAs(FileFormat.PARQUET)
+		.asSelect(
+				impala.select(column_name_subject).distinct()
+				.from(impala_input))
+		.execute();
 		
 		// Precompute optimization stats
-		System.out.println(String.format("Precomputing optimization stats for '%s'", tablename_distinct_subjects));
-		stmt.executeUpdate(String.format("COMPUTE STATS %s;", tablename_distinct_subjects));
+		impala.computeStats(tablename_distinct_subjects);
 		
 		// Prepare for building the property table
-		StringBuilder select_clause_builder = new StringBuilder();
+		SelectStatement ss = impala.select("t1.ID");
 		StringBuilder from_clause_builder = new StringBuilder();
-		select_clause_builder.append("t1.ID");
+		// TODO THIS MUST BE POSSIBLE IN JAVA
 		from_clause_builder.append(tablename_distinct_subjects).append(" t1");
 	    int table_counter = 2;
 		
 		// Get all properties
-		ResultSet resultSet = stmt.executeQuery(String.format("SELECT DISTINCT %s\nFROM %s;", column_name_predicate, impala_input));
+		ResultSet resultSet = impala.select(column_name_predicate).distinct().from(impala_input).execute();
+				
 		while (resultSet.next()) {
-			String predicate = resultSet.getString("predicate");
+			String predicate = resultSet.getString(column_name_predicate);
 			
 			// Append ", t<x>.object AS <predicate>" to select clause
-			select_clause_builder.append(String.format(
-					",\nt%d.%s AS '%s'",
-					table_counter,
-					column_name_object,
-					predicate));
+			ss.addProjection(String.format(",\nt%d.%s AS '%s'", table_counter, column_name_object, predicate));
 
+			// TODO THIS MUST BE POSSIBLE IN JAVA
 			// Append "LEFT JOIN <tablename_internal_parquet> t<x> ON (t1.ID = t<x>.ID AND t<x>.predicate = <predicate>)" to from clause
 			from_clause_builder.append(String.format(
 					" LEFT JOIN \n%1$s t%2$d ON (t1.%3$s = t%2$d.%3$s AND t%2$d.%4$s = '%5$s')",
@@ -292,20 +296,14 @@ public class SempalaNativeLoader {
 		}
 
 		// Create the property table 
-		System.out.println(String.format("Creating property table '%s'", impala_output));
-		stmt.executeUpdate(String.format("CREATE TABLE %1$s STORED AS PARQUET\nAS SELECT\n%2$s\nFROM\n%3$s",
-				impala_output,
-				select_clause_builder.toString(),
-				from_clause_builder.toString())
-				);
+		ss.from(from_clause_builder.toString());
+		impala.createTable(impala_output).storedAs(FileFormat.PARQUET).asSelect(ss).execute();
 		
 		// Drop tmp table
-		System.out.println(String.format("Dropping '%s'", tablename_distinct_subjects));
-		stmt.executeUpdate(String.format("DROP TABLE %s;", tablename_distinct_subjects));
+		impala.dropTable(tablename_distinct_subjects);
 
 		// Precompute optimization stats
-		System.out.println(String.format("Precomputing optimization stats for '%s'", impala_output));
-		stmt.executeUpdate(String.format("COMPUTE STATS %s;", impala_output));
+		impala.computeStats(impala_output);
 	}
 	
 
@@ -348,6 +346,14 @@ public class SempalaNativeLoader {
 				.build());
 		
 		options.addOption(
+				Option.builder("t")
+				.longOpt("line-terminator")
+				.desc("The character used to separate the columns in the data. (Defaults to '\\t')")
+				.hasArg()
+				.required(false)
+				.build());
+		
+		options.addOption(
 				Option.builder("h")
 				.longOpt("host")
 				.desc("The host to connect to.")
@@ -358,7 +364,7 @@ public class SempalaNativeLoader {
 		options.addOption(
 				Option.builder("p")
 				.longOpt("port")
-				.desc("The port to connect to. (Defaults to 21000)")
+				.desc("The port to connect to. (Defaults to 21050)")
 				.hasArg()
 				.required(false)
 				.build());
