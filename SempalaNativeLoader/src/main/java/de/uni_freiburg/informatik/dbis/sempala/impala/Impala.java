@@ -46,14 +46,11 @@ public final class Impala {
     
     
     
-    /**
-     * Closes the connection to the impala daemon.
-     *  
-     * @throws SQLException
-     */
-    public void disconnect() throws SQLException{
+    @Override
+    protected void finalize() throws Throwable {
     	connection.close();
     	connection=null;
+    	super.finalize();
     }
     
     

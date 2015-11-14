@@ -15,7 +15,7 @@ public final class CreateStatement {
 	private ArrayList<ColumnDefinition> columnDefinitions = new ArrayList<ColumnDefinition>();
 	private ArrayList<ColumnDefinition> partitionDefinitions = new ArrayList<ColumnDefinition>();
 	private String fieldTermintor = null;
-	private String linesTermintor = null;
+	private String lineTermintor = null;
 	private FileFormat fileFormat = null;
 	private String location = null;
 	private String selectStatement = null;
@@ -59,8 +59,8 @@ public final class CreateStatement {
 		return this;
 	}
 
-	public CreateStatement linesTermintor(final String linesTermintor) {
-		this.linesTermintor = linesTermintor;
+	public CreateStatement lineTermintor(final String lineTermintor) {
+		this.lineTermintor = lineTermintor;
 		return this;
 	}
 
@@ -111,12 +111,12 @@ public final class CreateStatement {
 		    }
 			sb.append(")");
 		}
-		if (this.fieldTermintor != null || this.linesTermintor != null) {
+		if (this.fieldTermintor != null || this.lineTermintor != null) {
 			sb.append("\nROW FORMAT DELIMITED");
 			if (this.fieldTermintor != null)
 				sb.append(String.format(" FIELDS TERMINATED BY '%s'", this.fieldTermintor));
-			if (this.linesTermintor != null)
-				sb.append(String.format(" LINES TERMINATED BY '%s'", this.linesTermintor));
+			if (this.lineTermintor != null)
+				sb.append(String.format(" LINES TERMINATED BY '%s'", this.lineTermintor));
 		}
 		if (this.fileFormat != null)
 			sb.append(String.format(" STORED AS %s", this.fileFormat.name()));
