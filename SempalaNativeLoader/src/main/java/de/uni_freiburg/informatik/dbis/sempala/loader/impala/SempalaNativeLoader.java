@@ -39,11 +39,33 @@ public class SempalaNativeLoader {
 
 	/** The name used for RDF object columns */	
 	public static final String column_name_object = "object";
+	
+	/** The impala wrapper */
+	private static Impala impala;
+	
+	/** The separator of the fields in the rdf data */
+	private static String field_terminator;
+	
+	/** The separator of the lines in the rdf data */
+	private static String line_terminator;
 
-	/** The wrapped impala connection */
-	private static Impala impala = null;	
-		
+	/** Flag if dot at the end of the line is to be stripped */
+	private static String hdfs_input_directory;
 
+	/** Flag if dot at the end of the line is to be stripped */
+	private static String tablename_output;
+	
+	/** Flag if dot at the end of the line is to be stripped */
+	private static boolean strip_dot;
+	
+	/** Flag if duplicates in the input are to be ignored */
+	private static boolean unique;
+	
+	/** The map containing the prefixes */
+	private static Map<String, String> prefix_map = null;
+	
+	
+	
 	/**
 	 * Loads RDF data into an impala parquet table.
 	 * 
@@ -54,15 +76,9 @@ public class SempalaNativeLoader {
 	 * 
 	 * @param hdfs_input_directory The directory containing the RDF data
 	 * @param tablename_output The name of the impala table to create
-	 * @param prefix_map The map containing the prefixes
-	 * @param strip_dot Flag if dot at the end of the line is to be stipped
-	 * @param field_terminator The separator of the fields in the rdf data 
-	 * @param line_terminator The separator of the lines in the rdf data
 	 * @throws SQLException
 	 */
-	public static void buildTripleStoreTable(String hdfs_input_directory, String tablename_output,
-			Map<String, String> prefix_map, boolean strip_dot,
-			String field_terminator, String line_terminator) throws SQLException {
+	public static void buildTripleStoreTable(String hdfs_input_directory, String tablename_output) throws SQLException {
 		
 		final String tablename_external_rdf = "rdf_input";
 		
@@ -101,15 +117,17 @@ public class SempalaNativeLoader {
 		// Replace prefixes
 		if (prefix_map != null){
 			// Build a select statement _WITH_ prefix replaced values
-			ss = impala.select(prefixHelper(column_name_subject, prefix_map))
-					.addProjection(prefixHelper(column_name_object_dot_stripped, prefix_map))
-					.addProjection(prefixHelper(column_name_predicate, prefix_map));
+			ss = impala.select(prefixHelper(column_name_subject))
+					.addProjection(prefixHelper(column_name_object_dot_stripped))
+					.addProjection(prefixHelper(column_name_predicate));
 		} else {
 			// Build a select statement _WITH_OUT_ prefix replaced values
 			ss = impala.select(column_name_subject)
 					.addProjection(column_name_object_dot_stripped)
 					.addProjection(column_name_predicate);
 		}
+		if (unique) 
+			ss.distinct();
 		ss.from(tablename_external_rdf);
 		
 		// Now insert the data into the new table
@@ -133,10 +151,9 @@ public class SempalaNativeLoader {
 	 * Note: Replace this with lambdas in Java 8.
 	 *  
 	 * @param column_name The column name for which to create the case statement
-	 * @param prefix_map The map of prefixes to replace
 	 * @return The complete CASE statement for this column
 	 */
-	public static String prefixHelper(String column_name, Map<String, String> prefix_map) {
+	public static String prefixHelper(String column_name) {
 		// For each prefix append a case with a regex_replace stmt
 		StringBuilder case_clause_builder = new StringBuilder();
 		for (Map.Entry<String, String> entry : prefix_map.entrySet()) {
@@ -159,22 +176,15 @@ public class SempalaNativeLoader {
 	 * 
 	 * @param hdfs_input_directory The directory containing the RDF data
 	 * @param tablename_output The name of the impala table to create
-	 * @param prefix_map The map containing the prefixes
-	 * @param strip_dot Flag if dot at the end of the line is to be stipped
-	 * @param field_terminator The separator of the fields in the rdf data 
-	 * @param line_terminator The separator of the lines in the rdf data
 	 * @throws SQLException
 	 */
-	public static void buildPropertyTable(String hdfs_input_directory, String tablename_output, 
-			Map<String, String> prefix_map, boolean strip_dot,
-			String field_terminator, String line_terminator) throws SQLException {
+	public static void buildPropertyTable(String hdfs_input_directory, String tablename_output) throws SQLException {
 		
 		final String tablename_triplestore = "tmp_triplestore";
 		final String tablename_distinct_subjects = "tmp_distinct_subjects";
 		
 		// Create a table in triple store format from hdfs data
-		buildTripleStoreTable(hdfs_input_directory, tablename_triplestore,
-				prefix_map, strip_dot, field_terminator,line_terminator);
+		buildTripleStoreTable(hdfs_input_directory, tablename_triplestore);
 		
 		// Create distinct subjects
 		System.out.println(String.format("Creating table '%s'", tablename_distinct_subjects));
@@ -229,31 +239,20 @@ public class SempalaNativeLoader {
 	/**
 	 * @param hdfs_input_directory The directory containing the RDF data
 	 * @param tablename_output The name of the impala table to create
-	 * @param prefix_map The map containing the prefixes
-	 * @param strip_dot Flag if dot at the end of the line is to be stipped
-	 * @param field_terminator The separator of the fields in the rdf data 
-	 * @param line_terminator The separator of the lines in the rdf data
 	 * @throws SQLException
 	 */
-	public static void buildExtendedVerticalPartitioningTable(String hdfs_input_directory,
-			String tablename_output, Map<String, String> prefix_map, boolean strip_dot,
-			String field_terminator, String line_terminator) throws SQLException {
+	public static void buildExtendedVerticalPartitioningTable(String hdfs_input_directory, String tablename_output) throws SQLException {
 		// TODO		
 	}
 
+	
 
 	/**
 	 * @param hdfs_input_directory The directory containing the RDF data
 	 * @param tablename_output The name of the impala table to create
-	 * @param prefix_map The map containing the prefixes
-	 * @param strip_dot Flag if dot at the end of the line is to be stipped
-	 * @param field_terminator The separator of the fields in the rdf data 
-	 * @param line_terminator The separator of the lines in the rdf data
 	 * @throws SQLException
 	 */
-	public static void buildBigTable(String hdfs_input_directory, String tablename_output,
-			Map<String, String> prefix_map, boolean strip_dot,
-			String field_terminator, String line_terminator) throws SQLException  {
+	public static void buildBigTable(String hdfs_input_directory, String tablename_output) throws SQLException  {
 		// TODO		
 	}
 
@@ -303,6 +302,13 @@ public class SempalaNativeLoader {
 				Option.builder("s")
 				.longOpt("strip-dot")
 				.desc("Strip th dot in the last field (N-Triples)")
+				.required(false)
+				.build());
+		
+		options.addOption(
+				Option.builder("u")
+				.longOpt("unique")
+				.desc("Ignore dups from the input")
 				.required(false)
 				.build());
 		
@@ -364,7 +370,6 @@ public class SempalaNativeLoader {
 		}
 		
 		// Read the prefix file if there is one
-		Map<String, String> prefix_map = null;
 		if (commandLine.hasOption("prefix-file")){
 			// Get the prefixes and remove braces from long format 
 			prefix_map = new HashMap<String, String>();
@@ -384,12 +389,13 @@ public class SempalaNativeLoader {
 		String host = commandLine.getOptionValue("host");
 		String port = commandLine.getOptionValue("port", "21050");
 		String database = commandLine.getOptionValue("database");
-		String field_terminator = commandLine.getOptionValue("field-terminator", "\\t");
-		String line_terminator = commandLine.getOptionValue("line-terminator", "\\n");
-		String hdfs_input_directory = commandLine.getOptionValue("input");
-		String tablename_output = commandLine.getOptionValue("output");
 		String format = commandLine.getOptionValue("format");
-		boolean strip_dot = commandLine.hasOption("strip-dot");
+		hdfs_input_directory = commandLine.getOptionValue("input");
+		tablename_output = commandLine.getOptionValue("output");
+		field_terminator = commandLine.getOptionValue("field-terminator", "\\t");
+		line_terminator = commandLine.getOptionValue("line-terminator", "\\n");
+		strip_dot = commandLine.hasOption("strip-dot");
+		unique = commandLine.hasOption("unique");
 		
 		try {
 			// Connect to impalad
@@ -397,20 +403,16 @@ public class SempalaNativeLoader {
 			
 		    switch (format.toLowerCase()) {
 			case "raw":
-				buildTripleStoreTable(hdfs_input_directory, tablename_output,
-						prefix_map, strip_dot, field_terminator, line_terminator);
+				buildTripleStoreTable(hdfs_input_directory, tablename_output);
 				break;				
 			case "prop":
-				buildPropertyTable(hdfs_input_directory, tablename_output,
-						prefix_map, strip_dot, field_terminator, line_terminator);
+				buildPropertyTable(hdfs_input_directory, tablename_output);
 				break;
 			case "extvp":
-				buildExtendedVerticalPartitioningTable(hdfs_input_directory,
-						tablename_output, prefix_map, strip_dot, field_terminator, line_terminator);
+				buildExtendedVerticalPartitioningTable(hdfs_input_directory, tablename_output);
 				break;
 			case "big":
-				buildBigTable(hdfs_input_directory, tablename_output,
-						prefix_map, strip_dot, field_terminator, line_terminator);
+				buildBigTable(hdfs_input_directory, tablename_output);
 				break;
 			default:
 				System.err.println("[ERROR] Format has to be one of : raw, prop, extvp, big");
