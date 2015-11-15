@@ -52,14 +52,12 @@ public class SempalaNativeLoader {
 	 * triplestore table with the given name. If a prefix file is given, the 
 	 * matching prefixes in the RDF dataset will be replaced.
 	 * 
-	 * @param stmt The statement to talk to impalad
-	 * @param hdfs_input 
-	 * @param nt_separator The separator of the triples
-	 * @param impala_output 
-	 * @param prefix_file The file containing the prefixes
-	 * 
 	 * @param hdfs_input_directory The directory containing the RDF data
 	 * @param tablename_output The name of the impala table to create
+	 * @param prefix_map The map containing the prefixes
+	 * @param strip_dot Flag if dot at the end of the line is to be stipped
+	 * @param field_terminator The separator of the fields in the rdf data 
+	 * @param line_terminator The separator of the lines in the rdf data
 	 * @throws SQLException
 	 */
 	public static void buildTripleStoreTable(String hdfs_input_directory, String tablename_output,
@@ -93,16 +91,12 @@ public class SempalaNativeLoader {
 		.addPartitionDefinition(column_name_predicate, DataType.STRING)
 		.execute();
 		
-	    /*
-	     *  BEGIN UGLY STRINGFIDDLING PART
-	     */
-	    
 	    // First create a select statement for the INSERT statement.
 		SelectStatement ss;
 		
-		// Strip point if necessary
+		// Strip point if necessary (four slashes: one escape for java one for sql
 		String column_name_object_dot_stripped = (strip_dot) ?
-				String.format("regexp_replace(%s, '\\s*\\.\\s*$', '')", column_name_object) : column_name_object;
+				String.format("regexp_replace(%s, '\\\\s*\\\\.\\\\s*$', '')", column_name_object) : column_name_object;
 		
 		// Replace prefixes
 		if (prefix_map != null){
@@ -119,9 +113,7 @@ public class SempalaNativeLoader {
 		ss.from(tablename_external_rdf);
 		
 		// Now insert the data into the new table
-		InsertStatement is = impala.insertOverwrite(tablename_output).addPartition(column_name_predicate).selectStatement(ss);
-		System.out.println(is.toString());
-		is.execute();
+		impala.insertOverwrite(tablename_output).addPartition(column_name_predicate).selectStatement(ss).execute();
 
 		// Drop the external table
 		impala.dropTable(tablename_external_rdf);
@@ -133,21 +125,21 @@ public class SempalaNativeLoader {
 	
 	
 	/**
-	 * Creates the enourmous prefix replace case statements for
-	 * createPrefixedTriplestoreFromHDFSDataset.
+	 * Creates the enourmous prefix replace case statements for buildTripleStoreTable.
 	 * 
-	 * createPrefixedTriplestoreFromHDFSDataset makes use of regex_replace in
-	 * its select clause which is dynamically created for each column. This
-	 * function takes over this part to not violate DRY priciple.
+	 * buildTripleStoreTable makes use of regex_replace in its select clause which is dynamically
+	 * created for each column. This function takes over this part to not violate DRY principle.
+	 * 
+	 * Note: Replace this with lambdas in Java 8.
 	 *  
 	 * @param column_name The column name for which to create the case statement
-	 * @param prefixes The map of prefixes to replace
+	 * @param prefix_map The map of prefixes to replace
 	 * @return The complete CASE statement for this column
 	 */
-	public static String prefixHelper(String column_name, Map<String, String> prefixes) {
+	public static String prefixHelper(String column_name, Map<String, String> prefix_map) {
 		// For each prefix append a case with a regex_replace stmt
 		StringBuilder case_clause_builder = new StringBuilder();
-		for (Map.Entry<String, String> entry : prefixes.entrySet()) {
+		for (Map.Entry<String, String> entry : prefix_map.entrySet()) {
 			case_clause_builder.append(String.format(
 					"\n WHEN %1$s LIKE '<%2$s%%'"
 					+ "\n THEN regexp_replace(translate(%1$s, '<>', ''), '%2$s', '%3$s')",
@@ -156,7 +148,7 @@ public class SempalaNativeLoader {
 		return String.format("CASE %s \nELSE %s\nEND", case_clause_builder.toString(), column_name);
 	}
 
-
+	
 	
 	/**
 	 * Creates a new property table from a triplestore table. 
@@ -165,15 +157,13 @@ public class SempalaNativeLoader {
 	 * be a table in format described in 'Sempala: Interactive SPARQL Query
 	 * Processing on Hadoop'.
 	 * 
-	 * This function uses solely Impala to accomplish its task.
-	 * @param prefix_map 
-	 * @param line_terminator 
-	 * @param field_terminator 
-	 * 
-	 * @param stmt The statement to talk to impalad
-	 * @param impala_input The name of the impala triplestore table
-	 * @param impala_output The name of the impala table to create
-	 * @throws SQLException 
+	 * @param hdfs_input_directory The directory containing the RDF data
+	 * @param tablename_output The name of the impala table to create
+	 * @param prefix_map The map containing the prefixes
+	 * @param strip_dot Flag if dot at the end of the line is to be stipped
+	 * @param field_terminator The separator of the fields in the rdf data 
+	 * @param line_terminator The separator of the lines in the rdf data
+	 * @throws SQLException
 	 */
 	public static void buildPropertyTable(String hdfs_input_directory, String tablename_output, 
 			Map<String, String> prefix_map, boolean strip_dot,
@@ -207,10 +197,10 @@ public class SempalaNativeLoader {
 
 		// Iterate over all predicates and build the select and from clauses
 		while (resultSet.next()) {
-			String column_name = resultSet.getString(column_name_predicate);
+			String predicate = resultSet.getString(column_name_predicate);
 			
 			// Make the column name impala conform, i.e. remove braces, replace non word chars, trim spaces
-			column_name = column_name.replaceAll("[<>]", "").replaceAll("[[^\\w]+]", "_").trim();
+			String column_name = predicate.replaceAll("[<>]", "").replaceAll("[[^\\w]+]", "_").trim();
 			
 			// Append ", t<x>.object AS <predicate>" to select clause
 			ss.addProjection(String.format("t%d.%s AS %s", table_counter, column_name_object, column_name));
@@ -219,7 +209,7 @@ public class SempalaNativeLoader {
 			ss.leftJoin(
 					String.format("%s t%d", tablename_triplestore, table_counter),
 					String.format("t1.%2$s = t%1$d.%2$s AND t%1$d.%3$s = '%4$s'",
-							table_counter, column_name_subject, column_name_predicate, column_name));
+							table_counter, column_name_subject, column_name_predicate, predicate));
 			++table_counter;
 		}
 
@@ -236,18 +226,34 @@ public class SempalaNativeLoader {
 
 	
 
+	/**
+	 * @param hdfs_input_directory The directory containing the RDF data
+	 * @param tablename_output The name of the impala table to create
+	 * @param prefix_map The map containing the prefixes
+	 * @param strip_dot Flag if dot at the end of the line is to be stipped
+	 * @param field_terminator The separator of the fields in the rdf data 
+	 * @param line_terminator The separator of the lines in the rdf data
+	 * @throws SQLException
+	 */
 	public static void buildExtendedVerticalPartitioningTable(String hdfs_input_directory,
 			String tablename_output, Map<String, String> prefix_map, boolean strip_dot,
-			String field_terminator, String line_terminator) {
+			String field_terminator, String line_terminator) throws SQLException {
 		// TODO		
-		
 	}
 
 
-	
+	/**
+	 * @param hdfs_input_directory The directory containing the RDF data
+	 * @param tablename_output The name of the impala table to create
+	 * @param prefix_map The map containing the prefixes
+	 * @param strip_dot Flag if dot at the end of the line is to be stipped
+	 * @param field_terminator The separator of the fields in the rdf data 
+	 * @param line_terminator The separator of the lines in the rdf data
+	 * @throws SQLException
+	 */
 	public static void buildBigTable(String hdfs_input_directory, String tablename_output,
 			Map<String, String> prefix_map, boolean strip_dot,
-			String field_terminator, String line_terminator) {
+			String field_terminator, String line_terminator) throws SQLException  {
 		// TODO		
 	}
 
