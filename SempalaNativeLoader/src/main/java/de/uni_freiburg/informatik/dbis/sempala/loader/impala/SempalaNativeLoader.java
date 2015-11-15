@@ -20,7 +20,7 @@ import de.uni_freiburg.informatik.dbis.sempala.impala.CreateStatement;
 import de.uni_freiburg.informatik.dbis.sempala.impala.DataType;
 import de.uni_freiburg.informatik.dbis.sempala.impala.FileFormat;
 import de.uni_freiburg.informatik.dbis.sempala.impala.Impala;
-import de.uni_freiburg.informatik.dbis.sempala.impala.QueryOption;
+import de.uni_freiburg.informatik.dbis.sempala.impala.InsertStatement;
 import de.uni_freiburg.informatik.dbis.sempala.impala.SelectStatement;
 
 
@@ -41,32 +41,8 @@ public class SempalaNativeLoader {
 	public static final String column_name_object = "object";
 
 	/** The wrapped impala connection */
-	private Impala impala = null;	
-	
-	
-	
-	/**
-	 * The {@link SempalaNativeLoader} constructor
-	 * @param host
-	 * @param port
-	 * @param database
-	 * @param hdfs_input
-	 * @param prefix_file
-	 * @param field_terminator
-	 * @param line_terminator
-	 * @param impala_output
-	 * @throws SQLException 
-	 */
-	public SempalaNativeLoader(String host, String port, String database) throws SQLException {
+	private static Impala impala = null;	
 		
-		// Connect to impalad
-		impala = new Impala(host, port, database);
-	    
-		// Set impala compression type to snappy
-		impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
-	}
-
-	
 
 	/**
 	 * Loads RDF data into an impala parquet table.
@@ -86,7 +62,7 @@ public class SempalaNativeLoader {
 	 * @param tablename_output The name of the impala table to create
 	 * @throws SQLException
 	 */
-	public void buildTripleStoreTable(String hdfs_input_directory, String tablename_output,
+	public static void buildTripleStoreTable(String hdfs_input_directory, String tablename_output,
 			Map<String, String> prefix_map, boolean strip_dot,
 			String field_terminator, String line_terminator) throws SQLException {
 		
@@ -99,8 +75,8 @@ public class SempalaNativeLoader {
 	    CreateStatement cet = impala.createExternalTable(tablename_external_rdf).ifNotExists()
 		.addColumnDefinition(column_name_subject, DataType.STRING)
 		.addColumnDefinition(column_name_predicate, DataType.STRING)
-		.location(hdfs_input_directory)
-		.addColumnDefinition(column_name_object, DataType.STRING);
+		.addColumnDefinition(column_name_object, DataType.STRING)
+		.location(hdfs_input_directory);
 	    if (field_terminator!=null)
 		    cet.fieldTermintor(field_terminator);
 	    if (line_terminator!=null)
@@ -124,26 +100,28 @@ public class SempalaNativeLoader {
 	    // First create a select statement for the INSERT statement.
 		SelectStatement ss;
 		
-		// Srip point if necessary
-		String column_name_predicate_stripped = (strip_dot) ?
-				String.format("regexp_replace(%s, '\\s*.\\s*$','')", column_name_predicate): column_name_predicate;
+		// Strip point if necessary
+		String column_name_object_dot_stripped = (strip_dot) ?
+				String.format("regexp_replace(%s, '\\s*\\.\\s*$', '')", column_name_object) : column_name_object;
 		
 		// Replace prefixes
 		if (prefix_map != null){
 			// Build a select statement _WITH_ prefix replaced values
 			ss = impala.select(prefixHelper(column_name_subject, prefix_map))
-					.addProjection(prefixHelper(column_name_object, prefix_map))
-					.addProjection(prefixHelper(column_name_predicate_stripped, prefix_map));
+					.addProjection(prefixHelper(column_name_object_dot_stripped, prefix_map))
+					.addProjection(prefixHelper(column_name_predicate, prefix_map));
 		} else {
 			// Build a select statement _WITH_OUT_ prefix replaced values
 			ss = impala.select(column_name_subject)
-					.addProjection(column_name_object)
-					.addProjection(column_name_predicate_stripped);
+					.addProjection(column_name_object_dot_stripped)
+					.addProjection(column_name_predicate);
 		}
 		ss.from(tablename_external_rdf);
 		
 		// Now insert the data into the new table
-		impala.insertOverwrite(tablename_output).addPartition(column_name_predicate).selectStatement(ss).execute();
+		InsertStatement is = impala.insertOverwrite(tablename_output).addPartition(column_name_predicate).selectStatement(ss);
+		System.out.println(is.toString());
+		is.execute();
 
 		// Drop the external table
 		impala.dropTable(tablename_external_rdf);
@@ -151,8 +129,35 @@ public class SempalaNativeLoader {
 		// Precompute optimization stats
 		impala.computeStats(tablename_output);
 	}
+	
+	
+	
+	/**
+	 * Creates the enourmous prefix replace case statements for
+	 * createPrefixedTriplestoreFromHDFSDataset.
+	 * 
+	 * createPrefixedTriplestoreFromHDFSDataset makes use of regex_replace in
+	 * its select clause which is dynamically created for each column. This
+	 * function takes over this part to not violate DRY priciple.
+	 *  
+	 * @param column_name The column name for which to create the case statement
+	 * @param prefixes The map of prefixes to replace
+	 * @return The complete CASE statement for this column
+	 */
+	public static String prefixHelper(String column_name, Map<String, String> prefixes) {
+		// For each prefix append a case with a regex_replace stmt
+		StringBuilder case_clause_builder = new StringBuilder();
+		for (Map.Entry<String, String> entry : prefixes.entrySet()) {
+			case_clause_builder.append(String.format(
+					"\n WHEN %1$s LIKE '<%2$s%%'"
+					+ "\n THEN regexp_replace(translate(%1$s, '<>', ''), '%2$s', '%3$s')",
+					column_name, entry.getKey(), entry.getValue()));
+		}
+		return String.format("CASE %s \nELSE %s\nEND", case_clause_builder.toString(), column_name);
+	}
 
 
+	
 	/**
 	 * Creates a new property table from a triplestore table. 
 	 * 
@@ -170,7 +175,7 @@ public class SempalaNativeLoader {
 	 * @param impala_output The name of the impala table to create
 	 * @throws SQLException 
 	 */
-	public void buildPropertyTable(String hdfs_input_directory, String tablename_output, 
+	public static void buildPropertyTable(String hdfs_input_directory, String tablename_output, 
 			Map<String, String> prefix_map, boolean strip_dot,
 			String field_terminator, String line_terminator) throws SQLException {
 		
@@ -202,16 +207,19 @@ public class SempalaNativeLoader {
 
 		// Iterate over all predicates and build the select and from clauses
 		while (resultSet.next()) {
-			String predicate = resultSet.getString(column_name_predicate);
+			String column_name = resultSet.getString(column_name_predicate);
+			
+			// Make the column name impala conform, i.e. remove braces, replace non word chars, trim spaces
+			column_name = column_name.replaceAll("[<>]", "").replaceAll("[[^\\w]+]", "_").trim();
 			
 			// Append ", t<x>.object AS <predicate>" to select clause
-			ss.addProjection(String.format("t%d.%s AS '%s'", table_counter, column_name_object, predicate));
+			ss.addProjection(String.format("t%d.%s AS %s", table_counter, column_name_object, column_name));
 
 			// Append "LEFT JOIN <tablename_internal_parquet> t<x> ON (t1.ID = t<x>.ID AND t<x>.predicate = <predicate>)" to from clause
 			ss.leftJoin(
 					String.format("%s t%d", tablename_triplestore, table_counter),
 					String.format("t1.%2$s = t%1$d.%2$s AND t%1$d.%3$s = '%4$s'",
-							table_counter, column_name_subject, column_name_predicate, predicate));
+							table_counter, column_name_subject, column_name_predicate, column_name));
 			++table_counter;
 		}
 
@@ -228,40 +236,19 @@ public class SempalaNativeLoader {
 
 	
 
-	public void buildExtendedVerticalPartitioningTable(String hdfs_input_directory,
+	public static void buildExtendedVerticalPartitioningTable(String hdfs_input_directory,
 			String tablename_output, Map<String, String> prefix_map, boolean strip_dot,
 			String field_terminator, String line_terminator) {
+		// TODO		
 		
 	}
 
 
-	public void buildBigTable(String hdfs_input_directory, String tablename_output,
+	
+	public static void buildBigTable(String hdfs_input_directory, String tablename_output,
 			Map<String, String> prefix_map, boolean strip_dot,
 			String field_terminator, String line_terminator) {
 		// TODO		
-	}
-		
-	/**
-	 * Creates the enourmous prefix replace case statements for
-	 * createPrefixedTriplestoreFromHDFSDataset.
-	 * 
-	 * createPrefixedTriplestoreFromHDFSDataset makes use of regex_replace in
-	 * its select clause which is dynamically created for each column. This
-	 * function takes over this part to not violate DRY priciple.
-	 *  
-	 * @param column_name The column name for which to create the case statement
-	 * @param prefixes The map of prefixes to replace
-	 * @return The complete CASE statement for this column
-	 */
-	public static String prefixHelper(String column_name, Map<String, String> prefixes) {
-		// For each prefix append a case with a regex_replace stmt
-		StringBuilder case_clause_builder = new StringBuilder();
-		for (Map.Entry<String, String> entry : prefixes.entrySet()) {
-			case_clause_builder.append(String.format(
-					" WHEN %1$s LIKE '<%2$s%%'\nTHEN translate(regexp_replace(substr(%1$s, 2, length(%1$s)-2), '%2$s', '%3$s'), ':', '_') \n",
-					column_name, entry.getKey(), entry.getValue()));
-		}
-		return String.format("CASE \n%s ELSE %s\nEND", case_clause_builder.toString(), column_name);
 	}
 
 
@@ -358,15 +345,16 @@ public class SempalaNativeLoader {
 				.build());
 		
 		// Parse the commandline
-		CommandLine commandLine;
+		CommandLine commandLine = null;
 		try {
 			CommandLineParser parser = new DefaultParser();
 			commandLine = parser.parse(options, args);
 		} catch (ParseException e) {
-			System.err.println("Parsing failed. Reason: " + e.getMessage());
+			e.printStackTrace();
+			System.err.println("[ERROR] Parsing failed. Reason: " + e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp( "SempalaNativeLoader", options );
-			return;
+	        System.exit(1);
 		}
 		
 		// Read the prefix file if there is one
@@ -382,7 +370,7 @@ public class SempalaNativeLoader {
 			    }
 			    br.close();
 			} catch (IOException e) {
-		        e.getLocalizedMessage();
+				System.err.println("[ERROR] Could not open prefix file. Reason: " + e.getMessage());
 		        System.exit(1);
 			}
 		}
@@ -398,32 +386,34 @@ public class SempalaNativeLoader {
 		boolean strip_dot = commandLine.hasOption("strip-dot");
 		
 		try {
-			SempalaNativeLoader sempalaNativeLoader = new SempalaNativeLoader(host, port, database);
+			// Connect to impalad
+			impala = new Impala(host, port, database);
+			
 		    switch (format.toLowerCase()) {
 			case "raw":
-				sempalaNativeLoader.buildTripleStoreTable(hdfs_input_directory, tablename_output,
+				buildTripleStoreTable(hdfs_input_directory, tablename_output,
 						prefix_map, strip_dot, field_terminator, line_terminator);
 				break;				
 			case "prop":
-				sempalaNativeLoader.buildPropertyTable(hdfs_input_directory, tablename_output,
+				buildPropertyTable(hdfs_input_directory, tablename_output,
 						prefix_map, strip_dot, field_terminator, line_terminator);
 				break;
 			case "extvp":
-				sempalaNativeLoader.buildExtendedVerticalPartitioningTable(hdfs_input_directory,
+				buildExtendedVerticalPartitioningTable(hdfs_input_directory,
 						tablename_output, prefix_map, strip_dot, field_terminator, line_terminator);
 				break;
 			case "big":
-				sempalaNativeLoader.buildBigTable(hdfs_input_directory, tablename_output,
+				buildBigTable(hdfs_input_directory, tablename_output,
 						prefix_map, strip_dot, field_terminator, line_terminator);
 				break;
 			default:
-				System.out.println("Format has to be one of : raw, prop, extvp, big" );
-				break;
+				System.err.println("[ERROR] Format has to be one of : raw, prop, extvp, big");
+				System.exit(1);
 		    }
 		}
 		catch (SQLException e)
 		{
-			System.out.println(e.getLocalizedMessage());
+			System.err.println("[ERROR] SQL exception: " + e.getLocalizedMessage());
 			System.exit(1);
 		} 
 	}
