@@ -1,30 +1,55 @@
 java -jar bin/SempalaNativeLoader-1.0.jar \
-  -h dbisst02.informatik.privat -d schneidm_sempala \
-  -i /user/schneidm/data/watdiv/ -o raw \
-  -f raw
+  --host dbisst02.informatik.privat --database schneidm_sempala \
+  --input /user/schneidm/data/BSBM --output BSBM_raw \
+  --format raw --prefix-file prefixes/BSBM_Prefixes.txt \
+  --field-terminator ' ' \
+  --strip-dot --unique
 
 java -jar bin/SempalaNativeLoader-1.0.jar \
-  -h dbisst02.informatik.privat -d schneidm_sempala \
-  -i /user/schneidm/data/watdiv/ -o raw_unique \
-  -f raw -u
+  --host dbisst02.informatik.privat --database schneidm_sempala \
+  --input /user/schneidm/data/LUBM/ --output LUBM_raw \
+  --format raw --prefix-file prefixes/LUBM_Prefixes.txt \
+  --field-terminator ' ' \
+  --unique
 
-#java -jar bin/SempalaNativeLoader-1.0.jar \
-#  -h dbisst02.informatik.privat -d schneidm_sempala \
-#  -i /user/schneidm/data/watdiv/ -o raw_stripped \
-#  -f raw -s
-#
-#java -jar bin/SempalaNativeLoader-1.0.jar \
-#  -h dbisst02.informatik.privat -d schneidm_sempala \
-#  -i /user/schneidm/data/watdiv/ -o raw_stripped_prefixed  \
-#  -f raw -s -P Prefixes.txt
-#
-#
-#java -jar bin/SempalaNativeLoader-1.0.jar \
-#  -h dbisst02.informatik.privat -d schneidm_sempala \
-#  -i /user/schneidm/data/watdiv/ -o prop_stripped \
-#  -f prop -s
-#
-#java -jar bin/SempalaNativeLoader-1.0.jar \
-#  -h dbisst02.informatik.privat -d schneidm_sempala \
-#  -i /user/schneidm/data/watdiv/ -o prop_stripped_prefixed \
-#  -f prop -s -P Prefixes.txt
+java -jar bin/SempalaNativeLoader-1.0.jar \
+  --host dbisst02.informatik.privat --database schneidm_sempala \
+  --input /user/schneidm/data/SP2Bench/ --output SP2Bench_raw \
+  --format raw --prefix-file prefixes/SP2Bench_Prefixes.txt \
+  --field-terminator ' ' \
+  --strip-dot --unique
+
+java -jar bin/SempalaNativeLoader-1.0.jar \
+  --host dbisst02.informatik.privat --database schneidm_sempala \
+  --input /user/schneidm/data/WatDiv/ --output WatDiv_raw \
+  --format raw --prefix-file prefixes/WatDiv_Prefixes.txt \
+  --field-terminator '\t' \
+  --strip-dot --unique
+
+java -jar bin/SempalaNativeLoader-1.0.jar \
+  --host dbisst02.informatik.privat --database schneidm_sempala \
+  --input /user/schneidm/data/BSBM --output BSBM_prop \
+  --format prop --prefix-file prefixes/BSBM_Prefixes.txt \
+  --field-terminator ' ' \
+  --strip-dot --unique
+
+java -jar bin/SempalaNativeLoader-1.0.jar \
+  --host dbisst02.informatik.privat --database schneidm_sempala \
+  --input /user/schneidm/data/LUBM/ --output LUBM_prop \
+  --format prop --prefix-file prefixes/LUBM_Prefixes.txt \
+  --field-terminator ' ' \
+  --unique
+
+java -jar bin/SempalaNativeLoader-1.0.jar \
+  --host dbisst02.informatik.privat --database schneidm_sempala \
+  --input /user/schneidm/data/SP2Bench/ --output SP2Bench_prop \
+  --format prop --prefix-file prefixes/SP2Bench_Prefixes.txt \
+  --field-terminator ' ' \
+  --strip-dot --unique
+
+java -jar bin/SempalaNativeLoader-1.0.jar \
+  --host dbisst02.informatik.privat --database schneidm_sempala \
+  --input /user/schneidm/data/WatDiv/ --output WatDiv_prop \
+  --format prop --prefix-file prefixes/WatDiv_Prefixes.txt \
+  --field-terminator '\t' \
+  --strip-dot --unique

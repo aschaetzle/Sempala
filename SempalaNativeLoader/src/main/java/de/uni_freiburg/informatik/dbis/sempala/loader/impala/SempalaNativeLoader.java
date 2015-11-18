@@ -377,7 +377,7 @@ public class SempalaNativeLoader {
 				BufferedReader br = new BufferedReader(new FileReader(commandLine.getOptionValue("prefix-file")));
 			    for(String line; (line = br.readLine()) != null; ) {
 			    	String[] splited = line.split("\\s+");
-			    	prefix_map.put(splited[2].substring(1, splited[2].length()-1), splited[1]);
+			    	prefix_map.put(splited[1].substring(1, splited[1].length()-1), splited[0]);
 			    }
 			    br.close();
 			} catch (IOException e) {
