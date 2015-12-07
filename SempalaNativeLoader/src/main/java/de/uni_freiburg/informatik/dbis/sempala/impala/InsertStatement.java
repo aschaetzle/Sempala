@@ -18,6 +18,7 @@ public final class InsertStatement {
 	}
 
 	public int execute() throws IllegalArgumentException, SQLException {
+		System.out.println(String.format("Inserting data into '%s'", tablename));
 		return connection.createStatement().executeUpdate(toString());
 	}
 
@@ -32,7 +33,7 @@ public final class InsertStatement {
 	}
 
 	public InsertStatement addPartition(final String partition) {
-		if (partitions==null)
+		if (this.partitions==null)
 			partitions = partition;
 		else
 			partitions+=String.format(", %s", partition);

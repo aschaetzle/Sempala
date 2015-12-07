@@ -20,9 +20,15 @@ public final class SelectStatement {
 
 	
 	
-	public SelectStatement(Connection connection, String projection) {
+	public SelectStatement(Connection connection) {
 		this.connection = connection;
-		this.projection = projection;
+	}
+
+	
+	
+	public SelectStatement(Connection connection, final String projection) {
+		this.connection = connection;
+		addProjection(projection);
 	}
 
 	
@@ -41,7 +47,10 @@ public final class SelectStatement {
 	
 	
 	public SelectStatement addProjection(final String projection) {
-		this.projection+=String.format(", %s", projection);
+		if (this.projection == null)
+			this.projection = projection;
+		else
+			this.projection += String.format(",\n\t%s", projection);
 		return this;
 	}
 	
@@ -149,7 +158,7 @@ public final class SelectStatement {
 		if (projection.isEmpty() || from == null)
 			throw new IllegalArgumentException("Projection and table reference must be specified");
 		StringBuilder sb = new StringBuilder();
-		sb.append(String.format("SELECT%s %s", distinct ? " DISTINCT": "", projection));
+		sb.append(String.format("SELECT%s\n\t%s", distinct ? " DISTINCT": "", projection));
 		sb.append(String.format("\nFROM %s", from));
 		for (String join : joins)
 			sb.append(join);

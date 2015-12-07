@@ -76,8 +76,8 @@ public final class Impala {
      * @param tablename The name of the table you want to create.
      * @return The builder for the CREATE statement. 
      */
-    public CreateStatement createExternalTable(String tablename){
-    	return this.createTable(tablename).external();
+    public CreateStatement createTable(){
+    	return new CreateStatement(connection);
     }
     
     
@@ -105,6 +105,18 @@ public final class Impala {
      */
     public InsertStatement insertOverwrite(String tablename){
     	return this.insertInto(tablename).overwrite();
+    }
+    
+    
+    
+    /**
+     * Creates a handy builder for the SELECT statement. 
+     *  
+     * @param tablename The projection expression of your query
+     * @return The builder for the SELECT statement. 
+     */
+    public SelectStatement select(){
+    	return new SelectStatement(connection);
     }
     
     

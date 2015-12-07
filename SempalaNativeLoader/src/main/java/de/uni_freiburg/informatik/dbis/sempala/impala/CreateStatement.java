@@ -20,12 +20,17 @@ public final class CreateStatement {
 	private String location = null;
 	private String selectStatement = null;
 
+	public CreateStatement(Connection connection) {
+		this.connection = connection;
+	}
+
 	public CreateStatement(Connection connection, String tablename) {
 		this.connection = connection;
-		this.tablename = tablename;
+		this.tablename(tablename);
 	}
 
 	public int execute() throws IllegalArgumentException, SQLException {
+		System.out.println(String.format("Creating table '%s'", tablename));
 		return connection.createStatement().executeUpdate(toString());
 	}
 
@@ -93,12 +98,12 @@ public final class CreateStatement {
 			sb.append(" (");
 			Iterator<ColumnDefinition> it = this.columnDefinitions.iterator();
 			ColumnDefinition columnDefinition = it.next();
-			sb.append(String.format("%s %s", columnDefinition.columnName, columnDefinition.dataType.name()));
+			sb.append(String.format("\n\t%s %s", columnDefinition.columnName, columnDefinition.dataType.name()));
 		    while (it.hasNext()) {
 				columnDefinition = it.next();
-				sb.append(String.format(", %s %s", columnDefinition.columnName, columnDefinition.dataType.name()));
+				sb.append(String.format(",\n\t%s %s", columnDefinition.columnName, columnDefinition.dataType.name()));
 		    }
-			sb.append(")");
+			sb.append("\n)");
 		}
 		if (!this.partitionDefinitions.isEmpty()){
 			sb.append("\nPARTITIONED BY (");
