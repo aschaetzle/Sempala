@@ -30,8 +30,12 @@ public final class CreateStatement {
 	}
 
 	public int execute() throws IllegalArgumentException, SQLException {
-		System.out.println(String.format("Creating table '%s'", tablename));
-		return connection.createStatement().executeUpdate(toString());
+		System.out.print(String.format("Creating table '%s'", tablename));
+		long startTime = System.currentTimeMillis();
+		int ret = connection.createStatement().executeUpdate(toString());
+		long endTime = System.currentTimeMillis();
+		System.out.println(String.format(" [%.3fs]", (float)(endTime - startTime)/1000));
+		return ret;
 	}
 
 	public CreateStatement tablename(String tablename) {

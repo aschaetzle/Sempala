@@ -21,8 +21,6 @@ public final class Impala {
 	/** The connection to the impala daemon */
     private Connection connection = null;
     
-    
-    
     /** Creates an instance of the impala wrapper. */
     public Impala(String host, String port, String database) throws SQLException{
         // Dynamically load the impala driver // Why is this not necessary?
@@ -44,16 +42,12 @@ public final class Impala {
 		connection = DriverManager.getConnection(impalad_url);
     } 
     
-    
-    
     @Override
     protected void finalize() throws Throwable {
     	connection.close();
     	connection=null;
     	super.finalize();
     }
-    
-    
     
     /**
      * Creates a handy builder for the CREATE statement. 
@@ -64,8 +58,6 @@ public final class Impala {
     public CreateStatement createTable(String tablename){
     	return new CreateStatement(connection, tablename);
     }
-    
-    
     
     /**
      * Creates a handy builder for the CREATE statement. 
@@ -80,8 +72,6 @@ public final class Impala {
     	return new CreateStatement(connection);
     }
     
-    
-    
     /**
      * Creates a handy builder for the INSERT statement. 
      * 
@@ -91,8 +81,6 @@ public final class Impala {
     public InsertStatement insertInto(String tablename){
     	return new InsertStatement(connection, tablename);
     }
-    
-    
     
     /**
      * Creates a handy builder for the INSERT statement. 
@@ -107,8 +95,6 @@ public final class Impala {
     	return this.insertInto(tablename).overwrite();
     }
     
-    
-    
     /**
      * Creates a handy builder for the SELECT statement. 
      *  
@@ -118,8 +104,6 @@ public final class Impala {
     public SelectStatement select(){
     	return new SelectStatement(connection);
     }
-    
-    
     
     /**
      * Creates a handy builder for the SELECT statement. 
@@ -131,8 +115,6 @@ public final class Impala {
     	return new SelectStatement(connection, expression);
     }
     
-    
-    
     /**
      * Drops a table instantly.
      * 
@@ -140,12 +122,13 @@ public final class Impala {
      * @throws SQLException
      */
     public void dropTable(String tablename) throws SQLException {
-		System.out.println(String.format("Dropping table '%s'", tablename));
+		System.out.print(String.format("Dropping table '%s'", tablename));
+		long startTime = System.currentTimeMillis();
 		connection.createStatement().executeUpdate(String.format("DROP TABLE %s;", tablename));
+		long endTime = System.currentTimeMillis();
+		System.out.println(String.format(" [%.3fs]", (float)(endTime - startTime)/1000));
     }
   
-    
-    
     /**
      * Computes stats for a table (optimization)
      * 
@@ -159,11 +142,12 @@ public final class Impala {
      * @throws SQLException
      */
     public void computeStats(String tablename) throws SQLException {
-		System.out.println(String.format("Precomputing optimization stats for '%s'", tablename));
+		System.out.print(String.format("Precomputing optimization stats for '%s'", tablename));
+		long startTime = System.currentTimeMillis();
 		connection.createStatement().executeUpdate(String.format("COMPUTE STATS %s;", tablename));
+		long endTime = System.currentTimeMillis();
+		System.out.println(String.format(" [%.3fs]", (float)(endTime - startTime)/1000));
     }
-    
-
     
     /**
      * Sets an impala query option
@@ -175,7 +159,10 @@ public final class Impala {
      * @throws SQLException
      */
     public void set(QueryOption option, String value) throws SQLException {
-		System.out.println(String.format("Setting impala query option '%s' to '%s'", option.name(), value));
+		System.out.print(String.format("Setting impala query option '%s' to '%s'", option.name(), value));
+		long startTime = System.currentTimeMillis();
 		connection.createStatement().executeUpdate(String.format("SET %s=%s;", option.name(), value));
+		long endTime = System.currentTimeMillis();
+		System.out.println(String.format(" [%.3fs]", (float)(endTime - startTime)/1000));
     }
 }

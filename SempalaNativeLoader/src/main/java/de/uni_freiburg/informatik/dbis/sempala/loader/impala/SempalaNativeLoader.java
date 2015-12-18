@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
@@ -21,23 +22,24 @@ import de.uni_freiburg.informatik.dbis.sempala.impala.CreateStatement;
 import de.uni_freiburg.informatik.dbis.sempala.impala.DataType;
 import de.uni_freiburg.informatik.dbis.sempala.impala.FileFormat;
 import de.uni_freiburg.informatik.dbis.sempala.impala.Impala;
+import de.uni_freiburg.informatik.dbis.sempala.impala.QueryOption;
 import de.uni_freiburg.informatik.dbis.sempala.impala.SelectStatement;
 
 /**
- * 
- * @author schneidm
+ *
+ * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
  *
  */
 public class SempalaNativeLoader {
 
 	/** The name used for RDF subject columns */
-	public static final String column_name_subject = "ID";
+	public static final String column_name_subject = "s";
 
 	/** The name used for RDF predicate columns */
-	public static final String column_name_predicate = "predicate";
+	public static final String column_name_predicate = "p";
 
 	/** The name used for RDF object columns */
-	public static final String column_name_object = "object";
+	public static final String column_name_object = "o";
 
 	/** The impala wrapper */
 	private static Impala impala;
@@ -62,15 +64,18 @@ public class SempalaNativeLoader {
 
 	/** The map containing the prefixes */
 	private static Map<String, String> prefix_map = null;
+	
+	/* A set containing created tables, intended for rollback operations */
+	private static HashSet<String> createdTables = new HashSet<String>();
 
 	/**
 	 * Loads RDF data into an impala parquet table.
-	 * 
+	 *
 	 * The input data has to be in N-Triple format and reside in a readable HDFS
-	 * directory. The output will be parquet encoded in a raw triplestore table
+	 * directory. The output will be parquet encoded in a raw triple table
 	 * with the given name. If a prefix file is given, the matching prefixes in
 	 * the RDF dataset will be replaced.
-	 * 
+	 *
 	 * @param hdfs_input_directory
 	 *            The directory containing the RDF data
 	 * @param tablename_output
@@ -82,6 +87,7 @@ public class SempalaNativeLoader {
 		final String tablename_external_rdf = "external_rdf_data";
 
 		// Import the table from hdfs into impala
+		createdTables.add(tablename_external_rdf);
 		CreateStatement cet = impala
 				.createTable(tablename_external_rdf)
 				.external()
@@ -96,7 +102,11 @@ public class SempalaNativeLoader {
 			cet.lineTermintor(line_terminator);
 		cet.execute();
 
+		// Precompute optimization stats
+		impala.computeStats(tablename_external_rdf);
+
 		// Create a new parquet table, partitioned by predicate");
+		createdTables.add(tablename_output);
 		impala
 		.createTable(tablename_output)
 		.ifNotExists()
@@ -139,23 +149,24 @@ public class SempalaNativeLoader {
 		.selectStatement(ss)
 		.execute();
 
-		// Drop the external table
-		impala.dropTable(tablename_external_rdf);
-
 		// Precompute optimization stats
 		impala.computeStats(tablename_output);
+
+		// Drop the external table
+		impala.dropTable(tablename_external_rdf);
+		createdTables.remove(tablename_external_rdf);
 	}
 
 	/**
 	 * Creates the enourmous prefix replace case statements for
 	 * buildTripleStoreTable.
-	 * 
+	 *
 	 * buildTripleStoreTable makes use of regex_replace in its select clause
 	 * which is dynamically created for each column. This function takes over
 	 * this part to not violate DRY principle.
-	 * 
+	 *
 	 * Note: Replace this with lambdas in Java 8.
-	 * 
+	 *
 	 * @param column_name
 	 *            The column name for which to create the case statement
 	 * @return The complete CASE statement for this column
@@ -172,12 +183,12 @@ public class SempalaNativeLoader {
 	}
 
 	/**
-	 * Creates a new property table from a triplestore table.
-	 * 
+	 * Creates a new property table from a triple table.
+	 *
 	 * The input table has to be in triple table format. The output will be a
 	 * table in format described in 'Sempala: Interactive SPARQL Query
 	 * Processing on Hadoop'.
-	 * 
+	 *
 	 * @param hdfs_input_directory
 	 *            The directory containing the RDF data
 	 * @param tablename_output
@@ -186,13 +197,14 @@ public class SempalaNativeLoader {
 	 */
 	public static void buildPropertyTable(String hdfs_input_directory, String tablename_output) throws SQLException {
 
-		final String tablename_triplestore = "tmp_triplestore";
+		final String tablename_triples = "tmp_triples";
 		final String tablename_distinct_subjects = "tmp_distinct_subjects";
 
 		// Create a table in triple store format from hdfs data
-		buildTripleStoreTable(hdfs_input_directory, tablename_triplestore);
+		buildTripleStoreTable(hdfs_input_directory, tablename_triples);
 
-		// Create distinct subjects
+		// Build a table containing distinct subjects
+		createdTables.add(tablename_distinct_subjects);
 		impala
 		.createTable(tablename_distinct_subjects)
 		.storedAs(FileFormat.PARQUET)
@@ -200,59 +212,71 @@ public class SempalaNativeLoader {
 				impala
 				.select(column_name_subject)
 				.distinct()
-				.from(tablename_triplestore)
+				.from(tablename_triples)
 				)
 		.execute();
 
 		// Precompute optimization stats
 		impala.computeStats(tablename_distinct_subjects);
 
-		// Prepare for building the property table
-		SelectStatement ss = impala
-				.select("t1."+ column_name_subject)
-				.from(String.format("%s t1", tablename_distinct_subjects));
-
-		// Get all properties
+		// Get properties
 		ResultSet resultSet = impala
 				.select(column_name_predicate)
 				.distinct()
-				.from(tablename_triplestore)
+				.from(tablename_triples)
 				.execute();
 
-		int table_counter = 2;
+		// Convert the result set to a list
+		ArrayList<String> predicates = new ArrayList<String>();
+		while (resultSet.next())
+			predicates.add(resultSet.getString(column_name_predicate));
+
+		// Build a select stmt for the Insert-as-select statement
+		SelectStatement sstmt = impala.select();
+
+		// Add the subject column
+		sstmt.addProjection(String.format("subjects.%s", column_name_subject));
+
+		// Add the property columns to select clause (", t<x>.object AS <predicate>")
+   	    for (int i = 0; i < predicates.size(); i++)
+			sstmt.addProjection(String.format("t%d.%s AS %s", i, column_name_object, toImpalaColName(predicates.get(i))));
+
+		// Add distinct subjects table reference
+		sstmt.from(String.format("%s subjects", tablename_distinct_subjects));
+
+		// Append the properties via join
+		// "LEFT JOIN <tablename_internal_parquet> t<x> ON (t1.subject =
+		// t<x>.subject AND t<x>.predicate = <predicate>)" to from clause
+		for (int i = 0; i < predicates.size(); i++)
+   	    	sstmt.leftJoin(
+   	    			String.format("%s t%d", tablename_triples, i),
+   	    			String.format("subjects.%2$s = t%1$d.%2$s AND t%1$d.%3$s = '%4$s'",
+   	    					i, column_name_subject,
+   	    					column_name_predicate, predicates.get(i)));
+
+		// Create the property table "s, p, o[, p1, ...]"
+		createdTables.add(tablename_output);
+		CreateStatement cstmt = impala.createTable(tablename_output).ifNotExists();
+		cstmt.addColumnDefinition(column_name_subject, DataType.STRING);
+		for (String pred : predicates)
+			cstmt.addColumnDefinition(toImpalaColName(pred), DataType.STRING);
+		cstmt.storedAs(FileFormat.PARQUET);
+		cstmt.execute();
 		
-		// Iterate over all predicates and build the select and from clauses
-		while (resultSet.next()) {
-			String predicate = resultSet.getString(column_name_predicate);
-
-			// Make the column name impala conform, i.e. remove braces, replace
-			// non word chars, trim spaces
-			String column_name = toImpalaColName(predicate);
-
-			// Append ", t<x>.object AS <predicate>" to select clause
-			ss.addProjection(String.format("t%d.%s AS %s", table_counter, column_name_object, column_name));
-
-			// Append "LEFT JOIN <tablename_internal_parquet> t<x> ON (t1.subject =
-			// t<x>.subject AND t<x>.predicate = <predicate>)" to from clause
-			ss.leftJoin(String.format("%s t%d", tablename_triplestore, table_counter),
-					String.format("t1.%2$s = t%1$d.%2$s AND t%1$d.%3$s = '%4$s'", table_counter, column_name_subject,
-							column_name_predicate, predicate));
-			++table_counter;
-		}
-
-		// Create the property table
+		// Insert data into the single table using the built select stmt
 		impala
-		.createTable(tablename_output)
-		.storedAs(FileFormat.PARQUET)
-		.asSelect(ss)
+		.insertOverwrite(tablename_output)
+		.selectStatement(sstmt)
 		.execute();
-
-		// Drop tmp tables
-		impala.dropTable(tablename_triplestore);
-		impala.dropTable(tablename_distinct_subjects);
 
 		// Precompute optimization stats
 		impala.computeStats(tablename_output);
+
+		// Drop the temporary tables
+		impala.dropTable(tablename_triples);
+		createdTables.remove(tablename_triples);
+		impala.dropTable(tablename_distinct_subjects);
+		createdTables.remove(tablename_distinct_subjects);
 	}
 
 	/**
@@ -273,15 +297,16 @@ public class SempalaNativeLoader {
 	 * @throws SQLException
 	 */
 	public static void buildSingleTable(String hdfs_input_directory, String tablename_output) throws SQLException  {
-		
-		final String tablename_triplestore = "tmp_triplestore";
+
+		final String tablename_triples = "tmp_triples";
 		final String tablename_subjects = "tmp_subjects";
 		final String tablename_objects  = "tmp_objects";
-		
-		// Create a table in triple store format from hdfs data
-		buildTripleStoreTable(hdfs_input_directory, tablename_triplestore);
+
+		// Create a table in triple format from hdfs data
+		buildTripleStoreTable(hdfs_input_directory, tablename_triples);
 
 		// Create a table for the distinct subject-predicate tuples
+		createdTables.add(tablename_subjects);
 		impala
 		.createTable(tablename_subjects)
 		.ifNotExists()
@@ -299,14 +324,15 @@ public class SempalaNativeLoader {
 				.select(column_name_subject)
 				.addProjection(column_name_predicate)
 				.distinct()
-				.from(tablename_triplestore)
+				.from(tablename_triples)
 				)
 		.execute();
-		
+
 		// Precompute optimization stats
 		impala.computeStats(tablename_subjects);
-		
+
 		// Create a table for the distinct predicate-object tuples
+		createdTables.add(tablename_objects);
 		impala
 		.createTable(tablename_objects)
 		.ifNotExists()
@@ -324,26 +350,27 @@ public class SempalaNativeLoader {
 				.select(column_name_object)
 				.addProjection(column_name_predicate)
 				.distinct()
-				.from(tablename_triplestore)
+				.from(tablename_triples)
 				)
 		.execute();
-		
+
 		// Precompute optimization stats
 		impala.computeStats(tablename_objects);
-		
+
 		// Get all properties
 		ResultSet resultSet = impala
 				.select(column_name_predicate)
 				.distinct()
-				.from(tablename_triplestore)
+				.from(tablename_triples)
 				.execute();
-		
+
 		// Convert the result set to a list
 		ArrayList<String> predicates = new ArrayList<String>();
 		while (resultSet.next())
 			predicates.add(resultSet.getString(column_name_predicate));
-		
+
 		// Create the new single table "s, p, o, [ss_p1, so_p1, os_p1], ..."
+		createdTables.add(tablename_output);
 		CreateStatement cstmt = impala
 				.createTable(tablename_output)
 				.ifNotExists()
@@ -358,12 +385,12 @@ public class SempalaNativeLoader {
 		}
 		cstmt.storedAs(FileFormat.PARQUET);
 		cstmt.execute();
-		
+
 		/*
-		 * Build a select stmt for the Insert-as-select statement 
+		 * Build a select stmt for the Insert-as-select statement
 		 */
-		SelectStatement sstmt = impala.select().distinct();
-		
+		SelectStatement sstmt = impala.select();
+
 		// Build the projection part
 		sstmt.addProjection(String.format("nt.%s", column_name_subject));
 		sstmt.addProjection(String.format("nt.%s", column_name_object));
@@ -387,12 +414,12 @@ public class SempalaNativeLoader {
 		}
 		// Partition column at last (impala requirement)
 		sstmt.addProjection(String.format("nt.%s", column_name_predicate));
-		
+
 		// Build the table references
-		sstmt.from(String.format("%s nt", tablename_triplestore));
+		sstmt.from(String.format("%s nt", tablename_triples));
 		for (String predicate : predicates){
 			String impalaConformPredicate = toImpalaColName(predicate);
-			
+
 			// SS_pi
 			sstmt.leftJoin(
 					// Table reference e.g. "LEFT JOIN subjects tss_p1"
@@ -403,7 +430,7 @@ public class SempalaNativeLoader {
 							column_name_predicate,
 							impalaConformPredicate,
 							predicate));
-			
+
 			// SO_pi
 			sstmt.leftJoin(
 					// Table reference e.g. "LEFT JOIN objects tso_p1"
@@ -415,7 +442,7 @@ public class SempalaNativeLoader {
 							column_name_object,
 							impalaConformPredicate,
 							predicate));
-			
+
 			// OS_pi
 			sstmt.leftJoin(
 					// Table reference e.g. "LEFT JOIN subjects tos_p1"
@@ -428,7 +455,6 @@ public class SempalaNativeLoader {
 							impalaConformPredicate,
 							predicate));
 		}
-	
 
 		// Insert data into the single table using the built select stmt
 		impala
@@ -437,15 +463,18 @@ public class SempalaNativeLoader {
 		.selectStatement(sstmt)
 		.execute();
 
-		// Drop the temporary tables
-		impala.dropTable(tablename_triplestore);
-		impala.dropTable(tablename_subjects);
-		impala.dropTable(tablename_objects);
-
 		// Precompute optimization stats
 		impala.computeStats(tablename_output);
+
+		// Drop the temporary tables
+		impala.dropTable(tablename_triples);
+		createdTables.remove(tablename_triples);
+		impala.dropTable(tablename_subjects);
+		createdTables.remove(tablename_subjects);
+		impala.dropTable(tablename_objects);
+		createdTables.remove(tablename_objects);
 	}
-	
+
 	/**
 	 * Makes the string conform to the requirements for impala column names.
 	 * I.e. remove braces, replace non word characters, trim spaces.
@@ -456,57 +485,107 @@ public class SempalaNativeLoader {
 		// Space is a nonword character so trim before replacing chars.
 		return s.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
 	}
-	
+
 	/**
 	 * The main routine.
-	 * 
-	 * @param args
-	 *            The arguments passed to the program
+	 *
+	 * @param args The arguments passed to the program
 	 */
 	public static void main(String[] args) {
 
 		Options options = new Options();
 
-		options.addOption(Option.builder("i").longOpt("input").desc("The HDFS location of the RDF data (N-Triples).")
-				.hasArg().required().build());
-
-		options.addOption(Option.builder("P").longOpt("prefix-file")
-				.desc("The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.").hasArg()
-				.required(false).build());
-
-		options.addOption(Option.builder("ft").longOpt("field-terminator")
-				.desc("The character used to separate the fields in the data. (Defaults to '\\t')").hasArg()
-				.required(false).build());
-
-		options.addOption(Option.builder("lt").longOpt("line-terminator")
-				.desc("The character used to separate the lines in the data. (Defaults to '\\n')").hasArg()
-				.required(false).build());
-
-		options.addOption(Option.builder("s").longOpt("strip-dot").desc("Strip th dot in the last field (N-Triples)")
-				.required(false).build());
+		options.addOption(
+				Option.builder("i")
+				.longOpt("input")
+				.desc("The HDFS location of the RDF data (N-Triples).")
+				.hasArg()
+				.required()
+				.build()
+				);
 
 		options.addOption(
-				Option.builder("u").longOpt("unique").desc("Ignore dups from the input").required(false).build());
+				Option.builder("P")
+				.longOpt("prefix-file")
+				.desc("The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.")
+				.hasArg()
+				.required(false)
+				.build()
+				);
 
 		options.addOption(
-				Option.builder("h").longOpt("host").desc("The host to connect to.").hasArg().required().build());
-
-		options.addOption(Option.builder("p").longOpt("port").desc("The port to connect to. (Defaults to 21050)")
-				.hasArg().required(false).build());
+				Option.builder("ft")
+				.longOpt("field-terminator")
+				.desc("The character used to separate the fields in the data. (Defaults to '\\t')")
+				.hasArg()
+				.required(false)
+				.build()
+				);
 
 		options.addOption(
-				Option.builder("d").longOpt("database").desc("The database to use.").hasArg().required().build());
+				Option.builder("lt")
+				.longOpt("line-terminator")
+				.desc("The character used to separate the lines in the data. (Defaults to '\\n')")
+				.hasArg()
+				.required(false)
+				.build());
 
-		options.addOption(Option.builder("o").longOpt("output").desc("The name of the table to create.").hasArg()
-				.required().build());
+		options.addOption(
+				Option.builder("s")
+				.longOpt("strip-dot")
+				.desc("Strip th dot in the last field (N-Triples)")
+				.required(false)
+				.build());
 
-		options.addOption(Option.builder("f").longOpt("format")
+		options.addOption(
+				Option.builder("u")
+				.longOpt("unique")
+				.desc("Ignore duplicates in the input (Memoryintensive!)")
+				.required(false)
+				.build());
+
+		options.addOption(
+				Option.builder("h")
+				.longOpt("host")
+				.desc("The host to connect to.")
+				.hasArg()
+				.required()
+				.build());
+
+		options.addOption(Option.builder("p")
+				.longOpt("port")
+				.desc("The port to connect to. (Defaults to 21050)")
+				.hasArg()
+				.required(false)
+				.build());
+
+		options.addOption(
+				Option.builder("d")
+				.longOpt("database")
+				.desc("The database to use.")
+				.hasArg()
+				.required()
+				.build());
+
+		options.addOption(
+				Option.builder("o")
+				.longOpt("output")
+				.desc("The name of the table to create.")
+				.hasArg()
+				.required()
+				.build());
+
+		options.addOption(
+				Option.builder("f")
+				.longOpt("format")
 				.desc("The format to use to create the table.\n"
 						+ "raw : The standard triples format partitioned by predicate\n"
 						+ "prop : Propertytable (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
-						+ "extvp : (Not implemented)\n" //Extended Vertical Partitioning (see Master's Thesis: S2RDF, Skilevic Simon\n"
+						//+ "extvp : (Not implemented)\n" //Extended Vertical Partitioning (see Master's Thesis: S2RDF, Skilevic Simon\n"
 						+ "single : Singletable (see Master's Thesis: S2RDF, Skilevic Simon)")
-				.hasArg().required().build());
+				.hasArg()
+				.required()
+				.build());
 
 		// Parse the commandline
 		CommandLine commandLine = null;
@@ -553,6 +632,9 @@ public class SempalaNativeLoader {
 			// Connect to impalad
 			impala = new Impala(host, port, database);
 
+			// Set compression codec to snappy
+			impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
+
 			switch (format.toLowerCase()) {
 			case "raw":
 				buildTripleStoreTable(hdfs_input_directory, tablename_output);
@@ -567,11 +649,20 @@ public class SempalaNativeLoader {
 				buildSingleTable(hdfs_input_directory, tablename_output);
 				break;
 			default:
-				System.err.println("[ERROR] Format has to be one of : raw, prop, extvp, big");
+				System.err.println("[ERROR] Format has to be one of : raw, prop, extvp, single");
 				System.exit(1);
 			}
 		} catch (SQLException e) {
 			System.err.println("[ERROR] SQL exception: " + e.getLocalizedMessage());
+
+			// Drop intermediate tables
+			for (String tablename : createdTables){
+				try {
+					impala.dropTable(tablename);
+				} catch (SQLException f) {
+					System.err.println("[FATAL] Could not roll back after exception: " + f.getLocalizedMessage());
+				}
+			}
 			System.exit(1);
 		}
 	}
