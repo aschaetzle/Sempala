@@ -37,9 +37,12 @@ public final class Impala {
 //		}
     	
     	// Establish the connection to impalad
-		String impalad_url = String.format("jdbc:impala://%s:%s/%s", host, port, database);
+		String impalad_url = String.format("jdbc:impala://%s:%s/", host, port);
 		System.out.println(String.format("Connecting to impalad (%s)", impalad_url));
 		connection = DriverManager.getConnection(impalad_url);
+		connection.createStatement()
+			.executeUpdate(String.format("CREATE DATABASE IF NOT EXISTS %s", database));
+		connection.createStatement().executeUpdate(String.format("USE %s", database));
     } 
     
     @Override
