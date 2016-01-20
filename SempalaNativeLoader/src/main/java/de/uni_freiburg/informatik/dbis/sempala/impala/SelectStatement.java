@@ -68,64 +68,70 @@ public final class SelectStatement {
 	
 	
 
-	public SelectStatement crossJoin(final String table) {
-		this.joins.add(String.format("\nCROSS JOIN %s", table));
+	public SelectStatement crossJoin(final String table, boolean shuffle) {
+		this.joins.add(String.format("\nCROSS JOIN %s %s", shuffle ? "/*SHUFFLE*/" : "/*BROADCAST*/", table));
+		return this;
+	}
+	
+	
+	private SelectStatement genericJoin(final String type, final String table, boolean shuffle, final String on) {
+		this.joins.add(String.format("\n%s JOIN %s %s ON %s", type, shuffle ? "/*SHUFFLE*/" : "/*BROADCAST*/", table, on));
 		return this;
 	}
 
 	
 	
-	public SelectStatement join(final String table, final String on) {
-		this.joins.add(String.format("\nINNER JOIN %s ON %s", table, on));
+	public SelectStatement join(final String table, final String on, boolean shuffle) {
+		genericJoin("INNER", table, shuffle, on);
 		return this;
 	}
 
 	
 	
-	public SelectStatement leftJoin(final String table, final String on) {
-		this.joins.add(String.format("\nLEFT OUTER JOIN %s ON %s", table, on));
+	public SelectStatement leftJoin(final String table, final String on, boolean shuffle) {
+		genericJoin("LEFT OUTER", table, shuffle, on);
 		return this;
 	}
 	
 	
 	
-	public SelectStatement rightJoin(final String table, final String on) {
-		this.joins.add(String.format("\nRIGHT OUTER JOIN %s ON %s", table, on));
+	public SelectStatement rightJoin(final String table, final String on, boolean shuffle) {
+		genericJoin("RIGHT OUTER", table, shuffle, on);
 		return this;
 	}
 	
 	
 	
-	public SelectStatement outerJoin(final String table, final String on) {
-		this.joins.add(String.format("\nFULL OUTER JOIN %s ON %s", table, on));
+	public SelectStatement outerJoin(final String table, final String on, boolean shuffle) {
+		genericJoin("FULL OUTER", table, shuffle, on);
 		return this;
 	}
 	
 	
 	
-	public SelectStatement leftSemiJoin(final String table, final String on) {
-		this.joins.add(String.format("\nLEFT SEMI JOIN %s ON %s", table, on));
+	public SelectStatement leftSemiJoin(final String table, final String on, boolean shuffle) {
+		genericJoin("LEFT SEMI", table, shuffle, on);
 		return this;
 	}
 	
 	
 	
-	public SelectStatement rightSemiJoin(final String table, final String on) {
-		this.joins.add(String.format("\nRIGHT SEMI JOIN %s ON %s", table, on));
+	public SelectStatement rightSemiJoin(final String table, final String on, boolean shuffle) {
+		genericJoin("RIGHT SEMI", table, shuffle, on);
 		return this;
 	}
 	
 	
 	
-	public SelectStatement leftAntiJoin(final String table, final String on) {
-		this.joins.add(String.format("\nLEFT ANTI JOIN %s ON %s", table, on));
+	public SelectStatement leftAntiJoin(final String table, final String on, boolean shuffle) {
+		genericJoin("LEFT ANTI", table, shuffle, on);
 		return this;
 	}
 
 	
 	
-	public SelectStatement rightAntiJoin(final String table, final String on) {
-		this.joins.add(String.format("\nRIGHT ANTI JOIN %s ON %s", table, on));
+	public SelectStatement rightAntiJoin(final String table, final String on, boolean shuffle) {
+		genericJoin("RIGHT ANTI", table, shuffle, on);
 		return this;
 	}
 

@@ -62,6 +62,9 @@ public class SempalaNativeLoader {
 	/** Flag if duplicates in the input are to be ignored */
 	private static boolean unique;
 
+	/** Flag if shuffle strategy should be used for join operations */
+	private static boolean shuffle;
+
 	/** The map containing the prefixes */
 	private static Map<String, String> prefix_map = null;
 	
@@ -176,10 +179,10 @@ public class SempalaNativeLoader {
 		StringBuilder case_clause_builder = new StringBuilder();
 		for (Map.Entry<String, String> entry : prefix_map.entrySet()) {
 			case_clause_builder.append(String.format(
-					"\n WHEN %1$s LIKE '<%2$s%%'" + "\n THEN regexp_replace(translate(%1$s, '<>', ''), '%2$s', '%3$s')",
+					"\n\t WHEN %1$s LIKE '<%2$s%%'" + "\n\t THEN regexp_replace(translate(%1$s, '<>', ''), '%2$s', '%3$s')",
 					column_name, entry.getKey(), entry.getValue()));
 		}
-		return String.format("CASE %s \nELSE %s\nEND", case_clause_builder.toString(), column_name);
+		return String.format("CASE %s \n\tELSE %s\n\tEND", case_clause_builder.toString(), column_name);
 	}
 
 	/**
@@ -252,7 +255,8 @@ public class SempalaNativeLoader {
    	    			String.format("%s t%d", tablename_triples, i),
    	    			String.format("subjects.%2$s = t%1$d.%2$s AND t%1$d.%3$s = '%4$s'",
    	    					i, column_name_subject,
-   	    					column_name_predicate, predicates.get(i)));
+   	    					column_name_predicate, predicates.get(i)),
+   	    			shuffle);
 
 		// Create the property table "s, p, o[, p1, ...]"
 		createdTables.add(tablename_output);
@@ -429,7 +433,8 @@ public class SempalaNativeLoader {
 							column_name_subject,
 							column_name_predicate,
 							impalaConformPredicate,
-							predicate));
+							predicate),
+   	    			shuffle);
 
 			// SO_pi
 			sstmt.leftJoin(
@@ -441,7 +446,8 @@ public class SempalaNativeLoader {
 							column_name_predicate,
 							column_name_object,
 							impalaConformPredicate,
-							predicate));
+							predicate),
+   	    			shuffle);
 
 			// OS_pi
 			sstmt.leftJoin(
@@ -453,7 +459,8 @@ public class SempalaNativeLoader {
 							column_name_predicate,
 							column_name_object,
 							impalaConformPredicate,
-							predicate));
+							predicate),
+   	    			shuffle);
 		}
 
 		// Insert data into the single table using the built select stmt
@@ -496,81 +503,9 @@ public class SempalaNativeLoader {
 		Options options = new Options();
 
 		options.addOption(
-				Option.builder("i")
-				.longOpt("input")
-				.desc("The HDFS location of the RDF data (N-Triples).")
-				.hasArg()
-				.required()
-				.build()
-				);
-
-		options.addOption(
-				Option.builder("P")
-				.longOpt("prefix-file")
-				.desc("The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.")
-				.hasArg()
-				.required(false)
-				.build()
-				);
-
-		options.addOption(
-				Option.builder("ft")
-				.longOpt("field-terminator")
-				.desc("The character used to separate the fields in the data. (Defaults to '\\t')")
-				.hasArg()
-				.required(false)
-				.build()
-				);
-
-		options.addOption(
-				Option.builder("lt")
-				.longOpt("line-terminator")
-				.desc("The character used to separate the lines in the data. (Defaults to '\\n')")
-				.hasArg()
-				.required(false)
-				.build());
-
-		options.addOption(
-				Option.builder("s")
-				.longOpt("strip-dot")
-				.desc("Strip th dot in the last field (N-Triples)")
-				.required(false)
-				.build());
-
-		options.addOption(
-				Option.builder("u")
-				.longOpt("unique")
-				.desc("Ignore duplicates in the input (Memoryintensive!)")
-				.required(false)
-				.build());
-
-		options.addOption(
-				Option.builder("h")
-				.longOpt("host")
-				.desc("The host to connect to.")
-				.hasArg()
-				.required()
-				.build());
-
-		options.addOption(Option.builder("p")
-				.longOpt("port")
-				.desc("The port to connect to. (Defaults to 21050)")
-				.hasArg()
-				.required(false)
-				.build());
-
-		options.addOption(
 				Option.builder("d")
 				.longOpt("database")
 				.desc("The database to use.")
-				.hasArg()
-				.required()
-				.build());
-
-		options.addOption(
-				Option.builder("o")
-				.longOpt("output")
-				.desc("The name of the table to create.")
 				.hasArg()
 				.required()
 				.build());
@@ -585,6 +520,86 @@ public class SempalaNativeLoader {
 						+ "single : Singletable (see Master's Thesis: S2RDF, Skilevic Simon)")
 				.hasArg()
 				.required()
+				.build());
+
+		options.addOption(
+				Option.builder("F")
+				.longOpt("field-terminator")
+				.desc("The character used to separate the fields in the data. (Defaults to '\\t')")
+				.hasArg()
+				.required(false)
+				.build()
+				);
+
+		options.addOption(
+				Option.builder("h")
+				.longOpt("host")
+				.desc("The host to connect to.")
+				.hasArg()
+				.required()
+				.build());
+
+		options.addOption(
+				Option.builder("i")
+				.longOpt("input")
+				.desc("The HDFS location of the RDF data (N-Triples).")
+				.hasArg()
+				.required()
+				.build()
+				);
+
+		options.addOption(
+				Option.builder("L")
+				.longOpt("line-terminator")
+				.desc("The character used to separate the lines in the data. (Defaults to '\\n')")
+				.hasArg()
+				.required(false)
+				.build());
+
+		options.addOption(
+				Option.builder("o")
+				.longOpt("output")
+				.desc("The name of the table to create.")
+				.hasArg()
+				.required()
+				.build());
+
+		options.addOption(
+				Option.builder("p")
+				.longOpt("port")
+				.desc("The port to connect to. (Defaults to 21050)")
+				.hasArg()
+				.required(false)
+				.build());
+
+		options.addOption(
+				Option.builder("P")
+				.longOpt("prefix-file")
+				.desc("The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.")
+				.hasArg()
+				.required(false)
+				.build()
+				);
+
+		options.addOption(
+				Option.builder("s")
+				.longOpt("strip-dot")
+				.desc("Strip th dot in the last field (N-Triples)")
+				.required(false)
+				.build());
+
+		options.addOption(
+				Option.builder("S")
+				.longOpt("shuffle")
+				.desc("Use shuffle strategy for join operations")
+				.required(false)
+				.build());
+
+		options.addOption(
+				Option.builder("u")
+				.longOpt("unique")
+				.desc("Detect and ignore duplicates in the input (Memoryintensive!)")
+				.required(false)
 				.build());
 
 		// Parse the commandline
@@ -627,6 +642,7 @@ public class SempalaNativeLoader {
 		line_terminator = commandLine.getOptionValue("line-terminator", "\\n");
 		strip_dot = commandLine.hasOption("strip-dot");
 		unique = commandLine.hasOption("unique");
+		shuffle = commandLine.hasOption("shuffle");
 
 		try {
 			// Connect to impalad
@@ -654,6 +670,7 @@ public class SempalaNativeLoader {
 			}
 		} catch (SQLException e) {
 			System.err.println("[ERROR] SQL exception: " + e.getLocalizedMessage());
+			System.err.println("! ! ! Trying to roll back the operations ! ! !");
 
 			// Drop intermediate tables
 			for (String tablename : createdTables){
