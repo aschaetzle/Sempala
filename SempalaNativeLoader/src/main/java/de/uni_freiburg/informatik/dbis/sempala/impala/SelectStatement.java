@@ -34,12 +34,7 @@ public final class SelectStatement {
 	
 	
 	public ResultSet execute() throws IllegalArgumentException, SQLException {
-		System.out.print("Executing query. See webfrontend.");
-		long startTime = System.currentTimeMillis();
-		ResultSet ret = connection.createStatement().executeQuery(toString());
-		long endTime = System.currentTimeMillis();
-		System.out.println(String.format(" [%.3fs]", (float)(endTime - startTime)/1000));
-		return ret;
+		return connection.createStatement().executeQuery(toString());
 	}
 
 	
