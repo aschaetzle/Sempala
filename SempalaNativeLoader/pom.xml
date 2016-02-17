@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>de.uni_freiburg.informatik.dbis</groupId>
-    <artifactId>SempalaNativeLoader</artifactId>
+    <artifactId>Sempala</artifactId>
     <version>1.0</version>
     <packaging>jar</packaging>
-    <name>SempalaNativeLoader</name>
+    <name>Sempala</name>
     <organization>
         <name>University of Freiburg, Department of Computer Science</name>
         <url>http://www.informatik.uni-freiburg.de</url>
@@ -140,7 +140,7 @@
 						<manifest>
 							<addClasspath>true</addClasspath>
 							<classpathPrefix>lib/</classpathPrefix>
-							<mainClass>de.uni_freiburg.informatik.dbis.sempala.loader.impala.SempalaNativeLoader</mainClass>
+							<mainClass>de.uni_freiburg.informatik.dbis.sempala.Main</mainClass>
 						</manifest>
 					</archive>
 					<outputDirectory>${project.basedir}/bin</outputDirectory>
