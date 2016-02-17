@@ -1,4 +1,4 @@
-package de.uni_freiburg.informatik.dbis.sempala.impala;
+package de.uni_freiburg.informatik.dbis.sempala.util.impala;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -13,16 +13,51 @@ import java.sql.SQLException;
  * are getting implemented not until they are needed in the context of sempala.
  * If you miss something implement it!
  * 
- * @author schneidm
+ * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
  *
  */
 public final class Impala {
+	
+	/** An enumertation of the query options supported by impala 2.2 */
+	public enum QueryOption {
+		ABORT_ON_DEFAULT_LIMIT_EXCEEDED,
+		ABORT_ON_ERROR,
+		ALLOW_UNSUPPORTED_FORMATS,
+		APPX_COUNT_DISTINCT,
+		BATCH_SIZE,
+		COMPRESSION_CODEC,
+		DEBUG_ACTION,
+		DEFAULT_ORDER_BY_LIMIT,
+		DISABLE_CODEGEN,
+		DISABLE_UNSAFE_SPILLS,
+		EXEC_SINGLE_NODE_ROWS_THRESHOLD,
+		EXPLAIN_LEVEL,
+		HBASE_CACHE_BLOCKS,
+		HBASE_CACHING,
+		MAX_ERRORS,
+		MAX_IO_BUFFERS,
+		MAX_SCAN_RANGE_LENGTH,
+		MEM_LIMIT,
+		NUM_NODES,
+		NUM_SCANNER_THREADS,
+		PARQUET_COMPRESSION_CODEC,
+		PARQUET_FILE_SIZE,
+		QUERY_TIMEOUT_S,
+		REQUEST_POOL,
+		RESERVATION_REQUEST_TIMEOUT,
+		SUPPORT_START_OVER,
+		SYNC_DDL,
+		V_CPU_CORES
+	}
 
+	/** The default impalad port */ 
+	public static final String defaultPort = "21050";
+	
 	/** The connection to the impala daemon */
     private Connection connection = null;
     
     /** Creates an instance of the impala wrapper. */
-    public Impala(String host, String port, String database) throws SQLException{
+	public Impala(String host, String port, String database) throws SQLException{
         // Dynamically load the impala driver // Why is this not necessary?
 //		try {
 //	    	Class.forName("com.cloudera.impala.jdbc41.Driver");
@@ -35,13 +70,12 @@ public final class Impala {
 //		while (d.hasMoreElements()) {
 //			System.out.println(d.nextElement());
 //		}
-    	
+		
     	// Establish the connection to impalad
-		String impalad_url = String.format("jdbc:impala://%s:%s/", host, port);
+		String impalad_url = String.format("jdbc:impala://%s:%s/", host, (port!=null)?port:defaultPort);
 		System.out.println(String.format("Connecting to impalad (%s)", impalad_url));
 		connection = DriverManager.getConnection(impalad_url);
-		connection.createStatement()
-			.executeUpdate(String.format("CREATE DATABASE IF NOT EXISTS %s", database));
+		connection.createStatement().executeUpdate(String.format("CREATE DATABASE IF NOT EXISTS %s", database));
 		connection.createStatement().executeUpdate(String.format("USE %s", database));
     } 
     

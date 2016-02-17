@@ -1,8 +1,13 @@
-package de.uni_freiburg.informatik.dbis.sempala.impala;
+package de.uni_freiburg.informatik.dbis.sempala.util.impala;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 
+/**
+ * 
+ * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
+ *
+ */
 public final class InsertStatement {
 	
 	private Connection connection; 

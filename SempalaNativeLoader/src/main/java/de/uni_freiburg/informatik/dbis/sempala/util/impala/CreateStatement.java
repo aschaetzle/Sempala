@@ -1,14 +1,53 @@
-package de.uni_freiburg.informatik.dbis.sempala.impala;
+package de.uni_freiburg.informatik.dbis.sempala.util.impala;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+/**
+ * 
+ * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
+ *
+ */
 public final class CreateStatement {
 	
-	private Connection connection; 
+
+	/** An enumertation of the data types supported by impala 2.2 */
+	public enum DataType {
+		TINYINT,
+		SMALLINT,
+		INT,
+		BIGINT,
+		BOOLEAN,
+		FLOAT,
+		DOUBLE,
+		DECIMAL,
+		STRING,
+		CHAR,
+		VARCHAR,
+		TIMESTAMP
+	}
+
+	/** An enumertation of the file formats supported by impala 2.2 */
+	public enum FileFormat {
+	    PARQUET,
+	    TEXTFILE,
+	    AVRO,
+	    SEQUENCEFILE,
+	    RCFILE
+	}
 	
+	private class ColumnDefinition {
+		public final String columnName;
+		public final DataType dataType;
+		public ColumnDefinition (final String columnName, final DataType dataType){
+			this.columnName = columnName;
+			this.dataType = dataType;
+		}
+	}
+	
+	private Connection connection; 
 	private String tablename = null;
 	private Boolean external = false;
 	private Boolean ifNotExists = false;

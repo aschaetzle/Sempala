@@ -1,10 +1,15 @@
-package de.uni_freiburg.informatik.dbis.sempala.impala;
+package de.uni_freiburg.informatik.dbis.sempala.util.impala;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+/**
+ * 
+ * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
+ *
+ */
 public final class SelectStatement {
 	
 	private Connection connection; 
