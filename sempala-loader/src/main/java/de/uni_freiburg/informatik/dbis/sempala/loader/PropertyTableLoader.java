@@ -21,9 +21,9 @@ public final class PropertyTableLoader extends Loader {
 	private final String tablename_distinct_subjects = "distinct_subjects";
 
 	/** The constructor */
-	public PropertyTableLoader(Impala wrapper, String hdfsLocation, String tableName){
-		super(wrapper, hdfsLocation);
-		tablename_output = tableName;		
+	public PropertyTableLoader(Impala wrapper, String hdfsLocation){
+		super(wrapper, hdfsLocation);	
+		tablename_output = "propertytable";	
 	}
 
 	/**

@@ -52,20 +52,20 @@ public abstract class Loader {
 	protected static final String tablename_triple_table = "tripletable";
 	
 	/** The name used for RDF subject columns */
-	public String column_name_subject = "subject";
+	public String column_name_subject = "s";
 
 	/** The name used for RDF predicate columns */
-	public String column_name_predicate = "predicate";
+	public String column_name_predicate = "p";
 
 	/** The name used for RDF object columns */
-	public String column_name_object = "object";
+	public String column_name_object = "o";
 
 	/*
 	 * Output configurations  
 	 */
 		
 	/** The name of the output table */
-	protected String tablename_output;
+	public String tablename_output;
 
 	/** Indicates if shuffle strategy should be used for join operations */
 	public boolean shuffle;
@@ -117,6 +117,10 @@ public abstract class Loader {
 				BufferedReader br = new BufferedReader(new FileReader(prefix_file));
 				for (String line; (line = br.readLine()) != null;) {
 					String[] splited = line.split("\\s+");
+					if (splited.length < 2){
+						System.out.printf("Line in prefix file has invalid format. Skip. ('%s')\n", line);
+						continue;
+					}
 					prefix_map.put(splited[1].substring(1, splited[1].length() - 1), splited[0]);
 				}
 				br.close();

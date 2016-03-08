@@ -84,7 +84,6 @@ public class Main {
 		String port = commandLine.getOptionValue(OptionNames.PORT.toString());
 		String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 		String hdfsInputDirectory = commandLine.getOptionValue(OptionNames.INPUT.toString());
-		String tablenameOutput = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
 
 		// Print help if requested
 		if (commandLine.hasOption(OptionNames.HELP.toString()))
@@ -106,17 +105,20 @@ public class Main {
 		Loader loader = null;
 		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
 		if (format.equals(Format.PROPERTYTABLE.toString()))
-			loader = new PropertyTableLoader(impala, hdfsInputDirectory, tablenameOutput);
+			loader = new PropertyTableLoader(impala, hdfsInputDirectory);
 //		else if (format.equals(Format.EXTVP.toString())
 //			throw new NotImplementedException("Extended vertical partitioning is not implemented yet");
 		else if (format.equals(Format.SINGLETABLE.toString()))
-			loader = new SingleTableLoader(impala, hdfsInputDirectory, tablenameOutput);
+			loader = new SingleTableLoader(impala, hdfsInputDirectory);
 		else {
 			System.err.println("Fatal: Invalid format.");
 			printHelpAndExit(1);
 		}
 				
 		// Set the options of the loader
+		if(commandLine.hasOption(OptionNames.OUTPUT.toString()))
+			loader.tablename_output = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
+		
 		if(commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
 			loader.column_name_subject = commandLine.getOptionValue(OptionNames.COLUMN_NAME_SUBJECT.toString());
 		
@@ -262,9 +264,8 @@ public class Main {
 		options.addOption(
 				Option.builder("o")
 				.longOpt(OptionNames.OUTPUT.toString())
-				.desc("The name of the table to create.")
+				.desc("Overwrites the name of the output table.")
 				.hasArg()
-				.required()
 				.build());
 
 		options.addOption(

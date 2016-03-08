@@ -1,5 +1,8 @@
 package de.uni_freiburg.informatik.dbis.sempala.loader.sql;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -57,7 +60,7 @@ public final class Impala {
     private Connection connection = null;
     
     /** Creates an instance of the impala wrapper. */
-	public Impala(String host, String port, String database) throws SQLException{
+	public Impala(String host, String port, String database) throws SQLException {
         // Dynamically load the impala driver // Why is this not necessary?
 //		try {
 //	    	Class.forName("com.cloudera.impala.jdbc41.Driver");
@@ -75,7 +78,34 @@ public final class Impala {
 		String impalad_url = String.format("jdbc:impala://%s:%s/", host, (port!=null)?port:defaultPort);
 		System.out.println(String.format("Connecting to impalad (%s)", impalad_url));
 		connection = DriverManager.getConnection(impalad_url);
-		connection.createStatement().executeUpdate(String.format("CREATE DATABASE IF NOT EXISTS %s", database));
+		try {
+			// Try to create the database
+			connection.createStatement().executeUpdate(String.format("CREATE DATABASE %s", database));
+		} catch (SQLException e) {
+			// TODO: Make sure this is the exception we expect (database exists)
+			// Ask which action should be taken
+			inputloop: while (true) {
+				System.out.printf("Database '%s' exists. (D)rop it, (u)se it, (a)bort? [d/u/a]: ", database);
+				BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+				String input = null;
+				try {
+					input = br.readLine().toLowerCase();			
+				} catch (IOException e1) {
+					e1.printStackTrace();
+					System.exit(1);
+				}
+				switch (input) {
+				case "d":
+					connection.createStatement().executeUpdate(String.format("DROP DATABASE %s CASCADE", database));
+					connection.createStatement().executeUpdate(String.format("CREATE DATABASE IF NOT EXISTS %s", database));
+					break inputloop;
+				case "u":
+					break inputloop;
+				case "a":
+					System.exit(1);		
+				}
+			}
+		} 
 		connection.createStatement().executeUpdate(String.format("USE %s", database));
     } 
     

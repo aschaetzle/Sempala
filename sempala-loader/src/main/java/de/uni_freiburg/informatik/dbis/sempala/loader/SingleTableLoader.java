@@ -25,9 +25,9 @@ public final class SingleTableLoader extends Loader {
 	private final String tablename_distinct_op_relations = "distinct_op_relations";
 	
 	/** The constructor */
-	public SingleTableLoader(Impala wrapper, String hdfsLocation, String tableName){
+	public SingleTableLoader(Impala wrapper, String hdfsLocation){
 		super(wrapper, hdfsLocation);
-		tablename_output = tableName;		
+		tablename_output = "singletable";
 	}
 
 	/**
