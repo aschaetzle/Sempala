@@ -1,7 +1,6 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.op;
 
 import com.hp.hpl.jena.shared.PrefixMapping;
-import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.algebra.op.OpProject;
 import com.hp.hpl.jena.sparql.core.Var;
 
@@ -37,12 +36,9 @@ public class ImpalaProject extends ImpalaOp1 {
 		Select projection = new Select(this.getResultName());
 		
 		// Add selectors (subset of result schema)
-		boolean first = true;
 		for (Var var : this.opProject.getVars()) {
 			projection.addSelector(var.getName(), resultSchema.get(var.getName()));
-			first = false;
 		}
-		
 		
 		// set from
 		projection.setFrom(child.toNamedString());

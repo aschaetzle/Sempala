@@ -1,11 +1,7 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.sparql;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Stack;
-
-import javax.naming.spi.DirStateFactory.Result;
 
 import com.hp.hpl.jena.shared.PrefixMapping;
 import com.hp.hpl.jena.sparql.expr.E_Add;
@@ -47,6 +43,8 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
  */
 public class ExprTranslator implements ExprVisitor {
 
+	// TODO: Proper implementation
+	@SuppressWarnings("unused")
     private boolean expandPrefixes;
     private final Stack<String> stack;
     private final PrefixMapping prefixes;

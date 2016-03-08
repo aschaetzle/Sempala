@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.jena.atlas.lib.NotImplemented;
-
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.shared.PrefixMapping;
@@ -41,7 +39,6 @@ public class TripleGroup {
 
 	// choose triplestore as predicate unbound
 	private boolean selectFromTripleStore = false;
-	private boolean selectPredicateOnlny = false;
 
 	PrefixMapping prefixMapping;
 
@@ -49,15 +46,9 @@ public class TripleGroup {
 
 	public TripleGroup(String tablename, PrefixMapping mapping,
 			boolean selectFromTripleStore) {
-		this(tablename, mapping, selectFromTripleStore, false);
-	}
-
-	public TripleGroup(String tablename, PrefixMapping mapping,
-			boolean selectFromTripleStore, boolean selectPredicateOnlny) {
 		this.name = tablename;
 		this.prefixMapping = mapping;
 		this.selectFromTripleStore = selectFromTripleStore;
-		this.selectPredicateOnlny = selectPredicateOnlny;
 	}
 
 	public void add(Triple triple) {
@@ -189,7 +180,7 @@ public class TripleGroup {
 					this.mapping, select.getName());
 			for (Triple triple : crossjoin) {
 				TripleGroup group = new TripleGroup(this.name + "_"
-						+ subQueries++, this.prefixMapping, false, true);
+						+ subQueries++, this.prefixMapping, false);
 				// group.setMapping(mapping);
 				group.add(triple);
 				rights.add(group.translate());

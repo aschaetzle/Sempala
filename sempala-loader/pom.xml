@@ -44,6 +44,13 @@
             <artifactId>hive-metastore</artifactId>
             <version>1.1.0-cdh5.4.5</version>
             <scope>runtime</scope>
+            <!-- Exclude transitive dependencies -->
+			<exclusions>
+			  <exclusion>
+			    <groupId>*</groupId>
+			    <artifactId>*</artifactId>
+			  </exclusion>
+			</exclusions>
         </dependency>
         <!-- contains /org/apache/hive/service/cli/thrift/ aka TCLIServiceClient -->
         <dependency> 
@@ -51,6 +58,13 @@
             <artifactId>hive-service</artifactId>
             <version>1.1.0-cdh5.4.5</version>
             <scope>runtime</scope>
+            <!-- Exclude transitive dependencies -->
+			<exclusions>
+			  <exclusion>
+			    <groupId>*</groupId>
+			    <artifactId>*</artifactId>
+			  </exclusion>
+			</exclusions>
         </dependency>
         <!--contains /org/apache/hadoop/hive/ql/plan/api/ aka ql-->
         <dependency>
@@ -58,6 +72,13 @@
             <artifactId>hive-exec</artifactId>
             <version>0.13.0</version>
             <scope>runtime</scope>
+            <!-- Exclude transitive dependencies -->
+			<exclusions>
+			  <exclusion>
+			    <groupId>*</groupId>
+			    <artifactId>*</artifactId>
+			  </exclusion>
+			</exclusions>
         </dependency> 
         <dependency>
             <groupId>org.apache.thrift</groupId>

@@ -15,6 +15,8 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
  */
 public class ImpalaReduced extends ImpalaOp1 {
 
+	// TODO: Proper implementation
+	@SuppressWarnings("unused")
 	private final OpReduced opReduced;
 
 	public ImpalaReduced(OpReduced _opReduced, ImpalaOp _subOp,

@@ -9,7 +9,6 @@ public class Schema {
 			Map<String, String[]> original, String table) {
 		HashMap<String, String[]> result = new HashMap<String, String[]>();
 		for (String key : original.keySet()) {
-			String[] entry = original.get(key);
 			result.put(key, new String[] { table, key });
 
 		}

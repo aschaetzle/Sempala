@@ -15,7 +15,10 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
  */
 public class ImpalaSequence extends ImpalaOpN {
 
+	// TODO: Proper implementation
+	@SuppressWarnings("unused")
     private final OpSequence opSequence;
+	@SuppressWarnings("unused")
     private ArrayList<String> intermediateSchema;
 
 

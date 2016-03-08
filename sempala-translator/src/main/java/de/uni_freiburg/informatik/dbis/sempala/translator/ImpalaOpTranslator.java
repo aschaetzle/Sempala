@@ -39,8 +39,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 	// Expand prefixes or not
 	private boolean expandPrefixes;
 	// Count the occurences of an operator
-	private int countBGP, countJoin, countLeftJoin, countUnion, countSequence,
-			countFilter;
+	private int countBGP, countJoin, countLeftJoin, countUnion, countFilter;
 
 	private Stack<SQLStatement> stack = new Stack<SQLStatement>();
 
@@ -52,7 +51,6 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 		countJoin = 0;
 		countLeftJoin = 0;
 		countUnion = 0;
-		countSequence = 0;
 		countFilter = 0;
 	}
 

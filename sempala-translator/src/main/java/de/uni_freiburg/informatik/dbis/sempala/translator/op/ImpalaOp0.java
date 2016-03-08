@@ -1,6 +1,5 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.op;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.hp.hpl.jena.shared.PrefixMapping;

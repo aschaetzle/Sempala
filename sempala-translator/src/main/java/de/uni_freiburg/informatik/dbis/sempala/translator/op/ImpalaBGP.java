@@ -68,8 +68,6 @@ public class ImpalaBGP extends ImpalaOp0 {
 			tripleGroups.get(key).add(triple);
 		}
 
-		boolean onlyTripleStore = false;
-
 		TripleGroup group = null;
 		ArrayList<TripleGroup> groups = new ArrayList<TripleGroup>();
 		groups.addAll(tripleGroups.values());

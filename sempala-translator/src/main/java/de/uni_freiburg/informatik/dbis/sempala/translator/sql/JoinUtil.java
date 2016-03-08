@@ -1,11 +1,8 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.jena.atlas.lib.NotImplemented;
 
 public class JoinUtil {
 
@@ -25,7 +22,7 @@ public class JoinUtil {
 		ArrayList<String> sharedVars = getSharedVars(leftSchema, rightSchema);
 		if (sharedVars.size() == 0) {
 			System.err.println("Warning! Found cross product!");
-			return new ArrayList();
+			return new ArrayList<String>();
 		} else {
 
 			for (String var : sharedVars) {

@@ -1,8 +1,6 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.op;
 
 import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.locks.Condition;
 
 import com.hp.hpl.jena.shared.PrefixMapping;
 import com.hp.hpl.jena.sparql.algebra.op.OpFilter;

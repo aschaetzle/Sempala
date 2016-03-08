@@ -5,7 +5,6 @@ import java.util.HashMap;
 import com.hp.hpl.jena.shared.PrefixMapping;
 
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
-import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Select;
 
 /**
  *

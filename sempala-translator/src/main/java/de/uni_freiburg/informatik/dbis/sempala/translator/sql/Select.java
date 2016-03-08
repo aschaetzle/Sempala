@@ -1,8 +1,6 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class Select extends SQLStatement {

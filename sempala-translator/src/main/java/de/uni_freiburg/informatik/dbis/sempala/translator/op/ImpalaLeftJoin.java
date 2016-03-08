@@ -11,7 +11,6 @@ import com.hp.hpl.jena.sparql.algebra.op.OpLeftJoin;
 import com.hp.hpl.jena.sparql.expr.Expr;
 
 import de.uni_freiburg.informatik.dbis.sempala.translator.ImpalaOpVisitor;
-import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sparql.ExprTranslator;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Join;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinType;

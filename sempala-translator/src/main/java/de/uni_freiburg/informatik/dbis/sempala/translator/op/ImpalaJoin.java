@@ -2,17 +2,14 @@ package de.uni_freiburg.informatik.dbis.sempala.translator.op;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import com.hp.hpl.jena.shared.PrefixMapping;
 import com.hp.hpl.jena.sparql.algebra.op.OpJoin;
-import com.hp.hpl.jena.sparql.expr.Expr;
 
 import de.uni_freiburg.informatik.dbis.sempala.translator.ImpalaOpVisitor;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
-import de.uni_freiburg.informatik.dbis.sempala.translator.sparql.ExprTranslator;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Join;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinType;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinUtil;
@@ -24,7 +21,9 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Schema;
  * @author Antony Neu
  */
 public class ImpalaJoin extends ImpalaOp2 {
-
+	
+	// TODO: Proper implementation
+	@SuppressWarnings("unused")
 	private final OpJoin opJoin;
 
 	public ImpalaJoin(OpJoin _opJoin, ImpalaOp _leftOp, ImpalaOp _rightOp,

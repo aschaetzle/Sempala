@@ -4,12 +4,11 @@ import java.io.File;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
 import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
@@ -86,43 +85,68 @@ public class Main {
 	 * @param args
 	 *            commandline arguments
 	 */
-	@SuppressWarnings("static-access")
 	private static void parseInput(String[] args) {
 		// DEFINITION STAGE
+		
 		Options options = new Options();
-		Option help = new Option("h", "help", false, "print this message");
-		options.addOption(help);
-		Option optimizer = new Option("opt", "optimize", false,
-				"turn on SPARQL algebra optimization");
-		options.addOption(optimizer);
-		Option prefixes = new Option("e", "expand", false,
-				"expand URI prefixes");
-		options.addOption(prefixes);
-		Option delimit = OptionBuilder
-				.withArgName("value")
+
+		options.addOption(
+				Option.builder("h")
+				.longOpt("help")
+				.desc("print this message")
+				.build());
+		
+		options.addOption(
+				Option.builder("opt")
+				.longOpt("optimize")
+				.desc("turn on SPARQL algebra optimization")
+				.build());
+		
+		options.addOption(
+				Option.builder("e")
+				.longOpt("expand")
+				.desc("expand URI prefixes")
+				.build());
+		
+		options.addOption(
+				Option.builder("d")
+				.longOpt("delimiter")
 				.hasArg()
-				.withDescription(
-						"delimiter used in RDF triples if not whitespace")
-				.withLongOpt("delimiter").isRequired(false).create("d");
-		options.addOption(delimit);
-		Option input = OptionBuilder.withArgName("file").hasArg()
-				.withDescription("SPARQL query file to translate")
-				.withLongOpt("input").isRequired(true).create("i");
-		options.addOption(input);
-		Option output = OptionBuilder.withArgName("file").hasArg()
-				.withDescription("Imapala output script file")
-				.withLongOpt("output").isRequired(false).create
+				.argName("value")
+				.desc("delimiter used in RDF triples if not whitespace")
+				.required()
+				.build());
+		
+		options.addOption(
+				Option.builder("i")
+				.longOpt("input")
+				.hasArg()
+				.argName("file")
+				.desc("SPARQL query file to translate")
+				.required()
+				.build());
+		
+		options.addOption(
+				Option.builder("o")
+				.longOpt("output")
+				.hasArg()
+				.argName("file")
+				.desc("Imapala output script file")
+				.required()
+				.build());
+		
+		options.addOption(
+				Option.builder("f")
+				.longOpt("folder")
+				.hasArg()
+				.argName("folder")
+				.desc("Imapala output script file")
+				.required()
+				.build());
 
-				("o");
-		options.addOption(output);
-
-		Option folder = OptionBuilder.withArgName("folder").hasArg()
-				.withDescription("Imapala output script file")
-				.withLongOpt("folder").isRequired(false).create("f");
-		options.addOption(folder);
-
+		
 		// PARSING STAGE
-		CommandLineParser parser = new PosixParser();
+		CommandLineParser parser = new  DefaultParser();
 		CommandLine cmd = null;
 		try {
 			// parse the command line arguments

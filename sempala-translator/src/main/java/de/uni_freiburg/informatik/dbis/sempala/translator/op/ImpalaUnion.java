@@ -8,7 +8,6 @@ import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
 import de.uni_freiburg.informatik.dbis.sempala.translator.ImpalaOpVisitor;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
-import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Select;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Union;
 
 /**
@@ -17,6 +16,8 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Union;
  */
 public class ImpalaUnion extends ImpalaOp2 {
 
+	// TODO: Proper implementation
+	@SuppressWarnings("unused")
 	private final OpUnion opUnion;
 
 	public ImpalaUnion(OpUnion _opUnion, ImpalaOp _leftOp, ImpalaOp _rightOp,
