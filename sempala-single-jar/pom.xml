@@ -13,7 +13,7 @@
     <artifactId>sempala-single-jar</artifactId>
     <packaging>jar</packaging>
     <name>Sempala Single Jar</name>
-    
+
     <dependencies>
         <dependency>
             <groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
@@ -29,8 +29,8 @@
 
 	<build>
 		<plugins>
-				
-			<!-- Set main class + class path in manifestand put jar in ./dist/ -->
+
+			<!-- Build a jar, set main class and class path in manifest and put jar in ./dist/ -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -46,20 +46,7 @@
 					<outputDirectory>${project.basedir}/dist</outputDirectory>
 				</configuration>
 			</plugin>
-		
-			<!-- Add ./dist to clean phase -->
-			<plugin>
-				<artifactId>maven-clean-plugin</artifactId>
-				<version>3.0.0</version>
-				<configuration>
-					<filesets>
-						<fileset>
-							<directory>dist</directory>
-						</fileset>
-					</filesets>
-				</configuration>
-			</plugin>
-	
+
 			<!-- Put dependencies in ./dist/lib -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -83,7 +70,50 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
+			<!-- Build a jar with dependencies -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.4.3</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<outputDirectory>${project.basedir}/dist</outputDirectory>
+					<createDependencyReducedPom>false</createDependencyReducedPom>
+					<shadedArtifactAttached>true</shadedArtifactAttached>
+					<shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+					<minimizeJar>true</minimizeJar>
+					<transformers>
+						<transformer
+							implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+							<manifestEntries>
+								<mainClass>de.uni_freiburg.informatik.dbis.sempala.Main</mainClass>
+							</manifestEntries>
+						</transformer>
+					</transformers>
+				</configuration>
+			</plugin>
+
+			<!-- Add ./dist to clean phase -->
+			<plugin>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<filesets>
+						<fileset>
+							<directory>dist</directory>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+
 		</plugins>
-    </build>
+	</build>
 </project>
