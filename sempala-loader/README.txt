@@ -1,23 +1,15 @@
 ### WHAT IS THE PURPOSE OF THE "project_repo" DIRECTORY
 
-Impala JDBC ships with several static libraries that are not versioned. Hence
-there is no proper way to get them from a central repository as maven's or
-cloudera's. For this reason we ship the libraries in a static in project
-repository. The project repository contains only these dependecies that are
-needed for the JDBC driver, but can not be retrieved by central repositories.
-All other dependencies are resolved dynamically at build time by maven.
+Cloudera Impala JDBC connector ships with several libraries. All but the 
+connector itself are available in the maven or cloudera central repositories
+and are pulled at build time by maven. To fit in the maven architecture the
+connector is installed in a in-project repository, which behaves like a remote 
+central repository.
 
-Each of them has been manually installed into the repository using the maven
-install plugin. If the current version of impala in the static in-project repository
- should be updated, completely remove and rebuild  the project repository.
-
-To build the project repo get the JDBC driver by downloading it from cloudera.com [1]. Public
-libraries with few transitive dependencies shall be dynamically resolved by
-maven. I.e. the pom.xml has to be adjusted. However there will be some libraries
-that are not present in the central repositories. Install them in the project
-repository with the install plugin. This will take care of checksum.
-
-Example:
+To update the current version of impala in the in-project repository, completely
+remove and rebuild the project repository. To build the project repo get the
+JDBC driver by downloading it from cloudera.com [1] and install it with the
+maven install plugin. This will take care of checksum. An example:
 
   mvn install:install-file
     -DlocalRepositoryPath=project_repo
@@ -28,7 +20,7 @@ Example:
     -DartifactId=impala-jdbc-connector
     -Dversion=<version>
 
-[1] http://www.cloudera.com/content/www/en-us/downloads.html.html
+
 
 ### INSTALLING A PACKAGE
 
@@ -56,4 +48,7 @@ directory, which will be read by default. In that case, all you need to do is:
 (Source: https://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html)
 
 
+
+
+[1] http://www.cloudera.com/content/www/en-us/downloads.html.html
 
