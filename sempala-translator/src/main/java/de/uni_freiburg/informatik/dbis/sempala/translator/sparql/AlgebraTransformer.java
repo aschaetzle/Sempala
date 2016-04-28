@@ -17,7 +17,9 @@ import com.hp.hpl.jena.sparql.algebra.op.OpSequence;
 import com.hp.hpl.jena.sparql.algebra.op.OpSlice;
 import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
 
-import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaBGP;
+import de.uni_freiburg.informatik.dbis.sempala.translator.Format;
+import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaBgpPropertyTable;
+import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaBgpSingleTable;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaDistinct;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaFilter;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaJoin;
@@ -38,11 +40,13 @@ public class AlgebraTransformer extends OpVisitorBase {
 
 	private final Stack<ImpalaOp> stack;
 	private final PrefixMapping prefixes;
+	private final Format format;
 
 
-	public AlgebraTransformer(PrefixMapping _prefixes) {
+	public AlgebraTransformer(PrefixMapping prefixes, Format format) {
 		stack = new Stack<ImpalaOp>();
-		prefixes = _prefixes;
+		this.prefixes = prefixes;
+		this.format = format;
 	}
 
 	public ImpalaOp transform(Op op) {
@@ -50,11 +54,16 @@ public class AlgebraTransformer extends OpVisitorBase {
 		return stack.pop();
 	}
 
-
-
 	@Override
 	public void visit(OpBGP opBGP) {
-		stack.push(new ImpalaBGP(opBGP, prefixes));
+		switch (format) {
+		case PROPERTYTABLE:
+			stack.push(new ImpalaBgpPropertyTable(opBGP, prefixes));
+			break;
+		case SINGLETABLE:
+			stack.push(new ImpalaBgpSingleTable(opBGP, prefixes));
+			break;
+		}
 	}
 
 	@Override
@@ -95,7 +104,7 @@ public class AlgebraTransformer extends OpVisitorBase {
 	} */
 
 	@Override
-	 public void visit(OpUnion opUnion) {
+	public void visit(OpUnion opUnion) {
 		ImpalaOp rightOp = stack.pop();
 		ImpalaOp leftOp = stack.pop();
 		stack.push(new ImpalaUnion(opUnion, leftOp, rightOp, prefixes));
@@ -125,10 +134,10 @@ public class AlgebraTransformer extends OpVisitorBase {
 		// change order of tree nodes
 		if(subOp instanceof ImpalaProject){
 			ImpalaSlice slice = new ImpalaSlice(opSlice, ((ImpalaProject) subOp).getSubOp(), prefixes);
-			ImpalaProject project = new ImpalaProject(((ImpalaProject) subOp).getOpProject(), (ImpalaOp)slice, prefixes);
+			ImpalaProject project = new ImpalaProject(((ImpalaProject) subOp).getOpProject(), slice, prefixes);
 			stack.push(project);
 		} else {
-		stack.push(new ImpalaSlice(opSlice, subOp, prefixes));
+			stack.push(new ImpalaSlice(opSlice, subOp, prefixes));
 		}
 	}
 

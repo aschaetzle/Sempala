@@ -11,6 +11,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
+import de.uni_freiburg.informatik.dbis.sempala.translator.Format;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 
 /**
@@ -21,11 +22,8 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
  */
 public class Main {
 
-	private static String inputFile;
-	private static String outputFile;
-	private static boolean optimize = false;
-	private static boolean expand = false;
-	private static String folderName = "";
+	private static String input;
+	private static String output;
 
 	// Define a static logger variable so that it references the corresponding
 	// Logger instance
@@ -64,54 +62,72 @@ public class Main {
 			formatter.printHelp("SparqlEvaluator", options, true);
 		}
 
+
+		/*
+		 *  Set properties of translator
+		 */
+
+		Translator translator = new Translator();
+
+		// Enable optimizations if requested
 		if (commandLine.hasOption(OptionNames.OPTIMIZE.toString())) {
-			optimize = true;
+			translator.setOptimizer(true);
 			logger.info("SPARQL Algebra optimization is turned on");
 		}
 
+		// Enable prefix expansion if requested
 		if (commandLine.hasOption(OptionNames.EXPAND.toString())) {
-			expand = true;
+			translator.setExpandPrefixes(true);
 			logger.info("URI prefix expansion is turned on");
 		}
 
-		if (commandLine.hasOption(OptionNames.INPUT.toString())) {
-			inputFile = commandLine.getOptionValue(OptionNames.INPUT.toString());
-		}
-
-		if (commandLine.hasOption(OptionNames.OUTPUT.toString())) {
-			outputFile = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
+		// Set requested format
+		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
+		if (format.equals(Format.PROPERTYTABLE.toString())) {
+			translator.setFormat(Format.PROPERTYTABLE);
+			logger.info("Format set to propertytable.");
+		} else if (format.equals(Format.SINGLETABLE.toString())) {
+			translator.setFormat(Format.SINGLETABLE);
+			logger.info("Format set to singletable.");
 		} else {
-			outputFile = commandLine.getOptionValue(OptionNames.INPUT.toString());
+			System.err.println("Fatal: Invalid format specified.");
+			System.exit(1);
 		}
 
-		if (commandLine.hasOption(OptionNames.FOLDER.toString())) {
-			folderName = commandLine.getOptionValue(OptionNames.FOLDER.toString());
-		}
+		// No check, input is required
+		input = commandLine.getOptionValue(OptionNames.INPUT.toString());
+
+		// If output is not specified use input as output
+		if ( commandLine.hasOption(OptionNames.OUTPUT.toString()) )
+			output = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
+		else
+			output = commandLine.getOptionValue(OptionNames.INPUT.toString());
 
 
 		/*
 		 *  Run translator
 		 */
 
-		if(folderName.equals("")){
-			// instantiate Translator
-			Translator translator = new Translator(inputFile, outputFile);
-			translator.setOptimizer(optimize);
-			translator.setExpandPrefixes(expand);
-			translator.translateQuery();
+		File inputFile = new File(input);
+		if (inputFile.isDirectory()){
 
-		} else {
-			File folderfile = new File(folderName);
-			for(final File fileEntry : folderfile.listFiles()){
-				if(fileEntry.getName().contains("sparql") && !fileEntry.getName().contains("log") && !fileEntry.getName().contains("sql")){
-					System.out.println("Tranlsating file "+fileEntry.getName());
-					// instantiate Translator
-					Translator translator = new Translator(fileEntry.getAbsolutePath(), fileEntry.getAbsolutePath());
-					translator.setOptimizer(optimize);
-					translator.setExpandPrefixes(expand);
+			// Run the translator for every file in the folder that matches the common sparql extensions
+			for(final File fileEntry : inputFile.listFiles()){
+				if(fileEntry.getName().matches("(.*\\.sq|.*\\.srx|.*\\.sparql)$")) { // Match only SPARQL extensions
+					System.out.println("Translating file " + fileEntry.getName());
+					translator.setInputFile(fileEntry.getAbsolutePath());
+					translator.setOutputFile(fileEntry.getAbsolutePath());
 					translator.translateQuery();
 				}
 			}
+
+		} else {
+
+			// Run the translator the for the given in- and output
+			translator.setInputFile(input);
+			translator.setOutputFile(output);
+			translator.translateQuery();
+
 		}
 	}
 
@@ -125,7 +141,7 @@ public class Main {
 	 */
 	private enum OptionNames {
 		EXPAND,
-		FOLDER,
+		FORMAT,
 		HELP,
 		INPUT,
 		OUTPUT,
@@ -136,6 +152,7 @@ public class Main {
 			return super.toString().toLowerCase();
 		}
 	}
+
 
 	/**
 	 * Builds the options for this application
@@ -154,10 +171,11 @@ public class Main {
 
 		options.addOption(
 				Option.builder("f")
-				.longOpt(OptionNames.FOLDER.toString())
+				.longOpt(OptionNames.FORMAT.toString())
+				.desc("The database format the query is built for.\n"
+						+ Format.PROPERTYTABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
+						+ Format.SINGLETABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon")
 				.hasArg()
-				.argName("folder")
-				.desc("Imapala output script file")
 				.required()
 				.build());
 
@@ -171,8 +189,8 @@ public class Main {
 				Option.builder("i")
 				.longOpt(OptionNames.INPUT.toString())
 				.hasArg()
-				.argName("file")
-				.desc("SPARQL query file to translate")
+				.argName("path")
+				.desc("SPARQL query file to translate or folder containing sparql query files.")
 				.required()
 				.build());
 
@@ -180,9 +198,8 @@ public class Main {
 				Option.builder("o")
 				.longOpt(OptionNames.OUTPUT.toString())
 				.hasArg()
-				.argName("file")
+				.argName("path")
 				.desc("Imapala output script file")
-				.required()
 				.build());
 
 		options.addOption(

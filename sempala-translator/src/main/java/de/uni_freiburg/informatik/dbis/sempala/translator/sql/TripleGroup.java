@@ -111,7 +111,7 @@ public class TripleGroup {
 				} else {
 					vars.add(subject.getName());
 					whereConditions.add(Tags.SUBJECT_COLUMN_NAME
-							+ " is not null ");
+							+ " IS NOT NULL ");
 				}
 			}
 			if (predicate.isURI()) {
@@ -125,7 +125,7 @@ public class TripleGroup {
 				// predicate is bound -> add to Filter
 				whereConditions.add(SpecialCharFilter.filter(FmtUtils
 						.stringForNode(predicate, this.prefixMapping)
-						+ " is not null"));
+						+ " IS NOT NULL"));
 
 			} else {
 				vars.add(predicate.getName());
@@ -226,7 +226,7 @@ public class TripleGroup {
 		for (int i = 0; i < this.triples.size(); i++) {
 			if (i != index
 					&& triples.get(index).getPredicate()
-							.equals(triples.get(i).getPredicate())) {
+					.equals(triples.get(i).getPredicate())) {
 				return i;
 			}
 		}

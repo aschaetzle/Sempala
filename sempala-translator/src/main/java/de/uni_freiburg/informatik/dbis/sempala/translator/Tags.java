@@ -34,13 +34,13 @@ public final class Tags {
 	public static final String LOGICAL_AND = " AND ";
 	public static final String LOGICAL_OR = " OR ";
 	public static final String LOGICAL_NOT = "NOT ";
-	public static final String BOUND = " is not NULL";
-	public static final String NOT_BOUND = " is NULL";
+	public static final String BOUND = " IS NOT NULL";
+	public static final String NOT_BOUND = " IS NULL";
 
 	public static final String NO_VAR = "#noVar";
 	public static final String NO_SUPPORT = "#noSupport";
 
-	public static final String QUERY_PREFIX = "DROP TABLE IF EXISTS result;\n Create Table result as ";
+	public static final String QUERY_PREFIX = "DROP TABLE IF EXISTS result;\n CREATE TABLE result AS ";
 	public static final String QUERY_SUFFIX = "\nPROFILE; ";
 
 	public static final String OFFSETCHAR = "\t";

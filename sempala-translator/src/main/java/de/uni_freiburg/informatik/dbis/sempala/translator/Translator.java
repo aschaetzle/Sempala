@@ -34,39 +34,43 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sparql.TransformFilter
  */
 public class Translator {
 
-	private String inputFile;
-	private String outputFile;
+	/** The input file containing the sparql query */
+	private String inputFile = null;
 
+	/** The output file to write the sql query to */
+	private String outputFile = null;
+
+	/** The format to use to build the output queries against */
+	private Format format = Format.SINGLETABLE;
+
+	/** Indicates if pefixes in the RDF Triples should be expanded or not */
 	private boolean expandPrefixes = false;
-	private boolean optimizer = true;
+
+	/** Indicates if optimizations of the SPARQL Algebra are enabled */
+	private boolean optimizer = false;
+
+	/** Indicates if BGP optimizations are enabled */
 	private boolean bgpOptimizer = true;
+
+	/** Indicates if join optimizations are enabled */
 	private boolean joinOptimizer = false;
+
+	/** Indicates if filter optimizations are enabled */
 	private boolean filterOptimizer = true;
 
 	// Define a static logger variable so that it references the corresponding Logger instance
 	private static final Logger logger = Logger.getLogger(Translator.class);
 
-
-
-	/**
-	 * Constructor of the ImpalaSPARQL translator.
-	 *
-	 * @param _inputFile SPARQL query to be translated
-	 * @param _outputFile Output script of the translator
-	 */
-	public Translator(String _inputFile, String _outputFile) {
-		inputFile = _inputFile;
-		outputFile = _outputFile;
-	}
-
-
-
 	/**
 	 * Translates the SPARQL query into a sql script for use with Impala.
 	 */
 	public void translateQuery() {
+
+		assert ! ( inputFile!=null && outputFile!=null ) : "in- and output must not be null!";
+
 		//Parse input query
 		Query query = QueryFactory.read("file:"+inputFile);
+
 		//Get prefixes defined in the query
 		PrefixMapping prefixes = query.getPrefixMapping();
 
@@ -170,7 +174,7 @@ public class Translator {
 		}
 
 		//Transform SPARQL Algebra Tree in ImpalaOp Tree
-		AlgebraTransformer transformer = new AlgebraTransformer(prefixes);
+		AlgebraTransformer transformer = new AlgebraTransformer(prefixes, format);
 		ImpalaOp impalaOpRoot = transformer.transform(opRoot);
 
 		// Print ImpalaOp Tree to log
@@ -201,7 +205,7 @@ public class Translator {
 
 
 	/*
-	 * Getters and setters
+	 * Getters and setters. See members descriptions for semantics
 	 */
 
 
@@ -225,10 +229,6 @@ public class Translator {
 		return expandPrefixes;
 	}
 
-	/**
-	 * Sets if pefixes in the RDF Triples should be expanded or not.
-	 * @param value
-	 */
 	public void setExpandPrefixes(boolean expandPrefixes) {
 		this.expandPrefixes = expandPrefixes;
 	}
@@ -237,11 +237,6 @@ public class Translator {
 		return optimizer;
 	}
 
-	/**
-	 * Enables or disables optimizations of the SPARQL Algebra.
-	 * Optimizer is enabled by default.
-	 * @param value
-	 */
 	public void setOptimizer(boolean value) {
 		this.optimizer = value;
 	}
@@ -250,11 +245,6 @@ public class Translator {
 		return bgpOptimizer;
 	}
 
-	/**
-	 * Enables or disables BGP optimizations.
-	 * BGP optimizations are enabled by default.
-	 * @param value
-	 */
 	public void setBgpOptimizer(boolean bgpOptimizer) {
 		this.bgpOptimizer = bgpOptimizer;
 	}
@@ -263,11 +253,6 @@ public class Translator {
 		return joinOptimizer;
 	}
 
-	/**
-	 * Enables or disables Join optimizations.
-	 * Join optimizations are disabled by default
-	 * @param value
-	 */
 	public void setJoinOptimizer(boolean value) {
 		this.joinOptimizer = value;
 	}
@@ -276,12 +261,15 @@ public class Translator {
 		return filterOptimizer;
 	}
 
-	/**
-	 * Enables or disables Filter optimizations.
-	 * Filter optimizations are enabled by default.
-	 * @param value
-	 */
 	public void setFilterOptimizer(boolean value) {
 		this.filterOptimizer = value;
+	}
+
+	public Format getFormat() {
+		return format;
+	}
+
+	public void setFormat(Format format) {
+		this.format = format;
 	}
 }

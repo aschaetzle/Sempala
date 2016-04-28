@@ -5,26 +5,25 @@ import java.util.Map;
 
 public class Select extends SQLStatement {
 
+	protected String from = "";
+	protected String where = "";
+	protected String order = "";
+	private int limit = -1;
+	private int offset = -1;
+	HashMap<String, String[]> selection = new HashMap<String, String[]>();
+
 	/*
 	 * Subset of schema
 	 */
-	HashMap<String, String[]> selection = new HashMap<String, String[]>();
 
 	public Select(String tablename) {
 		super(tablename);
 	}
 
-	private int limit = -1;
-	private int offset = -1;
-
-
+	@Override
 	public void addSelector(String alias, String[] selector) {
 		selection.put(alias, selector);
 	}
-
-	protected String order = "";
-
-	protected String from = "";
 
 	public void appendToFrom(String s) {
 		from += s;
@@ -34,8 +33,7 @@ public class Select extends SQLStatement {
 		this.from = from;
 	}
 
-	protected String where = "";
-
+	@Override
 	public void addWhereConjunction(String condition) {
 		if (where.equals("")) {
 			where += condition;
@@ -44,30 +42,34 @@ public class Select extends SQLStatement {
 		}
 	}
 
+	@Override
 	public void addOrder(String by) {
 		this.order = by;
 	}
 
+	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("");
 		sb.append("(SELECT ");
 		//if(isDistinct)
-			sb.append(" DISTINCT ");
+		sb.append(" DISTINCT ");
 		if (selection.size() == 0) {
 			sb.append("* ");
 		} else {
 			boolean first = true;
 			for (String key : selection.keySet()) {
 				String[] selector = selection.get(key);
-				if (first) {
-					first = false;
-				} else {
-					sb.append(", ");
-				}
-				if (selector.length > 1) {
-					sb.append(selector[0]+"." + selector[1]+  " AS " + "\"" + key + "\" ");
-				} else {
-					sb.append(selector[0]+  " AS " + "\"" + key + "\" ");
+				if (selector!= null) {
+					if (first) {
+						first = false;
+					} else {
+						sb.append(", ");
+					}
+					if (selector.length > 1) {
+						sb.append(selector[0]+"." + selector[1]+  " AS " + "\"" + key + "\" ");
+					} else {
+						sb.append(selector[0]+  " AS " + "\"" + key + "\" ");
+					}
 				}
 			}
 		}
@@ -124,14 +126,14 @@ public class Select extends SQLStatement {
 	public void removeNullFilters() {
 		String[] filters =  where.split(" AND ");
 		for(int i = 0; i < filters.length; i++){
-			if(filters[i].toLowerCase().contains("is not null")){
+			if(filters[i].toLowerCase().contains("IS NOT NULL")){
 				filters[i] = "";
 			}
 		}
 		this.where = "";
 		for(String filter : filters){
 			if(!filter.equals(""))
-			this.addWhereConjunction(filter);
+				this.addWhereConjunction(filter);
 		}
 
 	}
@@ -142,6 +144,7 @@ public class Select extends SQLStatement {
 	}
 
 
+	@Override
 	public String getName(){
 		return this.statementName;
 	}
