@@ -32,10 +32,10 @@ public class JoinUtil {
 		}
 		return conditions;
 	}
-	
+
 	public static String generateConjunction(List<String> conditions){
 		String result = "";
-		
+
 		boolean first = true;
 		for (String cond : conditions) {
 			if (!first) {

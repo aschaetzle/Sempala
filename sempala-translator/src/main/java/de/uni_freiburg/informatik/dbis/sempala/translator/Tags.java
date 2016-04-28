@@ -3,7 +3,7 @@ package de.uni_freiburg.informatik.dbis.sempala.translator;
 import java.util.HashMap;
 
 /**
- * 
+ *
  * @author ALKA2008
  */
 public final class Tags {

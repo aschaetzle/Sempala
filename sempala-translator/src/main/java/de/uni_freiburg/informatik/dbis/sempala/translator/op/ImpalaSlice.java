@@ -8,7 +8,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaSlice extends ImpalaOp1 {

@@ -12,7 +12,7 @@ public class Join extends SQLStatement {
 	private Select wrapper;
 	private List<String> onStrings;
 	private JoinType type = JoinType.natural;
-	
+
 	public Join(String tablename, SQLStatement left, List<SQLStatement> rights,
 			List<String> onStrings, JoinType type) {
 		super(tablename);
@@ -98,7 +98,7 @@ public class Join extends SQLStatement {
 	@Override
 	public void addWhereConjunction(String where) {
 		wrapper.addWhereConjunction(where);
-		
+
 	}
 
 	@Override
@@ -109,7 +109,7 @@ public class Join extends SQLStatement {
 	@Override
 	public void updateSelection(Map<String, String[]> resultSchema) {
 		wrapper.updateSelection(resultSchema);
-		
+
 	}
 
 	@Override
@@ -124,7 +124,7 @@ public class Join extends SQLStatement {
 	@Override
 	public void addLimit(int i) {
 		wrapper.addLimit(i);
-		
+
 	}
 
 	@Override
@@ -137,6 +137,6 @@ public class Join extends SQLStatement {
 		return this.wrapper.getOrder();
 	}
 
-	
+
 
 }

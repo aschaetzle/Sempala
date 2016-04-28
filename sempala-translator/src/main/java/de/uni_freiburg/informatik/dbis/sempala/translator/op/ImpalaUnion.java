@@ -11,7 +11,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Union;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaUnion extends ImpalaOp2 {
@@ -39,11 +39,11 @@ public class ImpalaUnion extends ImpalaOp2 {
 		for(String col : onlyRightVars){
 			left.addSelector(col, new String[]{ "null"});
 		}
-		
+
 		// union of schema
 		leftOp.getSchema().putAll(rightOp.getSchema());
 		resultSchema = leftOp.getSchema();
-		
+
 		return new Union(getResultName(), left, right );
 	}
 

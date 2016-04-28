@@ -34,185 +34,185 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sparql.TransformFilter
  */
 public class Translator {
 
-    private String inputFile;
-    private String outputFile;
-    
-    private boolean expandPrefixes = false;
-    private boolean optimizer = true;
-    private boolean bgpOptimizer = true;
-    private boolean joinOptimizer = false;
-    private boolean filterOptimizer = true;
-	
+	private String inputFile;
+	private String outputFile;
+
+	private boolean expandPrefixes = false;
+	private boolean optimizer = true;
+	private boolean bgpOptimizer = true;
+	private boolean joinOptimizer = false;
+	private boolean filterOptimizer = true;
+
 	// Define a static logger variable so that it references the corresponding Logger instance
 	private static final Logger logger = Logger.getLogger(Translator.class);
 
 
-    
-    /**
-     * Constructor of the ImpalaSPARQL translator.
-     *
-     * @param _inputFile SPARQL query to be translated
-     * @param _outputFile Output script of the translator
-     */
-    public Translator(String _inputFile, String _outputFile) {
-        inputFile = _inputFile;
-        outputFile = _outputFile;
-    }
-    
+
+	/**
+	 * Constructor of the ImpalaSPARQL translator.
+	 *
+	 * @param _inputFile SPARQL query to be translated
+	 * @param _outputFile Output script of the translator
+	 */
+	public Translator(String _inputFile, String _outputFile) {
+		inputFile = _inputFile;
+		outputFile = _outputFile;
+	}
 
 
-    /**
-     * Translates the SPARQL query into a sql script for use with Impala.
-     */
-    public void translateQuery() {
-        //Parse input query
-        Query query = QueryFactory.read("file:"+inputFile);
-        //Get prefixes defined in the query
-        PrefixMapping prefixes = query.getPrefixMapping();
 
-        //Generate translation logfile
-        PrintWriter logWriter;
-        try {
-            logWriter = new PrintWriter(outputFile + ".log");
-        } catch (FileNotFoundException ex) {
-            logger.warn("Cannot open translation logfile, using stdout instead!", ex);
-            logWriter = new PrintWriter(System.out);
-        }
+	/**
+	 * Translates the SPARQL query into a sql script for use with Impala.
+	 */
+	public void translateQuery() {
+		//Parse input query
+		Query query = QueryFactory.read("file:"+inputFile);
+		//Get prefixes defined in the query
+		PrefixMapping prefixes = query.getPrefixMapping();
 
-        //Output original query to log
-        logWriter.println("SPARQL Input Query:");
-        logWriter.println("###################");
-        logWriter.println(query);
-        logWriter.println();
-        //Print Algebra Using SSE, true -> optimiert
-        //PrintUtils.printOp(query, true);
+		//Generate translation logfile
+		PrintWriter logWriter;
+		try {
+			logWriter = new PrintWriter(outputFile + ".log");
+		} catch (FileNotFoundException ex) {
+			logger.warn("Cannot open translation logfile, using stdout instead!", ex);
+			logWriter = new PrintWriter(System.out);
+		}
 
-        //Generate Algebra Tree of the SPARQL query
-        Op opRoot = Algebra.compile(query);
+		//Output original query to log
+		logWriter.println("SPARQL Input Query:");
+		logWriter.println("###################");
+		logWriter.println(query);
+		logWriter.println();
+		//Print Algebra Using SSE, true -> optimiert
+		//PrintUtils.printOp(query, true);
 
-        //Output original Algebra Tree to log
-        logWriter.println("Algebra Tree of Query:");
-        logWriter.println("######################");
-        logWriter.println(opRoot.toString(prefixes));
-        logWriter.println();
+		//Generate Algebra Tree of the SPARQL query
+		Op opRoot = Algebra.compile(query);
 
-        //Optimize Algebra Tree if optimizer is enabled
-        if(optimizer) {
-            /*
-             * Algebra Optimierer führt High-Level Transformationen aus (z.B. Filter Equalilty)
-             * -> nicht BGP reordering
-             *
-             * zunächst muss gesetzt werden was alles optimiert werden soll, z.B.
-             * ARQ.set(ARQ.optFilterEquality, true);
-             * oder
-             * ARQ.set(ARQ.optFilterPlacement, true);
-             *
-             * Danach kann dann Algebra.optimize(op) aufgerufen werden
-             */
+		//Output original Algebra Tree to log
+		logWriter.println("Algebra Tree of Query:");
+		logWriter.println("######################");
+		logWriter.println(opRoot.toString(prefixes));
+		logWriter.println();
 
-            /*
-             * Algebra.optimize always executes TransformJoinStrategy -> not always wanted
-             * ARQ.set(ARQ.optFilterPlacement, false);
-             * ARQ.set(ARQ.optFilterEquality, true);
-             * ARQ.set(ARQ.optFilterConjunction, true);
-             * ARQ.set(ARQ.optFilterDisjunction, true);
-             * opRoot = Algebra.optimize(opRoot);
-             */
+		//Optimize Algebra Tree if optimizer is enabled
+		if(optimizer) {
+			/*
+			 * Algebra Optimierer führt High-Level Transformationen aus (z.B. Filter Equalilty)
+			 * -> nicht BGP reordering
+			 *
+			 * zunächst muss gesetzt werden was alles optimiert werden soll, z.B.
+			 * ARQ.set(ARQ.optFilterEquality, true);
+			 * oder
+			 * ARQ.set(ARQ.optFilterPlacement, true);
+			 *
+			 * Danach kann dann Algebra.optimize(op) aufgerufen werden
+			 */
 
-            /*
-             * Reihenfolge der Optimierungen wichtig!
-             *
-             * 1. Transformationen der SPARQL-Algebra bis auf FilterPlacement -> könnte Kreuzprodukte erzeugen
-             * 2. BGPOptimizer -> Neuanordnung der Triple im BGP zur Vermeidung von Kreuzprodukten und zur Minimierung von Joins
-             * 3. FilterPlacement -> Vorziehen des Filters soweit möglich
-             */
+			/*
+			 * Algebra.optimize always executes TransformJoinStrategy -> not always wanted
+			 * ARQ.set(ARQ.optFilterPlacement, false);
+			 * ARQ.set(ARQ.optFilterEquality, true);
+			 * ARQ.set(ARQ.optFilterConjunction, true);
+			 * ARQ.set(ARQ.optFilterDisjunction, true);
+			 * opRoot = Algebra.optimize(opRoot);
+			 */
 
-            if(joinOptimizer) {
-                TransformJoinStrategy joinStrategy = new TransformJoinStrategy();
-                opRoot = Transformer.transform(joinStrategy, opRoot);
-            }
+			/*
+			 * Reihenfolge der Optimierungen wichtig!
+			 *
+			 * 1. Transformationen der SPARQL-Algebra bis auf FilterPlacement -> könnte Kreuzprodukte erzeugen
+			 * 2. BGPOptimizer -> Neuanordnung der Triple im BGP zur Vermeidung von Kreuzprodukten und zur Minimierung von Joins
+			 * 3. FilterPlacement -> Vorziehen des Filters soweit möglich
+			 */
 
-            if(filterOptimizer) {
-                //ARQ optimization of Filter conjunction
-                TransformFilterConjunction filterConjunction = new TransformFilterConjunction();
-                opRoot = Transformer.transform(filterConjunction, opRoot);
+			if(joinOptimizer) {
+				TransformJoinStrategy joinStrategy = new TransformJoinStrategy();
+				opRoot = Transformer.transform(joinStrategy, opRoot);
+			}
 
-                //ARQ optimization of Filter disjunction
-                TransformFilterDisjunction filterDisjunction = new TransformFilterDisjunction();
-                opRoot = Transformer.transform(filterDisjunction, opRoot);
+			if(filterOptimizer) {
+				//ARQ optimization of Filter conjunction
+				TransformFilterConjunction filterConjunction = new TransformFilterConjunction();
+				opRoot = Transformer.transform(filterConjunction, opRoot);
 
-                //ARQ optimization of Filter equality
-                TransformFilterEquality filterEquality = new TransformFilterEquality();
-                opRoot = Transformer.transform(filterEquality, opRoot);
+				//ARQ optimization of Filter disjunction
+				TransformFilterDisjunction filterDisjunction = new TransformFilterDisjunction();
+				opRoot = Transformer.transform(filterDisjunction, opRoot);
 
-                //Own optimization of Filter variable equality
-                TransformFilterVarEquality filterVarEquality = new TransformFilterVarEquality();
-                opRoot = filterVarEquality.transform(opRoot);
-            }
+				//ARQ optimization of Filter equality
+				TransformFilterEquality filterEquality = new TransformFilterEquality();
+				opRoot = Transformer.transform(filterEquality, opRoot);
 
-            if(bgpOptimizer) {
-                //Own BGP optimizer using variable counting heuristics
-                BGPOptimizerNoStats bgpOptimizer = new BGPOptimizerNoStats();
-                opRoot = bgpOptimizer.optimize(opRoot);
-            }
+				//Own optimization of Filter variable equality
+				TransformFilterVarEquality filterVarEquality = new TransformFilterVarEquality();
+				opRoot = filterVarEquality.transform(opRoot);
+			}
 
-            if(filterOptimizer) {
-                //ARQ optimization of Filter placement
-                TransformFilterPlacement filterPlacement = new TransformFilterPlacement();
-                opRoot = Transformer.transform(filterPlacement, opRoot);
-            }
+			if(bgpOptimizer) {
+				//Own BGP optimizer using variable counting heuristics
+				BGPOptimizerNoStats bgpOptimizer = new BGPOptimizerNoStats();
+				opRoot = bgpOptimizer.optimize(opRoot);
+			}
 
-            //Output optimized Algebra Tree to log file
-            logWriter.println("optimized Algebra Tree of Query:");
-            logWriter.println("################################");
-            logWriter.println(opRoot.toString(prefixes));
-            logWriter.println();
-        }
+			if(filterOptimizer) {
+				//ARQ optimization of Filter placement
+				TransformFilterPlacement filterPlacement = new TransformFilterPlacement();
+				opRoot = Transformer.transform(filterPlacement, opRoot);
+			}
 
-        //Transform SPARQL Algebra Tree in ImpalaOp Tree
-        AlgebraTransformer transformer = new AlgebraTransformer(prefixes);
-        ImpalaOp impalaOpRoot = transformer.transform(opRoot);
+			//Output optimized Algebra Tree to log file
+			logWriter.println("optimized Algebra Tree of Query:");
+			logWriter.println("################################");
+			logWriter.println(opRoot.toString(prefixes));
+			logWriter.println();
+		}
 
-        // Print ImpalaOp Tree to log
-        logWriter.println("ImpalaOp Tree:");
-        logWriter.println("###########");
-        ImpalaOpPrettyPrinter.print(logWriter, impalaOpRoot);
-        //close log file
-        logWriter.close();
+		//Transform SPARQL Algebra Tree in ImpalaOp Tree
+		AlgebraTransformer transformer = new AlgebraTransformer(prefixes);
+		ImpalaOp impalaOpRoot = transformer.transform(opRoot);
 
-        // Walk through ImpalaOp Tree and generate translation
-       
-        // Translate the query
-        String sqlScript = "";
-        ImpalaOpTranslator translator = new ImpalaOpTranslator();
-        sqlScript += translator.translate(impalaOpRoot, expandPrefixes);
-        
-        // Print resulting SQL script program to output file
-        PrintWriter sqlWriter;
-        try {
-        	sqlWriter = new PrintWriter(outputFile+".sql");
-        	sqlWriter.print(sqlScript);
-        	sqlWriter.close();
-        } catch (Exception ex) {
-            logger.fatal("Cannot open output file!", ex);
-            System.exit(-1);
-        }
-    }
+		// Print ImpalaOp Tree to log
+		logWriter.println("ImpalaOp Tree:");
+		logWriter.println("###########");
+		ImpalaOpPrettyPrinter.print(logWriter, impalaOpRoot);
+		//close log file
+		logWriter.close();
 
-    
-    /*
-     * Getters and setters 
-     */
-    
-    
-    public String inputFile() {
+		// Walk through ImpalaOp Tree and generate translation
+
+		// Translate the query
+		String sqlScript = "";
+		ImpalaOpTranslator translator = new ImpalaOpTranslator();
+		sqlScript += translator.translate(impalaOpRoot, expandPrefixes);
+
+		// Print resulting SQL script program to output file
+		PrintWriter sqlWriter;
+		try {
+			sqlWriter = new PrintWriter(outputFile+".sql");
+			sqlWriter.print(sqlScript);
+			sqlWriter.close();
+		} catch (Exception ex) {
+			logger.fatal("Cannot open output file!", ex);
+			System.exit(-1);
+		}
+	}
+
+
+	/*
+	 * Getters and setters
+	 */
+
+
+	public String inputFile() {
 		return inputFile;
 	}
-    
+
 	public void setInputFile(String inputFile) {
 		this.inputFile = inputFile;
 	}
-	
+
 	public String outputFile() {
 		return outputFile;
 	}
@@ -220,15 +220,15 @@ public class Translator {
 	public void setOutputFile(String outputFile) {
 		this.outputFile = outputFile;
 	}
-	
+
 	public boolean expandPrefixes() {
 		return expandPrefixes;
 	}
 
-    /**
-     * Sets if pefixes in the RDF Triples should be expanded or not.
-     * @param value
-     */
+	/**
+	 * Sets if pefixes in the RDF Triples should be expanded or not.
+	 * @param value
+	 */
 	public void setExpandPrefixes(boolean expandPrefixes) {
 		this.expandPrefixes = expandPrefixes;
 	}
@@ -236,25 +236,25 @@ public class Translator {
 	public boolean optimizer() {
 		return optimizer;
 	}
-	
-    /**
-     * Enables or disables optimizations of the SPARQL Algebra.
-     * Optimizer is enabled by default.
-     * @param value
-     */
-    public void setOptimizer(boolean value) {
-        this.optimizer = value;
-    }
-	
+
+	/**
+	 * Enables or disables optimizations of the SPARQL Algebra.
+	 * Optimizer is enabled by default.
+	 * @param value
+	 */
+	public void setOptimizer(boolean value) {
+		this.optimizer = value;
+	}
+
 	public boolean bgpOptimizer() {
 		return bgpOptimizer;
 	}
 
 	/**
-     * Enables or disables BGP optimizations.
-     * BGP optimizations are enabled by default.
-     * @param value
-     */
+	 * Enables or disables BGP optimizations.
+	 * BGP optimizations are enabled by default.
+	 * @param value
+	 */
 	public void setBgpOptimizer(boolean bgpOptimizer) {
 		this.bgpOptimizer = bgpOptimizer;
 	}
@@ -263,25 +263,25 @@ public class Translator {
 		return joinOptimizer;
 	}
 
-    /**
-     * Enables or disables Join optimizations.
-     * Join optimizations are disabled by default
-     * @param value
-     */
-    public void setJoinOptimizer(boolean value) {
-    	this.joinOptimizer = value;
-    }
+	/**
+	 * Enables or disables Join optimizations.
+	 * Join optimizations are disabled by default
+	 * @param value
+	 */
+	public void setJoinOptimizer(boolean value) {
+		this.joinOptimizer = value;
+	}
 
-    public boolean isFilterOptimizer() {
+	public boolean isFilterOptimizer() {
 		return filterOptimizer;
 	}
-	
-    /**
-     * Enables or disables Filter optimizations.
-     * Filter optimizations are enabled by default.
-     * @param value
-     */
-    public void setFilterOptimizer(boolean value) {
-    	this.filterOptimizer = value;
-    }
+
+	/**
+	 * Enables or disables Filter optimizations.
+	 * Filter optimizations are enabled by default.
+	 * @param value
+	 */
+	public void setFilterOptimizer(boolean value) {
+		this.filterOptimizer = value;
+	}
 }

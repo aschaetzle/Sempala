@@ -16,7 +16,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sparql.ExprTranslator;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaOrder extends ImpalaOp1 {
@@ -52,7 +52,7 @@ public class ImpalaOrder extends ImpalaOp1 {
 		Expr expr = condition.getExpression();
 		String orderArg ="";
 		if(expr instanceof E_Function){
-			
+
 			ExprTranslator translator = new ExprTranslator(prefixes);
 			orderArg = translator.translate(expr,
 					expandPrefixes,resultSchema);

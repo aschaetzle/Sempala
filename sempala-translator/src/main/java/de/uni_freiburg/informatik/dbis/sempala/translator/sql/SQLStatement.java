@@ -19,13 +19,13 @@ public abstract class SQLStatement {
 	public abstract void addWhereConjunction(String where);
 
 	public abstract void addOrder(String byColumn);
-	
+
 	public abstract String getOrder();
 
 	public abstract String toString();
 
 	/**
-	 * 
+	 *
 	 * @return String represantation with item name, e.g. (SELECT ...) table1.
 	 */
 	public String toNamedString() {
@@ -38,10 +38,10 @@ public abstract class SQLStatement {
 
 	public abstract void updateSelection(Map<String, String[]> resultSchema);
 
-	
+
 	public abstract void addLimit(int i);
 	public abstract boolean addOffset(int i);
-	
+
 	public void setDistinct(boolean b) {
 		this.isDistinct = b;
 	}

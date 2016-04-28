@@ -16,7 +16,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 /**
  * Main Class for program start. Parses the commandline arguments and calls the
  * Sempala translator.
- * 
+ *
  * @author Antony Neu
  */
 public class Main {
@@ -34,7 +34,7 @@ public class Main {
 	/**
 	 * Main method invoked on program start. It parses the commandline arguments
 	 * and calls the Translator.
-	 * 
+	 *
 	 * @param args
 	 *            commandline arguments
 	 */
@@ -43,7 +43,7 @@ public class Main {
 		/*
 		 *  Parse the command line
 		 */
-		
+
 		Options options = buildOptions();
 		CommandLineParser parser = new DefaultParser();
 		CommandLine commandLine = null;
@@ -57,27 +57,27 @@ public class Main {
 			logger.fatal(e.getMessage(), e);
 			System.exit(-1);
 		}
-		
+
 		if (commandLine.hasOption(OptionNames.HELP.toString())) {
 			// automatically generate the help statement
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp("SparqlEvaluator", options, true);
 		}
-		
+
 		if (commandLine.hasOption(OptionNames.OPTIMIZE.toString())) {
 			optimize = true;
 			logger.info("SPARQL Algebra optimization is turned on");
 		}
-		
+
 		if (commandLine.hasOption(OptionNames.EXPAND.toString())) {
 			expand = true;
 			logger.info("URI prefix expansion is turned on");
 		}
-		
+
 		if (commandLine.hasOption(OptionNames.INPUT.toString())) {
 			inputFile = commandLine.getOptionValue(OptionNames.INPUT.toString());
 		}
-		
+
 		if (commandLine.hasOption(OptionNames.OUTPUT.toString())) {
 			outputFile = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
 		} else {
@@ -87,19 +87,19 @@ public class Main {
 		if (commandLine.hasOption(OptionNames.FOLDER.toString())) {
 			folderName = commandLine.getOptionValue(OptionNames.FOLDER.toString());
 		}
-		
-		
+
+
 		/*
 		 *  Run translator
 		 */
-			
+
 		if(folderName.equals("")){
 			// instantiate Translator
 			Translator translator = new Translator(inputFile, outputFile);
 			translator.setOptimizer(optimize);
 			translator.setExpandPrefixes(expand);
 			translator.translateQuery();
-			
+
 		} else {
 			File folderfile = new File(folderName);
 			for(final File fileEntry : folderfile.listFiles()){
@@ -115,11 +115,11 @@ public class Main {
 		}
 	}
 
-	/** An enumeration of the options supported by this loader 
-	 * 
-	 * -h, --help prints the usage help message 
-	 * -e, --expand expand prefixes used in the query 
-	 * -opt, --optimize turn on SPARQL algebra optimization 
+	/** An enumeration of the options supported by this loader
+	 *
+	 * -h, --help prints the usage help message
+	 * -e, --expand expand prefixes used in the query
+	 * -opt, --optimize turn on SPARQL algebra optimization
 	 * -i, --input <file> SPARQL query file to translate
 	 * -o, --output <file> Impala output script file
 	 */
@@ -130,13 +130,13 @@ public class Main {
 		INPUT,
 		OUTPUT,
 		OPTIMIZE;
-	
-	    @Override
-	    public String toString() {
-	        return super.toString().toLowerCase();
-	    }
+
+		@Override
+		public String toString() {
+			return super.toString().toLowerCase();
+		}
 	}
-	
+
 	/**
 	 * Builds the options for this application
 	 *
@@ -145,13 +145,13 @@ public class Main {
 	public static Options buildOptions() {
 
 		Options options = new Options();
-		
+
 		options.addOption(
 				Option.builder("e")
 				.longOpt(OptionNames.EXPAND.toString())
 				.desc("expand URI prefixes")
 				.build());
-		
+
 		options.addOption(
 				Option.builder("f")
 				.longOpt(OptionNames.FOLDER.toString())
@@ -160,13 +160,13 @@ public class Main {
 				.desc("Imapala output script file")
 				.required()
 				.build());
-		
+
 		options.addOption(
 				Option.builder("h")
 				.longOpt(OptionNames.HELP.toString())
 				.desc("print this message")
 				.build());
-		
+
 		options.addOption(
 				Option.builder("i")
 				.longOpt(OptionNames.INPUT.toString())
@@ -175,7 +175,7 @@ public class Main {
 				.desc("SPARQL query file to translate")
 				.required()
 				.build());
-		
+
 		options.addOption(
 				Option.builder("o")
 				.longOpt(OptionNames.OUTPUT.toString())
@@ -184,15 +184,15 @@ public class Main {
 				.desc("Imapala output script file")
 				.required()
 				.build());
-		
+
 		options.addOption(
 				Option.builder("opt")
 				.longOpt(OptionNames.OPTIMIZE.toString())
 				.desc("turn on SPARQL algebra optimization")
 				.build());
-		
+
 		return options;
 	}
-	
-	
+
+
 }

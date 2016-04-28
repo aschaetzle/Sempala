@@ -14,9 +14,9 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 
 /**
  * Group of triples within a BGP.
- * 
+ *
  * @author neua
- * 
+ *
  */
 public class TripleGroup {
 

@@ -8,11 +8,11 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaDistinct extends ImpalaOp1 {
-	
+
 	// TODO: Proper implementation
 	@SuppressWarnings("unused")
 	private final OpDistinct opDistinct;

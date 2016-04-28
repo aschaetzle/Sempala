@@ -11,7 +11,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Schema;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Select;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaProject extends ImpalaOp1 {
@@ -34,27 +34,27 @@ public class ImpalaProject extends ImpalaOp1 {
 
 		// translates to select object
 		Select projection = new Select(this.getResultName());
-		
+
 		// Add selectors (subset of result schema)
 		for (Var var : this.opProject.getVars()) {
 			projection.addSelector(var.getName(), resultSchema.get(var.getName()));
 		}
-		
+
 		// set from
 		projection.setFrom(child.toNamedString());
-		
+
 		return projection;
 	}
 
 	public OpProject getOpProject(){
 		return this.opProject;
 	}
-	
+
 	@Override
 	public void visit(ImpalaOpVisitor impalaOpVisitor) {
 		impalaOpVisitor.visit(this);
 	}
-	
-	
+
+
 
 }

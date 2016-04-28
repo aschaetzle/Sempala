@@ -19,7 +19,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Schema;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaLeftJoin extends ImpalaOp2 {

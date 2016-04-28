@@ -13,38 +13,38 @@ import com.hp.hpl.jena.shared.PrefixMapping;
  */
 public abstract class ImpalaOpN extends ImpalaBase {
 
-    protected List<ImpalaOp> elements = new ArrayList<ImpalaOp>();
+	protected List<ImpalaOp> elements = new ArrayList<ImpalaOp>();
 
 
-    protected ImpalaOpN(PrefixMapping _prefixes) {
-        prefixes = _prefixes;
-        resultSchema = new HashMap<String, String[]>();
-    }
+	protected ImpalaOpN(PrefixMapping _prefixes) {
+		prefixes = _prefixes;
+		resultSchema = new HashMap<String, String[]>();
+	}
 
-    public ImpalaOp get(int index) {
-        return elements.get(index);
-    }
+	public ImpalaOp get(int index) {
+		return elements.get(index);
+	}
 
-    public List<ImpalaOp> getElements() {
-        return elements;
-    }
+	public List<ImpalaOp> getElements() {
+		return elements;
+	}
 
-    public void add(ImpalaOp op) {
-        elements.add(op);
-    }
+	public void add(ImpalaOp op) {
+		elements.add(op);
+	}
 
-    public void add(int index, ImpalaOp op) {
-        elements.add(index, op);
-    }
+	public void add(int index, ImpalaOp op) {
+		elements.add(index, op);
+	}
 
-    public Iterator<ImpalaOp> iterator() {
-        return elements.iterator();
-    }
+	public Iterator<ImpalaOp> iterator() {
+		return elements.iterator();
+	}
 
-    public int size() {
-        return elements.size();
-    }
+	public int size() {
+		return elements.size();
+	}
 
- 
-    
+
+
 }

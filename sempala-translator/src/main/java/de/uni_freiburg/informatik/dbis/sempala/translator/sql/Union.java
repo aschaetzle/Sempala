@@ -9,7 +9,7 @@ public class Union extends SQLStatement {
 
 	private SQLStatement left;
 	private SQLStatement right;
-	
+
 	public Union(String tablename, SQLStatement left, SQLStatement right) {
 		super(tablename);
 		this.left = left;
@@ -33,8 +33,8 @@ public class Union extends SQLStatement {
 		right.addSelector(alias, selector);
 	}
 
-	
-	
+
+
 	@Override
 	public HashMap<String, String[]> getSelectors() {
 		return left.getSelectors();
@@ -50,14 +50,14 @@ public class Union extends SQLStatement {
 	public void addOrder(String byColumn) {
 		left.addOrder(byColumn);
 		right.addOrder(byColumn);
-		
+
 	}
 
 	@Override
 	public void updateSelection(Map<String, String[]> resultSchema) {
 		left.updateSelection(resultSchema);
 		right.updateSelection(resultSchema);
-		
+
 	}
 
 	@Override

@@ -12,19 +12,19 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
  */
 public abstract class ImpalaOp1 extends ImpalaBase {
 
-    protected ImpalaOp subOp;
+	protected ImpalaOp subOp;
 
 
-    protected ImpalaOp1(ImpalaOp _subOp, PrefixMapping _prefixes) {
-        subOp = _subOp;
-        prefixes = _prefixes;
-        resultSchema = new HashMap<String, String[]>();
-    }
+	protected ImpalaOp1(ImpalaOp _subOp, PrefixMapping _prefixes) {
+		subOp = _subOp;
+		prefixes = _prefixes;
+		resultSchema = new HashMap<String, String[]>();
+	}
 
-    public ImpalaOp getSubOp() {
-        return subOp;
-    }
+	public ImpalaOp getSubOp() {
+		return subOp;
+	}
 
-    public abstract SQLStatement translate(String name, SQLStatement child);
-    
+	public abstract SQLStatement translate(String name, SQLStatement child);
+
 }

@@ -12,7 +12,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sparql.ExprTranslator;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaFilter extends ImpalaOp1 {
@@ -29,7 +29,7 @@ public class ImpalaFilter extends ImpalaOp1 {
 	public SQLStatement translate(String _resultName, SQLStatement child) {
 		resultName = subOp.getResultName();
 		this.resultSchema = subOp.getSchema();
-		
+
 		Iterator<Expr> iterator = opFilter.getExprs().iterator();
 		Expr current = iterator.next();
 		ExprTranslator translator = new ExprTranslator(prefixes);
@@ -37,20 +37,20 @@ public class ImpalaFilter extends ImpalaOp1 {
 				expandPrefixes,resultSchema);
 		//child.updateSelection(resultSchema);
 		if(!condition.equals("")){
-			child.addWhereConjunction(condition); 
+			child.addWhereConjunction(condition);
 		}
 		while (iterator.hasNext()) {
 			translator = new ExprTranslator(prefixes);
 			current = iterator.next();
 			condition = translator.translate(current,
 					expandPrefixes,resultSchema);
-			//child.updateSelection(resultSchema); // consider schema changes 
+			//child.updateSelection(resultSchema); // consider schema changes
 			if(!condition.equals("")){
 				child.addWhereConjunction(condition);
 			}
 		}
-		
-		
+
+
 
 		return child;
 	}

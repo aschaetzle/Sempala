@@ -17,19 +17,19 @@ public class ImpalaSequence extends ImpalaOpN {
 
 	// TODO: Proper implementation
 	@SuppressWarnings("unused")
-    private final OpSequence opSequence;
+	private final OpSequence opSequence;
 	@SuppressWarnings("unused")
-    private ArrayList<String> intermediateSchema;
+	private ArrayList<String> intermediateSchema;
 
 
-    public ImpalaSequence(OpSequence _opSequence, PrefixMapping _prefixes) {
-        super(_prefixes);
-        opSequence = _opSequence;
-        resultName = Tags.SEQUENCE;
-    }
+	public ImpalaSequence(OpSequence _opSequence, PrefixMapping _prefixes) {
+		super(_prefixes);
+		opSequence = _opSequence;
+		resultName = Tags.SEQUENCE;
+	}
 
 
-    
+
 //    private String generateSequence() {
 //        String sequence = "";
 //        intermediateSchema.addAll(get(0).getSchema());
@@ -79,14 +79,14 @@ public class ImpalaSequence extends ImpalaOpN {
 
 
 
-    @Override
-    public void visit(ImpalaOpVisitor impalaOpVisitor) {
-    	impalaOpVisitor.visit(this);
-    }
+	@Override
+	public void visit(ImpalaOpVisitor impalaOpVisitor) {
+		impalaOpVisitor.visit(this);
+	}
 
-    public void setSchema(Map<String, String[]> schema){
-    	this.resultSchema = schema;
- 
-    }
-    
+	public void setSchema(Map<String, String[]> schema){
+		this.resultSchema = schema;
+
+	}
+
 }

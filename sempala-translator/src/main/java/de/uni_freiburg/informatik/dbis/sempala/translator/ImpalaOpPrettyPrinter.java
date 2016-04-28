@@ -18,7 +18,7 @@ public class ImpalaOpPrettyPrinter extends ImpalaOpVisitorByType {
 
 	/**
 	 * Private constructor, initialization using factory function.
-	 * 
+	 *
 	 * @param _writer
 	 */
 	private ImpalaOpPrettyPrinter(PrintWriter _writer) {
@@ -28,7 +28,7 @@ public class ImpalaOpPrettyPrinter extends ImpalaOpVisitorByType {
 
 	/**
 	 * Prints the given ImpalaOp tree.
-	 * 
+	 *
 	 * @param _writer
 	 * @param op
 	 */

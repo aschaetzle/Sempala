@@ -31,7 +31,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Schema;
  * through the ImpalaOp Tree bottom up and generates the commands for every
  * operator. A SPARQL Algebra Tree must be translated into a corresponding ImpalaOp
  * Tree before using the ImpalaOpTranslator.
- * 
+ *
  * @see de.uni_freiburg.informatik.dbis.sempala.translator.sparql.AlgebraTransformer
  */
 public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
@@ -56,7 +56,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a ImpalaOp Tree into a corresponding Impala SQL program.
-	 * 
+	 *
 	 * @param op
 	 *            Root of the ImpalaOp Tree
 	 * @param _expandPrefixes
@@ -105,7 +105,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a BGP into corresponding Impala SQL commands.
-	 * 
+	 *
 	 * @param bgp
 	 *            BGP in the ImpalaOp Tree
 	 */
@@ -118,7 +118,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a FILTER into corresponding Impala SQL commands.
-	 * 
+	 *
 	 * @param filter
 	 *            FILTER in the ImpalaOp Tree
 	 */
@@ -130,7 +130,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a JOIN into corresponding SQL commands.
-	 * 
+	 *
 	 * @param join
 	 *            JOIN in the ImpalaOp Tree
 	 */
@@ -144,7 +144,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a sequence of JOINs into corresponding Impala SQL Latin commands.
-	 * 
+	 *
 	 * @param sequence
 	 *            JOIN sequence in the ImpalaOp Tree
 	 */
@@ -187,7 +187,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a LEFTJOIN into corresponding Impala SQL commands.
-	 * 
+	 *
 	 * @param impalaLeftJoin
 	 *            LEFTJOIN in the ImpalaOp Tree
 	 */
@@ -203,7 +203,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 	/**
 	 * Translates a LEFTJOIN without Filter (Conditional) into corresponding Impala SQL
 	 *  commands.
-	 * 
+	 *
 	 * @param impalaConditional
 	 *            LEFTJOIN without Filter (Conditional) in the ImpalaOp Tree
 	 */
@@ -217,7 +217,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a UNION into corresponding Impala SQL commands.
-	 * 
+	 *
 	 * @param impalaUnion
 	 *            UNION in the ImpalaOp Tree
 	 */
@@ -232,7 +232,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a PROJECT into corresponding Impala SQL commands.
-	 * 
+	 *
 	 * @param impalaProject
 	 *            PROJECT in the ImpalaOp Tree
 	 */
@@ -245,7 +245,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a DISTINCT into corresponding Impala SQL commands.
-	 * 
+	 *
 	 * @param impalaDistinct
 	 *            Distinct in the ImpalaOp Tree
 	 */
@@ -258,7 +258,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a REDUCE into corresponding Impala SQL commands.
-	 * 
+	 *
 	 * @param impalaReduced
 	 *            REDUCE in the ImpalaOp Tree
 	 */
@@ -272,7 +272,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates an ORDER into corresponding SQL commands.
-	 * 
+	 *
 	 * @param impalaOrder
 	 *            ORDER in the ImpalaOp Tree
 	 */
@@ -285,7 +285,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 	/**
 	 * Translates a SLICE into corresponding Impala SQL commands.
-	 * 
+	 *
 	 * @param impalaSlice
 	 *            SLICE in the ImpalaOp Tree
 	 */

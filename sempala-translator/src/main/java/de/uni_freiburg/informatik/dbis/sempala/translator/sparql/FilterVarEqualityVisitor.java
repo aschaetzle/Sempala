@@ -10,15 +10,15 @@ import java.util.List;
  * @author Alexander Schaetzle
  */
 public class FilterVarEqualityVisitor extends OpVisitorBase {
-    
-    public List<Var> projectVars;
 
-    public FilterVarEqualityVisitor() {}
+	public List<Var> projectVars;
+
+	public FilterVarEqualityVisitor() {}
 
 
-    @Override
-    public void visit(OpProject opProject) {
-        projectVars = opProject.getVars();
-    }
+	@Override
+	public void visit(OpProject opProject) {
+		projectVars = opProject.getVars();
+	}
 
 }

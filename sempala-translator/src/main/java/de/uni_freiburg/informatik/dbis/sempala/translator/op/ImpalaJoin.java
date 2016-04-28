@@ -17,11 +17,11 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Schema;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaJoin extends ImpalaOp2 {
-	
+
 	// TODO: Proper implementation
 	@SuppressWarnings("unused")
 	private final OpJoin opJoin;
@@ -36,32 +36,32 @@ public class ImpalaJoin extends ImpalaOp2 {
 	@Override
 	public SQLStatement translate(String _resultName, SQLStatement firstChild,
 			SQLStatement secondChild) {
-		
+
 		resultName = _resultName;
-		
+
 		Map<String, String[]> newSchema = new HashMap<String, String[]>();
-        newSchema.putAll(leftOp.getSchema());
-        newSchema.putAll(rightOp.getSchema());
+		newSchema.putAll(leftOp.getSchema());
+		newSchema.putAll(rightOp.getSchema());
 		resultSchema = Schema.shiftToParent(newSchema, this.resultName);
-		
-		
+
+
 		SQLStatement join = null ;
-		
+
 		List<SQLStatement> rights = new ArrayList<SQLStatement>();
 		rights.add(secondChild);
-				
+
 		List<String> onConditions =  JoinUtil.getOnConditions(Schema.shiftToParent(leftOp.getSchema(), leftOp.getResultName()), Schema.shiftToParent(rightOp.getSchema(), rightOp.getResultName()));
-		
-		
+
+
 		join = new Join(this.getResultName(), firstChild, rights, onConditions, JoinType.natural);
-		
-		
-		
+
+
+
 		 return join;
 
 	}
 
-	
+
 
 	@Override
 	public void visit(ImpalaOpVisitor impalaOpVisitor) {

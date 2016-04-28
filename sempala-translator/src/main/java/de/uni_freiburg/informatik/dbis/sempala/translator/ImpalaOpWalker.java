@@ -10,7 +10,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaOpN;
 /**
  * Applies a given ImpalaOpVisitor to all operators in the tree Can walk through
  * the tree bottom up or top down.
- * 
+ *
  * @author Antony Neu
  * @see ImpalaOpVisitor.Impala.ImpalaOpVisitor
  */
@@ -24,7 +24,7 @@ public class ImpalaOpWalker extends ImpalaOpVisitorByType {
 
 	/**
 	 * Private constructor, initialization using factory functions.
-	 * 
+	 *
 	 * @param visitor
 	 *            ImpalaOpVisitor to be applied
 	 * @param topDown
@@ -42,7 +42,7 @@ public class ImpalaOpWalker extends ImpalaOpVisitorByType {
 	/**
 	 * Apply a given ImpalaOpVisitor to all operators in a ImpalaOp tree walking top
 	 * down.
-	 * 
+	 *
 	 * @param visitor
 	 *            ImpalaOpVisitor to be applied
 	 * @param op
@@ -56,7 +56,7 @@ public class ImpalaOpWalker extends ImpalaOpVisitorByType {
 	/**
 	 * Apply a given ImpalaOpVisitor to all operators in a ImpalaOp tree walking
 	 * bottom up.
-	 * 
+	 *
 	 * @param visitor
 	 *            ImpalaOpVisitor to be applied
 	 * @param op
@@ -69,7 +69,7 @@ public class ImpalaOpWalker extends ImpalaOpVisitorByType {
 
 	/**
 	 * Visit leef operator with no sub operators.
-	 * 
+	 *
 	 * @param op
 	 */
 	@Override
@@ -79,7 +79,7 @@ public class ImpalaOpWalker extends ImpalaOpVisitorByType {
 
 	/**
 	 * Visit operator with 1 sub operator.
-	 * 
+	 *
 	 * @param op
 	 */
 	@Override
@@ -96,7 +96,7 @@ public class ImpalaOpWalker extends ImpalaOpVisitorByType {
 
 	/**
 	 * Visit operator with 2 sub operator.
-	 * 
+	 *
 	 * @param op
 	 */
 	@Override
@@ -117,7 +117,7 @@ public class ImpalaOpWalker extends ImpalaOpVisitorByType {
 
 	/**
 	 * Visit operator with N sub operator.
-	 * 
+	 *
 	 * @param op
 	 */
 	@Override

@@ -16,8 +16,8 @@ public class Select extends SQLStatement {
 
 	private int limit = -1;
 	private int offset = -1;
-	
-	
+
+
 	public void addSelector(String alias, String[] selector) {
 		selection.put(alias, selector);
 	}
@@ -133,15 +133,15 @@ public class Select extends SQLStatement {
 			if(!filter.equals(""))
 			this.addWhereConjunction(filter);
 		}
-		
+
 	}
 
 	public void setName(String string) {
 		this.statementName = string;
-		
+
 	}
 
-	
+
 	public String getName(){
 		return this.statementName;
 	}
@@ -149,7 +149,7 @@ public class Select extends SQLStatement {
 	@Override
 	public void addLimit(int i) {
 		this.limit = i;
-		
+
 	}
 
 	@Override
@@ -157,7 +157,7 @@ public class Select extends SQLStatement {
 		if(!this.order.equals("")){
 			this.offset = i;
 			return true;
-		} 
+		}
 		return false;
 	}
 

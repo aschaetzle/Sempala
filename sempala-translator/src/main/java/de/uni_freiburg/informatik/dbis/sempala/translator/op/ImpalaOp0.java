@@ -10,9 +10,9 @@ import com.hp.hpl.jena.shared.PrefixMapping;
  */
 public abstract class ImpalaOp0 extends ImpalaBase {
 
-    protected ImpalaOp0(PrefixMapping _prefixes) {
-        prefixes = _prefixes;
-        resultSchema = new HashMap<String,String[]>();
-    }
+	protected ImpalaOp0(PrefixMapping _prefixes) {
+		prefixes = _prefixes;
+		resultSchema = new HashMap<String,String[]>();
+	}
 
 }

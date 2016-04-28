@@ -20,7 +20,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Schema;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.TripleGroup;
 
 /**
- * 
+ *
  * @author Antony Neu
  */
 public class ImpalaBGP extends ImpalaOp0 {
@@ -36,7 +36,7 @@ public class ImpalaBGP extends ImpalaOp0 {
 
 	public SQLStatement translate(String _resultName) {
 		resultName = _resultName;
-		
+
 		List<Triple> triples = opBGP.getPattern().getList();
 
 		HashMap<Node, TripleGroup> tripleGroups = new HashMap<Node, TripleGroup>();
@@ -96,7 +96,7 @@ public class ImpalaBGP extends ImpalaOp0 {
 			Join join= new Join(getResultName(), group.translate(), rights,
 					onConditions, JoinType.natural);
 			return join;
-		} 
+		}
 		// no join needed
 		this.resultName = group.getName();
 		SQLStatement res = group.translate();

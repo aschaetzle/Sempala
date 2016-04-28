@@ -24,7 +24,7 @@ public class ImpalaConditional extends ImpalaOp2 {
 	@Override
 	public void visit(ImpalaOpVisitor impalaOpVisitor) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -34,8 +34,8 @@ public class ImpalaConditional extends ImpalaOp2 {
 		return null;
 	}
 
-    
-    
+
+
 }
 
 

@@ -15,6 +15,6 @@ public class SpecialCharFilter {
 				s = s.substring(1);
 		return s;
 	}
-	
-	
+
+
 }
