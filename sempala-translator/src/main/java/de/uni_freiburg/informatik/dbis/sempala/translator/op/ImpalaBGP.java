@@ -8,8 +8,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 
 /**
- *
- * @author Antony Neu
+ * @author Manuel Schneider
  */
 public abstract class ImpalaBGP extends ImpalaOp0 {
 

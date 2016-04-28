@@ -9,7 +9,8 @@ import java.util.HashMap;
 public final class Tags {
 
 	// Global Constants
-	public static final String IMPALA_TABLENAME = "bigtable_parquet";
+	public static final String IMPALA_PROPERTYTABLE_TABLENAME = "bigtable_parquet";
+	public static final String IMPALA_SINGLETABLE_TABLENAME = "singletable_parquet";
 	public static final String IMPALA_TABLENAME_TRIPLESTORE = "triplestore_parquet";
 
 	public static final String BGP = "BGP";

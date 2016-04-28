@@ -164,7 +164,7 @@ public class TripleGroup {
 		if (selectFromTripleStore) {
 			select.setFrom(Tags.IMPALA_TABLENAME_TRIPLESTORE);
 		} else {
-			select.setFrom(Tags.IMPALA_TABLENAME);
+			select.setFrom(Tags.IMPALA_PROPERTYTABLE_TABLENAME);
 		}
 		// WHERE
 		for (String where : whereConditions) {

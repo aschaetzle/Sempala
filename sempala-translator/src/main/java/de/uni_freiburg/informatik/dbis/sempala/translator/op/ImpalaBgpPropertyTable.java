@@ -10,7 +10,6 @@ import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.shared.PrefixMapping;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
 
-import de.uni_freiburg.informatik.dbis.sempala.translator.ImpalaOpVisitor;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Join;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinType;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinUtil;
@@ -19,7 +18,6 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Schema;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.TripleGroup;
 
 /**
- *
  * @author Antony Neu
  */
 public class ImpalaBgpPropertyTable extends ImpalaBGP {
@@ -29,8 +27,8 @@ public class ImpalaBgpPropertyTable extends ImpalaBGP {
 	}
 
 	@Override
-	public SQLStatement translate(String _resultName) {
-		resultName = _resultName;
+	public SQLStatement translate(String resultName) {
+		this.resultName = resultName;
 
 		List<Triple> triples = opBGP.getPattern().getList();
 
@@ -57,7 +55,7 @@ public class ImpalaBgpPropertyTable extends ImpalaBGP {
 			}
 
 			if (!tripleGroups.containsKey(key)) {
-				tripleGroups.put(key, new TripleGroup(resultName + "_"
+				tripleGroups.put(key, new TripleGroup(this.resultName + "_"
 						+ tableNumber++, prefixes, fromTripletable));
 			}
 			tripleGroups.get(key).add(triple);
@@ -117,10 +115,4 @@ public class ImpalaBgpPropertyTable extends ImpalaBGP {
 		}
 		return index;
 	}
-
-	@Override
-	public void visit(ImpalaOpVisitor impalaOpVisitor) {
-		impalaOpVisitor.visit(this);
-	}
-
 }
