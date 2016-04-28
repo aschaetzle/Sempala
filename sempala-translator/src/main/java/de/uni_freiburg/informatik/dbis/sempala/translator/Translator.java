@@ -34,15 +34,20 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sparql.TransformFilter
  */
 public class Translator {
 
-    String inputFile;
-    String outputFile;
-    private String sqlScript;
-    private ImpalaOp impalaOpRoot;
+    private String inputFile;
+    private String outputFile;
     
-    // Define a static logger variable so that it references the corresponding Logger instance
-    private static final Logger logger = Logger.getLogger(Translator.class);
+    private boolean expandPrefixes = false;
+    private boolean optimizer = true;
+    private boolean bgpOptimizer = true;
+    private boolean joinOptimizer = false;
+    private boolean filterOptimizer = true;
+	
+	// Define a static logger variable so that it references the corresponding Logger instance
+	private static final Logger logger = Logger.getLogger(Translator.class);
 
 
+    
     /**
      * Constructor of the ImpalaSPARQL translator.
      *
@@ -50,62 +55,10 @@ public class Translator {
      * @param _outputFile Output script of the translator
      */
     public Translator(String _inputFile, String _outputFile) {
-    	sqlScript = "";
         inputFile = _inputFile;
         outputFile = _outputFile;
     }
-
-    /**
-     * Sets the delimiter of the RDF Triples.
-     * @param _delimiter
-     */
-    public void setDelimiter(String _delimiter) {
-        Tags.delimiter = _delimiter;
-    }
-
-    /**
-     * Sets if pefixes in the RDF Triples should be expanded or not.
-     * @param value
-     */
-    public void setExpandMode(boolean value) {
-        Tags.expandPrefixes = value;
-    }
-
-    /**
-     * Enables or disables optimizations of the SPARQL Algebra.
-     * Optimizer is enabled by default.
-     * @param value
-     */
-    public void setOptimizer(boolean value) {
-        Tags.optimizer = value;
-    }
-
-    /**
-     * Enables or disables Join optimizations.
-     * Join optimizations are disabled by default
-     * @param value
-     */
-    public void setJoinOptimizer(boolean value) {
-        Tags.joinOptimizer = value;
-    }
-
-    /**
-     * Enables or disables Filter optimizations.
-     * Filter optimizations are enabled by default.
-     * @param value
-     */
-    public void setFilterOptimizer(boolean value) {
-        Tags.filterOptimizer = value;
-    }
-
-    /**
-     * Enables or disables BGP optimizations.
-     * BGP optimizations are enabled by default.
-     * @param value
-     */
-    public void setBGPOptimizer(boolean value) {
-        Tags.bgpOptimizer = value;
-    }
+    
 
 
     /**
@@ -144,7 +97,7 @@ public class Translator {
         logWriter.println();
 
         //Optimize Algebra Tree if optimizer is enabled
-        if(Tags.optimizer) {
+        if(optimizer) {
             /*
              * Algebra Optimierer führt High-Level Transformationen aus (z.B. Filter Equalilty)
              * -> nicht BGP reordering
@@ -174,12 +127,12 @@ public class Translator {
              * 3. FilterPlacement -> Vorziehen des Filters soweit möglich
              */
 
-            if(Tags.joinOptimizer) {
+            if(joinOptimizer) {
                 TransformJoinStrategy joinStrategy = new TransformJoinStrategy();
                 opRoot = Transformer.transform(joinStrategy, opRoot);
             }
 
-            if(Tags.filterOptimizer) {
+            if(filterOptimizer) {
                 //ARQ optimization of Filter conjunction
                 TransformFilterConjunction filterConjunction = new TransformFilterConjunction();
                 opRoot = Transformer.transform(filterConjunction, opRoot);
@@ -197,13 +150,13 @@ public class Translator {
                 opRoot = filterVarEquality.transform(opRoot);
             }
 
-            if(Tags.bgpOptimizer) {
+            if(bgpOptimizer) {
                 //Own BGP optimizer using variable counting heuristics
                 BGPOptimizerNoStats bgpOptimizer = new BGPOptimizerNoStats();
                 opRoot = bgpOptimizer.optimize(opRoot);
             }
 
-            if(Tags.filterOptimizer) {
+            if(filterOptimizer) {
                 //ARQ optimization of Filter placement
                 TransformFilterPlacement filterPlacement = new TransformFilterPlacement();
                 opRoot = Transformer.transform(filterPlacement, opRoot);
@@ -218,7 +171,7 @@ public class Translator {
 
         //Transform SPARQL Algebra Tree in ImpalaOp Tree
         AlgebraTransformer transformer = new AlgebraTransformer(prefixes);
-        impalaOpRoot = transformer.transform(opRoot);
+        ImpalaOp impalaOpRoot = transformer.transform(opRoot);
 
         // Print ImpalaOp Tree to log
         logWriter.println("ImpalaOp Tree:");
@@ -230,8 +183,9 @@ public class Translator {
         // Walk through ImpalaOp Tree and generate translation
        
         // Translate the query
+        String sqlScript = "";
         ImpalaOpTranslator translator = new ImpalaOpTranslator();
-        sqlScript += translator.translate(impalaOpRoot, Tags.expandPrefixes);
+        sqlScript += translator.translate(impalaOpRoot, expandPrefixes);
         
         // Print resulting SQL script program to output file
         PrintWriter sqlWriter;
@@ -245,4 +199,89 @@ public class Translator {
         }
     }
 
+    
+    /*
+     * Getters and setters 
+     */
+    
+    
+    public String inputFile() {
+		return inputFile;
+	}
+    
+	public void setInputFile(String inputFile) {
+		this.inputFile = inputFile;
+	}
+	
+	public String outputFile() {
+		return outputFile;
+	}
+
+	public void setOutputFile(String outputFile) {
+		this.outputFile = outputFile;
+	}
+	
+	public boolean expandPrefixes() {
+		return expandPrefixes;
+	}
+
+    /**
+     * Sets if pefixes in the RDF Triples should be expanded or not.
+     * @param value
+     */
+	public void setExpandPrefixes(boolean expandPrefixes) {
+		this.expandPrefixes = expandPrefixes;
+	}
+
+	public boolean optimizer() {
+		return optimizer;
+	}
+	
+    /**
+     * Enables or disables optimizations of the SPARQL Algebra.
+     * Optimizer is enabled by default.
+     * @param value
+     */
+    public void setOptimizer(boolean value) {
+        this.optimizer = value;
+    }
+	
+	public boolean bgpOptimizer() {
+		return bgpOptimizer;
+	}
+
+	/**
+     * Enables or disables BGP optimizations.
+     * BGP optimizations are enabled by default.
+     * @param value
+     */
+	public void setBgpOptimizer(boolean bgpOptimizer) {
+		this.bgpOptimizer = bgpOptimizer;
+	}
+
+	public boolean joinOptimizer() {
+		return joinOptimizer;
+	}
+
+    /**
+     * Enables or disables Join optimizations.
+     * Join optimizations are disabled by default
+     * @param value
+     */
+    public void setJoinOptimizer(boolean value) {
+    	this.joinOptimizer = value;
+    }
+
+    public boolean isFilterOptimizer() {
+		return filterOptimizer;
+	}
+	
+    /**
+     * Enables or disables Filter optimizations.
+     * Filter optimizations are enabled by default.
+     * @param value
+     */
+    public void setFilterOptimizer(boolean value) {
+    	this.filterOptimizer = value;
+    }
 }

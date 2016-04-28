@@ -11,18 +11,6 @@ public final class Tags {
 	// Global Constants
 	public static final String IMPALA_TABLENAME = "bigtable_parquet";
 	public static final String IMPALA_TABLENAME_TRIPLESTORE = "triplestore_parquet";
-	public static final String IMPALA_BGP = "ImpalaBGP";
-	public static final String IMPALA_FILTER = "ImpalaFilter";
-	public static final String IMPALA_JOIN = "ImpalaJoin";
-	public static final String IMPALA_SEQUENCE = "ImpalaSequenceJoin";
-	public static final String IMPALA_LEFTJOIN = "ImpalaLeftJoin";
-	public static final String IMPALA_CONDITIONAL = "ImpalaConditional";
-	public static final String IMPALA_UNION = "ImpalaUnion";
-	public static final String IMPALA_PROJECT = "ImpalaProject";
-	public static final String IMPALA_DISTINCT = "ImpalaDistinct";
-	public static final String IMPALA_ORDER = "ImpalaOrder";
-	public static final String IMPALA_SLICE = "ImpalaSlice";
-	public static final String IMPALA_REDUCED = "ImpalaReduced";
 
 	public static final String BGP = "BGP";
 	public static final String FILTER = "FILTER";
@@ -65,21 +53,6 @@ public final class Tags {
 	public static final String SUBTRACT = "-";
 	public static final String LIKE = " LIKE ";
 	public static final String LANG_MATCHES = " LIKE ";
-
-	// Global Fields
-	public static String delimiter = " ";
-	public static String defaultReducer = "%default reducerNum '1';";
-	public static String udf = "ImpalaSPARQL_udf.jar";
-	public static String indata = "indata";
-	public static String rdfLoader = "impalasparql.rdfLoader.ExNTriplesLoader";
-	public static String resultWriter = "ImpalaStorage";
-	public static int globalOffsetTabs = 0;
-
-	public static boolean expandPrefixes = false;
-	public static boolean optimizer = true;
-	public static boolean joinOptimizer = false;
-	public static boolean filterOptimizer = true;
-	public static boolean bgpOptimizer = true;
 
 	// names which cannot be used for columns and their replacements
 	public static HashMap<String, String> restrictedNames = new HashMap<String, String>();
