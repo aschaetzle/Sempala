@@ -73,12 +73,12 @@ public class TripleGroup {
 		if (predicate.isVariable()) {
 			selectFromTripleStore = true;
 			result.put(predicate.getName(),
-					new String[] { Tags.PREDICATE_COLUMN_NAME_TRIPLESTORE });
+					new String[] { Tags.PREDICATE_COLUMN_NAME });
 		}
 		if (object.isVariable()) {
 			if (selectFromTripleStore) {
 				result.put(object.getName(),
-						new String[] { Tags.OBJECT_COLUMN_NAME_TRIPLESTORE });
+						new String[] { Tags.OBJECT_COLUMN_NAME });
 			} else {
 				result.put(object.getName(), new String[] { SpecialCharFilter
 						.filter(FmtUtils
@@ -105,7 +105,7 @@ public class TripleGroup {
 				// only check subject once per group
 				if (subject.isURI() || subject.isBlank()) {
 					// subject is bound -> add to Filter
-					whereConditions.add("ID = '"
+					whereConditions.add(Tags.SUBJECT_COLUMN_NAME + " = '"
 							+ FmtUtils.stringForNode(subject,
 									this.prefixMapping) + "'");
 				} else {
@@ -138,7 +138,7 @@ public class TripleGroup {
 				}
 				String condition = "";
 				if (selectFromTripleStore) {
-					condition = Tags.OBJECT_COLUMN_NAME_TRIPLESTORE + " = '"
+					condition = Tags.OBJECT_COLUMN_NAME + " = '"
 							+ string + "'";
 				} else {
 					condition = SpecialCharFilter.filter(FmtUtils

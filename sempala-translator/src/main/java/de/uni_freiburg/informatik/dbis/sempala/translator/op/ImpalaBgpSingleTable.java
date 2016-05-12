@@ -75,15 +75,15 @@ public class ImpalaBgpSingleTable extends ImpalaBGP {
 
 
 		handleNode(triples.get(0).getSubject(),  Tags.SUBJECT_COLUMN_NAME, 0);
-		handleNode(triples.get(0).getPredicate(),  Tags.PREDICATE_COLUMN_NAME_TRIPLESTORE, 0); // undefined if this is a variable
-		handleNode(triples.get(0).getObject(), Tags.OBJECT_COLUMN_NAME_TRIPLESTORE, 0);
+		handleNode(triples.get(0).getPredicate(),  Tags.PREDICATE_COLUMN_NAME, 0); // undefined if this is a variable
+		handleNode(triples.get(0).getObject(), Tags.OBJECT_COLUMN_NAME, 0);
 		fromClause.append(String.format("%s t0", Tags.IMPALA_SINGLETABLE_TABLENAME));
 
 		for (int tripleIndex = 1; tripleIndex < triples.size(); ++tripleIndex) {
 			onClauses = new ArrayList<>();
 			handleNode(triples.get(tripleIndex).getSubject(),  Tags.SUBJECT_COLUMN_NAME, tripleIndex);
-			handleNode(triples.get(tripleIndex).getPredicate(),  Tags.PREDICATE_COLUMN_NAME_TRIPLESTORE, tripleIndex); // undefined if this is a variable
-			handleNode(triples.get(tripleIndex).getObject(), Tags.OBJECT_COLUMN_NAME_TRIPLESTORE, tripleIndex);
+			handleNode(triples.get(tripleIndex).getPredicate(),  Tags.PREDICATE_COLUMN_NAME, tripleIndex); // undefined if this is a variable
+			handleNode(triples.get(tripleIndex).getObject(), Tags.OBJECT_COLUMN_NAME, tripleIndex);
 			fromClause.append(String.format("\nJOIN %s t%d", Tags.IMPALA_SINGLETABLE_TABLENAME, tripleIndex));
 			if (!onClauses.isEmpty()){
 				fromClause.append(String.format(" ON %s", onClauses.get(0)));

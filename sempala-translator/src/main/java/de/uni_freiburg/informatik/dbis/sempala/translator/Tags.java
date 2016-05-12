@@ -45,9 +45,9 @@ public final class Tags {
 	public static final String QUERY_SUFFIX = "\nPROFILE; ";
 
 	public static final String OFFSETCHAR = "\t";
-	public static final String SUBJECT_COLUMN_NAME = "ID";
-	public static final String PREDICATE_COLUMN_NAME_TRIPLESTORE = "predicate";
-	public static final String OBJECT_COLUMN_NAME_TRIPLESTORE = "object";
+	public static final String SUBJECT_COLUMN_NAME   = "subject";
+	public static final String PREDICATE_COLUMN_NAME = "predicate";
+	public static final String OBJECT_COLUMN_NAME    = "object";
 
 	public static final int LIMIT_LARGE_NUMBER = 100000000;
 	public static final String ADD = "+";
