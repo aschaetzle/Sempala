@@ -180,7 +180,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 
 		sequence.setSchema(filterSchema);
 		Join join = new Join(tablename, children.get(0), children.subList(1,
-				children.size()), onStrings, JoinType.natural);
+				children.size()), onStrings, JoinType.INNER);
 
 		stack.push(join);
 	}

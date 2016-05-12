@@ -53,7 +53,7 @@ public class ImpalaJoin extends ImpalaOp2 {
 		List<String> onConditions =  JoinUtil.getOnConditions(Schema.shiftToParent(leftOp.getSchema(), leftOp.getResultName()), Schema.shiftToParent(rightOp.getSchema(), rightOp.getResultName()));
 
 
-		join = new Join(this.getResultName(), firstChild, rights, onConditions, JoinType.natural);
+		join = new Join(this.getResultName(), firstChild, rights, onConditions, JoinType.INNER);
 
 
 

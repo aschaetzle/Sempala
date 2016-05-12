@@ -89,10 +89,10 @@ public class ImpalaLeftJoin extends ImpalaOp2 {
 						Schema.shiftToParent(rightOp.getSchema(),
 								rightOp.getResultName())).size() > 0) {
 			leftjoin = new Join(this.getResultName(), firstChild, rights,
-					oneCondition, JoinType.left_outer);
+					oneCondition, JoinType.LEFT);
 		} else {
 			leftjoin = new Join(this.getResultName(), firstChild, rights,
-					oneCondition, JoinType.cross);
+					oneCondition, JoinType.CROSS);
 		}
 
 		return leftjoin;

@@ -11,7 +11,7 @@ public class Join extends SQLStatement {
 	private List<SQLStatement> rights;
 	private Select wrapper;
 	private List<String> onStrings;
-	private JoinType type = JoinType.natural;
+	private JoinType type = JoinType.INNER;
 
 	public Join(String tablename, SQLStatement left, List<SQLStatement> rights,
 			List<String> onStrings, JoinType type) {
@@ -61,20 +61,20 @@ public class Join extends SQLStatement {
 		for (int i = 0; i < rights.size(); i++) {
 			SQLStatement right = rights.get(i);
 			String onString = onStrings.get(i);
-			if(onString.equals("") || this.type == JoinType.cross){
+			if(onString.equals("") || this.type == JoinType.CROSS){
 				sb.append(" CROSS JOIN ");
 			}
-			else if(this.type == JoinType.left_outer){
+			else if(this.type == JoinType.LEFT){
 			sb.append(" LEFT JOIN ");
 			} else{
 				sb.append(" JOIN ");	
 			}
 			sb.append(right.toNamedString());
-			if(!onString.equals("") && this.type != JoinType.cross){
+			if(!onString.equals("") && this.type != JoinType.CROSS){
 			sb.append(" ON(");
 			sb.append(onString);
 			sb.append(")");
-			} else if(!onString.equals("") && this.type == JoinType.cross){
+			} else if(!onString.equals("") && this.type == JoinType.CROSS){
 				wrapper.addWhereConjunction(onString);
 			}
 		}

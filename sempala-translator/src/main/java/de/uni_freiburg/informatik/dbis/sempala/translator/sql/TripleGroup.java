@@ -198,7 +198,7 @@ public class TripleGroup {
 			this.mapping = newMapping;
 
 			Join join = new Join(this.name, select, rights, onStrings,
-					JoinType.natural);
+					JoinType.INNER);
 			return join;
 		}
 
