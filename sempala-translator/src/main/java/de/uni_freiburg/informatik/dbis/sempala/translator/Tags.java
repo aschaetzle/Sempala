@@ -10,7 +10,7 @@ public final class Tags {
 
 	// Global Constants
 	public static final String IMPALA_PROPERTYTABLE_TABLENAME = "bigtable_parquet";
-	public static final String IMPALA_SINGLETABLE_TABLENAME = "singletable_parquet";
+	public static final String IMPALA_SINGLETABLE_TABLENAME = "singletable";
 	public static final String IMPALA_TABLENAME_TRIPLESTORE = "triplestore_parquet";
 
 	public static final String BGP = "BGP";
@@ -41,7 +41,7 @@ public final class Tags {
 	public static final String NO_VAR = "#noVar";
 	public static final String NO_SUPPORT = "#noSupport";
 
-	public static final String QUERY_PREFIX = "DROP TABLE IF EXISTS result;\n CREATE TABLE result AS ";
+	public static final String QUERY_PREFIX = "DROP TABLE IF EXISTS result;\nCREATE TABLE result AS ";
 	public static final String QUERY_SUFFIX = "\nPROFILE; ";
 
 	public static final String OFFSETCHAR = "\t";

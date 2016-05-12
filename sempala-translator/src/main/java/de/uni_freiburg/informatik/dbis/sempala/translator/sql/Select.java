@@ -38,7 +38,7 @@ public class Select extends SQLStatement {
 		if (where.equals("")) {
 			where += condition;
 		} else {
-			where += " AND " + condition;
+			where += "\n  AND " + condition;
 		}
 	}
 
@@ -50,11 +50,11 @@ public class Select extends SQLStatement {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("");
-		sb.append("(SELECT ");
+		sb.append("(\nSELECT");
 		//if(isDistinct)
-		sb.append(" DISTINCT ");
+		sb.append(" DISTINCT");
 		if (selection.size() == 0) {
-			sb.append("* ");
+			sb.append(" *");
 		} else {
 			boolean first = true;
 			for (String key : selection.keySet()) {
@@ -63,41 +63,35 @@ public class Select extends SQLStatement {
 					if (first) {
 						first = false;
 					} else {
-						sb.append(", ");
+						sb.append(",");
 					}
 					if (selector.length > 1) {
-						sb.append(selector[0]+"." + selector[1]+  " AS " + "\"" + key + "\" ");
+						sb.append(" " + selector[0] + "." + selector[1] +  " AS " + "\"" + key + "\"");
 					} else {
-						sb.append(selector[0]+  " AS " + "\"" + key + "\" ");
+						sb.append(" " + selector[0] + " AS " + "\"" + key + "\"");
 					}
 				}
 			}
 		}
-		sb.append("\n FROM ");
-		// pretty formating
-		if (from.length() > 10)
-			sb.append("\n");
-		sb.append(from);
+		sb.append("\nFROM ");
+		sb.append(from.replaceAll("\n", "\n  "));
 		if (!this.where.equals("")) {
-			sb.append(" \n WHERE ");
-			// pretty formating
-			if (where.length() > 10)
-				sb.append("\n");
+			sb.append(" \nWHERE ");
 			sb.append(where);
 		}
 		if (!this.order.equals("")) {
-			sb.append("\n ORDER BY ");
+			sb.append("\nORDER BY ");
 			sb.append(order);
 		}
 		if(this.limit != -1){
-			sb.append("\n LIMIT ");
+			sb.append("\nLIMIT ");
 			sb.append(this.limit);
 		}
 		if(this.offset != -1){
-			sb.append("\n OFFSET ");
+			sb.append("\nOFFSET ");
 			sb.append(this.offset);
 		}
-		sb.append(")");
+		sb.append("\n)");
 		return sb.toString();
 	}
 
