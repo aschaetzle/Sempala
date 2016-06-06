@@ -27,6 +27,7 @@ public class ImpalaUnion extends ImpalaOp2 {
 		resultName = Tags.UNION;
 	}
 
+	@Override
 	public SQLStatement translate(String _resultName, SQLStatement left, SQLStatement right) {
 		resultName = _resultName;
 

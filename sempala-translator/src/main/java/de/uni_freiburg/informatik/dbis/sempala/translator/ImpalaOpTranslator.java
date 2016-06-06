@@ -67,9 +67,7 @@ public class ImpalaOpTranslator extends ImpalaOpVisitorBase {
 		expandPrefixes = _expandPrefixes;
 		// Walk through the tree bottom up
 		ImpalaOpWalker.walkBottomUp(this, op);
-		// put stack top here
-		String raw = Tags.QUERY_PREFIX + stack.pop().toString() + " ; "+ Tags.QUERY_SUFFIX;
-		return clean(raw);
+		return clean(stack.pop().toString());
 	}
 
 	private String clean(String raw) {

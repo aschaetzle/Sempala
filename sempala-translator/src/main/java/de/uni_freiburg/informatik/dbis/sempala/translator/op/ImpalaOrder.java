@@ -30,6 +30,7 @@ public class ImpalaOrder extends ImpalaOp1 {
 
 	}
 
+	@Override
 	public SQLStatement translate(String _resultName, SQLStatement child) {
 		resultName = subOp.getResultName();
 		String order = "";

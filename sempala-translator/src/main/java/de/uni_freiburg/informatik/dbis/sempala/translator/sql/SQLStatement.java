@@ -22,6 +22,7 @@ public abstract class SQLStatement {
 
 	public abstract String getOrder();
 
+	@Override
 	public abstract String toString();
 
 	/**

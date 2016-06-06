@@ -18,6 +18,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
 import de.uni_freiburg.informatik.dbis.sempala.translator.Format;
+import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 
 /**
@@ -80,14 +81,20 @@ public class Main {
 			if (commandLine.hasOption(OptionNames.HOST.toString())
 					&& commandLine.hasOption(OptionNames.DATABASE.toString())){
 
-				// Establish the connection to impalad
+				// Build the impalad url
 				String host = commandLine.getOptionValue(OptionNames.HOST.toString());
 				String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
 				String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 				String impalad_url = String.format("jdbc:impala://%s:%s/%s", host, port, database);
-				System.out.println(String.format("Connecting to impalad (%s)", impalad_url));
+
 				try {
+					// Connect to the impala server
+					System.out.println(String.format("Connecting to impalad (%s)", impalad_url));
 					connection = DriverManager.getConnection(impalad_url);
+
+					// Create a results database
+					connection.createStatement().executeUpdate(String.format("CREATE DATABASE IF NOT EXISTS %s;", Tags.SEMPALA_RESULTS_DB_NAME));
+
 				} catch (SQLException e) {
 					logger.fatal(e.getLocalizedMessage());
 					System.exit(1);
@@ -138,40 +145,53 @@ public class Main {
 		}
 
 		// Get a list of files that have to be handled
-		List<String> inputPaths = new ArrayList<>();
+		List<File> inputFiles = new ArrayList<>();
 		if (inputFile.isDirectory()){
 			// Run the translator for every file in the folder that matches the common sparql extensions
 			for(final File fileEntry : inputFile.listFiles()){
 				if(fileEntry.getName().matches("(.*\\.sq|.*\\.srx|.*\\.sparql)$")) { // Match only SPARQL extensions
-					inputPaths.add(fileEntry.getAbsolutePath());
+					inputFiles.add(fileEntry);
 				}
 			}
 		} else {
-			inputPaths.add(inputFile.getAbsolutePath());
+			inputFiles.add(inputFile);
 		}
 
-		// Translate every file
-		String sqlString = null;
-		for ( final String filePath : inputPaths ){
-			System.out.println("Translating file " + filePath);
-			translator.setInputFile(filePath);
-			sqlString = translator.translateQuery();
+		for ( final File file : inputFiles ) {
+
+			// Translate the sparql query
+			translator.setInputFile(file.getAbsolutePath());
+			String sqlString = translator.translateQuery();
 
 			if (connection != null) {
+
+				// If a connection is set run the query
 				try {
-					connection.createStatement().executeUpdate(sqlString);
+					// Build a unique impala conform tablename
+					String resultsTableName = String.format("%s_%d", file.getName(), System.currentTimeMillis());
+					resultsTableName =  resultsTableName.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
+
+					// Run the translated query and put it into the unique results table
+
+					System.out.print(file.getName() + ": ");
+					long startTime = System.currentTimeMillis();
+					connection.createStatement().executeUpdate(String.format("CREATE TABLE %s.%s AS (%s);", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlString));
+					long elapsedTime = System.currentTimeMillis() - startTime;
+					System.out.println(elapsedTime + " ms");
+
 				} catch (SQLException e) {
-					logger.warn("Querying database failed!", e);
+					logger.fatal("SQLException: " + e.getLocalizedMessage());
+					System.exit(1);
 				}
 			} else {
-				// Print resulting SQL script program to output file
+				// Print resulting SQL script to output file
 				PrintWriter printWriter;
 				try {
-					printWriter = new PrintWriter(filePath + ".sql");
+					printWriter = new PrintWriter(file.getAbsolutePath() + ".sql");
 					printWriter.print(sqlString);
 					printWriter.close();
 				} catch (Exception e) {
-					logger.warn("Cannot open output file: " + filePath + ".sql", e);
+					logger.warn("Cannot open output file: " + file.getAbsolutePath() + ".sql", e);
 				}
 			}
 		}

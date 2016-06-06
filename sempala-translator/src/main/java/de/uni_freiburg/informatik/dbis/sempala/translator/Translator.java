@@ -178,14 +178,22 @@ public class Translator {
 		logWriter.println("ImpalaOp Tree:");
 		logWriter.println("###########");
 		ImpalaOpPrettyPrinter.print(logWriter, impalaOpRoot);
-		//close log file
-		logWriter.close();
+		logWriter.println();
 
 		// Walk through ImpalaOp Tree and generate translation
 
 		// Translate the query
-		ImpalaOpTranslator translator = new ImpalaOpTranslator();
-		return translator.translate(impalaOpRoot, expandPrefixes);
+		ImpalaOpTranslator algebraTranslator = new ImpalaOpTranslator();
+		String sqlString = algebraTranslator.translate(impalaOpRoot, expandPrefixes);
+
+		//Output original Algebra Tree to log
+		logWriter.println("SQL Output Query:");
+		logWriter.println("######################");
+		logWriter.println(sqlString);
+		//close log file
+		logWriter.close();
+
+		return sqlString;
 	}
 
 

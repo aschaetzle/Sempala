@@ -26,6 +26,7 @@ public class ImpalaFilter extends ImpalaOp1 {
 		resultName = Tags.FILTER;
 	}
 
+	@Override
 	public SQLStatement translate(String _resultName, SQLStatement child) {
 		resultName = subOp.getResultName();
 		this.resultSchema = subOp.getSchema();

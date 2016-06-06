@@ -13,6 +13,8 @@ public final class Tags {
 	public static final String IMPALA_SINGLETABLE_TABLENAME = "singletable";
 	public static final String IMPALA_TABLENAME_TRIPLESTORE = "triplestore_parquet";
 
+	public static final String SEMPALA_RESULTS_DB_NAME = "sempala_results";
+
 	public static final String BGP = "BGP";
 	public static final String FILTER = "FILTER";
 	public static final String JOIN = "JOIN";
@@ -40,9 +42,6 @@ public final class Tags {
 
 	public static final String NO_VAR = "#noVar";
 	public static final String NO_SUPPORT = "#noSupport";
-
-	public static final String QUERY_PREFIX = "DROP TABLE IF EXISTS result;\nCREATE TABLE result AS ";
-	public static final String QUERY_SUFFIX = "\nPROFILE; ";
 
 	public static final String OFFSETCHAR = "\t";
 	public static final String SUBJECT_COLUMN_NAME   = "s";
