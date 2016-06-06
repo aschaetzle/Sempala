@@ -37,9 +37,6 @@ public class Translator {
 	/** The input file containing the sparql query */
 	private String inputFile = null;
 
-	/** The output file to write the sql query to */
-	private String outputFile = null;
-
 	/** The format to use to build the output queries against */
 	private Format format = Format.SINGLETABLE;
 
@@ -64,9 +61,9 @@ public class Translator {
 	/**
 	 * Translates the SPARQL query into a sql script for use with Impala.
 	 */
-	public void translateQuery() {
+	public String translateQuery() {
 
-		assert ! ( inputFile!=null && outputFile!=null ) : "in- and output must not be null!";
+		assert ! ( inputFile!=null ) : "in- and output must not be null!";
 
 		//Parse input query
 		Query query = QueryFactory.read("file:"+inputFile);
@@ -77,7 +74,7 @@ public class Translator {
 		//Generate translation logfile
 		PrintWriter logWriter;
 		try {
-			logWriter = new PrintWriter(outputFile + ".log");
+			logWriter = new PrintWriter(inputFile + ".log");
 		} catch (FileNotFoundException ex) {
 			logger.warn("Cannot open translation logfile, using stdout instead!", ex);
 			logWriter = new PrintWriter(System.out);
@@ -187,20 +184,8 @@ public class Translator {
 		// Walk through ImpalaOp Tree and generate translation
 
 		// Translate the query
-		String sqlScript = "";
 		ImpalaOpTranslator translator = new ImpalaOpTranslator();
-		sqlScript += translator.translate(impalaOpRoot, expandPrefixes);
-
-		// Print resulting SQL script program to output file
-		PrintWriter sqlWriter;
-		try {
-			sqlWriter = new PrintWriter(outputFile+".sql");
-			sqlWriter.print(sqlScript);
-			sqlWriter.close();
-		} catch (Exception ex) {
-			logger.fatal("Cannot open output file!", ex);
-			System.exit(-1);
-		}
+		return translator.translate(impalaOpRoot, expandPrefixes);
 	}
 
 
@@ -215,14 +200,6 @@ public class Translator {
 
 	public void setInputFile(String inputFile) {
 		this.inputFile = inputFile;
-	}
-
-	public String outputFile() {
-		return outputFile;
-	}
-
-	public void setOutputFile(String outputFile) {
-		this.outputFile = outputFile;
 	}
 
 	public boolean expandPrefixes() {

@@ -1,6 +1,12 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.run;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -18,12 +24,15 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
  * Main Class for program start. Parses the commandline arguments and calls the
  * Sempala translator.
  *
- * @author Antony Neu
+ * @author Antony Neu, Manuel Schneider
  */
 public class Main {
 
-	private static String input;
-	private static String output;
+	/** The input file/folder to write to */
+	private static String inputPath = null;
+
+	/** The connection to the impala daemon */
+    private static Connection connection = null;
 
 	// Define a static logger variable so that it references the corresponding
 	// Logger instance
@@ -37,6 +46,8 @@ public class Main {
 	 *            commandline arguments
 	 */
 	public static void main(String[] args) {
+
+		Translator translator = new Translator();
 
 		/*
 		 *  Parse the command line
@@ -52,7 +63,7 @@ public class Main {
 			// automatically generate the help statement
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp("SparqlEvaluator", options, true);
-			logger.fatal(e.getMessage(), e);
+			logger.fatal(e.getLocalizedMessage());
 			System.exit(-1);
 		}
 
@@ -62,12 +73,31 @@ public class Main {
 			formatter.printHelp("SparqlEvaluator", options, true);
 		}
 
+		// If host, port or database is defined, host and database are required
+		if (commandLine.hasOption(OptionNames.HOST.toString())
+				|| commandLine.hasOption(OptionNames.PORT.toString())
+				|| commandLine.hasOption(OptionNames.DATABASE.toString())){
+			if (commandLine.hasOption(OptionNames.HOST.toString())
+					&& commandLine.hasOption(OptionNames.DATABASE.toString())){
 
-		/*
-		 *  Set properties of translator
-		 */
+				// Establish the connection to impalad
+				String host = commandLine.getOptionValue(OptionNames.HOST.toString());
+				String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
+				String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
+				String impalad_url = String.format("jdbc:impala://%s:%s/%s", host, port, database);
+				System.out.println(String.format("Connecting to impalad (%s)", impalad_url));
+				try {
+					connection = DriverManager.getConnection(impalad_url);
+				} catch (SQLException e) {
+					logger.fatal(e.getLocalizedMessage());
+					System.exit(1);
+				}
 
-		Translator translator = new Translator();
+			} else {
+				logger.fatal("If host, port or database is defined, host and database are required");
+				System.exit(1);
+			}
+		}
 
 		// Enable optimizations if requested
 		if (commandLine.hasOption(OptionNames.OPTIMIZE.toString())) {
@@ -90,44 +120,60 @@ public class Main {
 			translator.setFormat(Format.SINGLETABLE);
 			logger.info("Format set to singletable.");
 		} else {
-			System.err.println("Fatal: Invalid format specified.");
+			logger.fatal("Fatal: Invalid format specified.");
 			System.exit(1);
 		}
 
 		// No check, input is required
-		input = commandLine.getOptionValue(OptionNames.INPUT.toString());
-
-		// If output is not specified use input as output
-		if ( commandLine.hasOption(OptionNames.OUTPUT.toString()) )
-			output = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
-		else
-			output = commandLine.getOptionValue(OptionNames.INPUT.toString());
-
+		inputPath = commandLine.getOptionValue(OptionNames.INPUT.toString());
 
 		/*
 		 *  Run translator
 		 */
 
-		File inputFile = new File(input);
-		if (inputFile.isDirectory()){
+		File inputFile = new File(inputPath);
+		if ( !inputFile.exists() ){
+			logger.fatal("Input path does not exist.");
+			System.exit(1);
+		}
 
+		// Get a list of files that have to be handled
+		List<String> inputPaths = new ArrayList<>();
+		if (inputFile.isDirectory()){
 			// Run the translator for every file in the folder that matches the common sparql extensions
 			for(final File fileEntry : inputFile.listFiles()){
 				if(fileEntry.getName().matches("(.*\\.sq|.*\\.srx|.*\\.sparql)$")) { // Match only SPARQL extensions
-					System.out.println("Translating file " + fileEntry.getName());
-					translator.setInputFile(fileEntry.getAbsolutePath());
-					translator.setOutputFile(fileEntry.getAbsolutePath());
-					translator.translateQuery();
+					inputPaths.add(fileEntry.getAbsolutePath());
 				}
 			}
-
 		} else {
+			inputPaths.add(inputFile.getAbsolutePath());
+		}
 
-			// Run the translator the for the given in- and output
-			translator.setInputFile(input);
-			translator.setOutputFile(output);
-			translator.translateQuery();
+		// Translate every file
+		String sqlString = null;
+		for ( final String filePath : inputPaths ){
+			System.out.println("Translating file " + filePath);
+			translator.setInputFile(filePath);
+			sqlString = translator.translateQuery();
 
+			if (connection != null) {
+				try {
+					connection.createStatement().executeUpdate(sqlString);
+				} catch (SQLException e) {
+					logger.warn("Querying database failed!", e);
+				}
+			} else {
+				// Print resulting SQL script program to output file
+				PrintWriter printWriter;
+				try {
+					printWriter = new PrintWriter(filePath + ".sql");
+					printWriter.print(sqlString);
+					printWriter.close();
+				} catch (Exception e) {
+					logger.warn("Cannot open output file: " + filePath + ".sql", e);
+				}
+			}
 		}
 	}
 
@@ -141,11 +187,13 @@ public class Main {
 	 */
 	private enum OptionNames {
 		EXPAND,
+		DATABASE,
 		FORMAT,
 		HELP,
+		HOST,
 		INPUT,
-		OUTPUT,
-		OPTIMIZE;
+		OPTIMIZE,
+		PORT;
 
 		@Override
 		public String toString() {
@@ -195,18 +243,33 @@ public class Main {
 				.build());
 
 		options.addOption(
-				Option.builder("o")
-				.longOpt(OptionNames.OUTPUT.toString())
-				.hasArg()
-				.argName("path")
-				.desc("Imapala output script file")
-				.build());
-
-		options.addOption(
 				Option.builder("opt")
 				.longOpt(OptionNames.OPTIMIZE.toString())
 				.desc("turn on SPARQL algebra optimization")
 				.build());
+
+		options.addOption(
+				Option.builder("d")
+				.longOpt(OptionNames.DATABASE.toString())
+				.desc("The database to use.")
+				.hasArg()
+				.build());
+
+		options.addOption(
+				Option.builder("H")
+				.longOpt(OptionNames.HOST.toString())
+				.desc("The host to connect to.")
+				.hasArg()
+				.build());
+
+		options.addOption(
+				Option.builder("p")
+				.longOpt(OptionNames.PORT.toString())
+				.desc("The port to connect to. (Defaults to 21050)")
+				.hasArg()
+				.build());
+
+
 
 		return options;
 	}

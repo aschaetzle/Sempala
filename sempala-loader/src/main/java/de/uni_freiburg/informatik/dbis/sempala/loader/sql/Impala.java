@@ -9,18 +9,18 @@ import java.sql.SQLException;
 
 /**
  * This is an Java binding for Impala JDBC.
- * 
+ *
  * This class lets you write Impala queries in Java. The statesments that are
  * sent to the impala daemon are build with convenient builders and finally
- * executed. This class is work in progress and is nowhere near final. Things 
+ * executed. This class is work in progress and is nowhere near final. Things
  * are getting implemented not until they are needed in the context of sempala.
  * If you miss something implement it!
- * 
+ *
  * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
  *
  */
 public final class Impala {
-	
+
 	/** An enumertation of the query options supported by impala 2.2 */
 	public enum QueryOption {
 		ABORT_ON_DEFAULT_LIMIT_EXCEEDED,
@@ -53,12 +53,9 @@ public final class Impala {
 		V_CPU_CORES
 	}
 
-	/** The default impalad port */ 
-	public static final String defaultPort = "21050";
-	
 	/** The connection to the impala daemon */
     private Connection connection = null;
-    
+
     /** Creates an instance of the impala wrapper. */
 	public Impala(String host, String port, String database) throws SQLException {
         // Dynamically load the impala driver // Why is this not necessary?
@@ -73,9 +70,9 @@ public final class Impala {
 //		while (d.hasMoreElements()) {
 //			System.out.println(d.nextElement());
 //		}
-		
+
     	// Establish the connection to impalad
-		String impalad_url = String.format("jdbc:impala://%s:%s/", host, (port!=null)?port:defaultPort);
+		String impalad_url = String.format("jdbc:impala://%s:%s/", host, port);
 		System.out.println(String.format("Connecting to impalad (%s)", impalad_url));
 		connection = DriverManager.getConnection(impalad_url);
 		try {
@@ -89,7 +86,7 @@ public final class Impala {
 				BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 				String input = null;
 				try {
-					input = br.readLine().toLowerCase();			
+					input = br.readLine().toLowerCase();
 				} catch (IOException e1) {
 					e1.printStackTrace();
 					System.exit(1);
@@ -102,89 +99,89 @@ public final class Impala {
 				case "u":
 					break inputloop;
 				case "a":
-					System.exit(1);		
+					System.exit(1);
 				}
 			}
-		} 
+		}
 		connection.createStatement().executeUpdate(String.format("USE %s", database));
-    } 
-    
+    }
+
     @Override
     protected void finalize() throws Throwable {
     	connection.close();
     	connection=null;
     	super.finalize();
     }
-    
+
     /**
-     * Creates a handy builder for the CREATE statement. 
-     * 
+     * Creates a handy builder for the CREATE statement.
+     *
      * @param tablename The name of the table you want to create.
-     * @return The builder for the CREATE statement. 
+     * @return The builder for the CREATE statement.
      */
     public CreateStatement createTable(String tablename){
     	return new CreateStatement(connection, tablename);
     }
-    
+
     /**
-     * Creates a handy builder for the CREATE statement. 
-     * 
+     * Creates a handy builder for the CREATE statement.
+     *
      * Convenience function for {@link createTable}. This function returns a
      * statement with the external flag initially set.
-     *  
+     *
      * @param tablename The name of the table you want to create.
-     * @return The builder for the CREATE statement. 
+     * @return The builder for the CREATE statement.
      */
     public CreateStatement createTable(){
     	return new CreateStatement(connection);
     }
-    
+
     /**
-     * Creates a handy builder for the INSERT statement. 
-     * 
+     * Creates a handy builder for the INSERT statement.
+     *
      * @param tablename The name of the table you want to insert into.
-     * @return The builder for the INSERT statement. 
+     * @return The builder for the INSERT statement.
      */
     public InsertStatement insertInto(String tablename){
     	return new InsertStatement(connection, tablename);
     }
-    
+
     /**
-     * Creates a handy builder for the INSERT statement. 
-     * 
+     * Creates a handy builder for the INSERT statement.
+     *
      * Convenience function for {@link insertTable}. This function returns a
      * statement with the overwrite flag initially set.
-     *  
+     *
      * @param tablename The name of the table you want to create.
-     * @return The builder for the INSERT statement. 
+     * @return The builder for the INSERT statement.
      */
     public InsertStatement insertOverwrite(String tablename){
     	return this.insertInto(tablename).overwrite();
     }
-    
+
     /**
-     * Creates a handy builder for the SELECT statement. 
-     *  
+     * Creates a handy builder for the SELECT statement.
+     *
      * @param tablename The projection expression of your query
-     * @return The builder for the SELECT statement. 
+     * @return The builder for the SELECT statement.
      */
     public SelectStatement select(){
     	return new SelectStatement(connection);
     }
-    
+
     /**
-     * Creates a handy builder for the SELECT statement. 
-     *  
+     * Creates a handy builder for the SELECT statement.
+     *
      * @param tablename The projection expression of your query
-     * @return The builder for the SELECT statement. 
+     * @return The builder for the SELECT statement.
      */
     public SelectStatement select(String expression){
     	return new SelectStatement(connection, expression);
     }
-    
+
     /**
      * Drops a table instantly.
-     * 
+     *
      * @param tablename The table to drop.
      * @throws SQLException
      */
@@ -195,16 +192,16 @@ public final class Impala {
 		long endTime = System.currentTimeMillis();
 		System.out.println(String.format(" [%.3fs]", (float)(endTime - startTime)/1000));
     }
-  
+
     /**
      * Computes stats for a table (optimization)
-     * 
+     *
      * Gathers information about volume and distribution of data in a table and
      * all associated columns and partitions. The information is stored in the
      * metastore database, and used by Impala to help optimize queries.
-     * 
-     * http://www.cloudera.com/content/www/en-us/documentation/enterprise/latest/topics/impala_perf_stats.html?scroll=perf_stats 
-     * 
+     *
+     * http://www.cloudera.com/content/www/en-us/documentation/enterprise/latest/topics/impala_perf_stats.html?scroll=perf_stats
+     *
      * @param tablename
      * @throws SQLException
      */
@@ -215,12 +212,12 @@ public final class Impala {
 		long endTime = System.currentTimeMillis();
 		System.out.println(String.format(" [%.3fs]", (float)(endTime - startTime)/1000));
     }
-    
+
     /**
      * Sets an impala query option
-     * 
+     *
      * http://www.cloudera.com/content/www/en-us/documentation/archive/impala/2-x/2-1-x/topics/impala_query_options.html?scroll=query_options
-     * 
+     *
      * @param option The option to set.
      * @param value The value of the option to set.
      * @throws SQLException

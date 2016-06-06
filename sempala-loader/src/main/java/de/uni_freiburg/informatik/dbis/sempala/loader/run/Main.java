@@ -17,18 +17,18 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala.QueryOption;
 
 /**
- * 
+ *
  * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
  *
  */
 public class Main {
-	
+
 	/** An enumeration of the data formats supported by this loader */
 	private enum Format {
 		PROPERTYTABLE,
 //		EXTVP,
 		SINGLETABLE;
-	
+
 	    @Override
 	    public String toString() {
 	        return super.toString().toLowerCase();
@@ -54,7 +54,7 @@ public class Main {
 		STRIP_DOT,
 		SHUFFLE,
 		UNIQUE;
-	
+
 	    @Override
 	    public String toString() {
 	        return super.toString().replace('_', '-').toLowerCase();
@@ -78,10 +78,10 @@ public class Main {
 			System.err.println("Fatal: Parsing failed. Reason: " + e.getMessage());
 			printHelpAndExit(1);
 		}
-		
+
 		// Get the required options
 		String host = commandLine.getOptionValue(OptionNames.HOST.toString());
-		String port = commandLine.getOptionValue(OptionNames.PORT.toString());
+		String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
 		String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 		String hdfsInputDirectory = commandLine.getOptionValue(OptionNames.INPUT.toString());
 
@@ -93,14 +93,14 @@ public class Main {
 		Impala impala = null;
 		try {
 			impala = new Impala(host, port, database);
-			
+
 			// Set compression codec to snappy
 			impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
 		} catch (SQLException e) {
 			System.err.println("Fatal: Could not connect to impalad: " + e.getLocalizedMessage());
 			System.exit(1);
 		}
-		
+
 		// Construct the loader corresponding to format
 		Loader loader = null;
 		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
@@ -114,14 +114,14 @@ public class Main {
 			System.err.println("Fatal: Invalid format.");
 			printHelpAndExit(1);
 		}
-				
+
 		// Set the options of the loader
 		if(commandLine.hasOption(OptionNames.OUTPUT.toString()))
 			loader.tablename_output = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
-		
+
 		if(commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
 			loader.column_name_subject = commandLine.getOptionValue(OptionNames.COLUMN_NAME_SUBJECT.toString());
-		
+
 		if(commandLine.hasOption(OptionNames.COLUMN_NAME_PREDICATE.toString()))
 			loader.column_name_predicate = commandLine.getOptionValue(OptionNames.COLUMN_NAME_PREDICATE.toString());
 
@@ -156,8 +156,8 @@ public class Main {
 			System.err.println("Fatal: SQL exception: " + e.getLocalizedMessage());
 			System.exit(1);
 		}
-	}	
-	
+	}
+
 	/**
 	 * Prints the commons cli help and exits with given return value
 	 */
@@ -166,7 +166,7 @@ public class Main {
 		formatter.printHelp("java -jar <path to jar> loader [options]", buildOptions());
 		System.exit(exitValue);
 	}
-	
+
 	/**
 	 * Builds the options for this application
 	 *
@@ -271,7 +271,7 @@ public class Main {
 		options.addOption(
 				Option.builder("p")
 				.longOpt(OptionNames.PORT.toString())
-				.desc("The port to connect to. (Defaults to "+Impala.defaultPort+")")
+				.desc("The port to connect to. (Defaults to 21050)")
 				.hasArg()
 				.build());
 
@@ -300,7 +300,7 @@ public class Main {
 				.longOpt(OptionNames.UNIQUE.toString())
 				.desc("Detect and ignore duplicates in the input (Memoryintensive!)")
 				.build());
-		
+
 		return options;
 	}
 }
