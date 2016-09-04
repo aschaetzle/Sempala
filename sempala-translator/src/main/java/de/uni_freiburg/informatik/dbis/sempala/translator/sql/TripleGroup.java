@@ -90,6 +90,7 @@ public class TripleGroup {
 
 	public SQLStatement translate() {
 		Select select = new Select(this.name);
+		select.setDistinct(true);
 
 		ArrayList<String> vars = new ArrayList<String>();
 		ArrayList<String> whereConditions = new ArrayList<String>();

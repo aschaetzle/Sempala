@@ -51,8 +51,8 @@ public class Select extends SQLStatement {
 	public String toString() {
 		StringBuilder sb = new StringBuilder("");
 		sb.append("(\nSELECT");
-		//if(isDistinct)
-		sb.append(" DISTINCT");
+		if(isDistinct)
+			sb.append(" DISTINCT");
 		if (selection.size() == 0) {
 			sb.append(" *");
 		} else {

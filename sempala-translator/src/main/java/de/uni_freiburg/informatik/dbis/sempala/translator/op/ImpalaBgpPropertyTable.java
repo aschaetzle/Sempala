@@ -86,8 +86,8 @@ public class ImpalaBgpPropertyTable extends ImpalaBGP {
 
 			}
 			this.resultSchema = group_shifted;
-			Join join= new Join(getResultName(), group.translate(), rights,
-					onConditions, JoinType.INNER);
+			Join join = new Join(getResultName(), group.translate(), rights, onConditions, JoinType.INNER);
+			join.setDistinct(true);
 			return join;
 		}
 		// no join needed
