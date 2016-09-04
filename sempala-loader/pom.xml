@@ -22,7 +22,7 @@
 
         <repository> <!-- Local repo containing dependencies -->
             <id>project_repo</id>
-            <url>file://${project.parent.basedir}/project_repo</url>
+            <url>file://${project.basedir}/../project_repo</url> <!-- ugly but maven -->
         </repository>
     </repositories>
 

@@ -22,7 +22,7 @@
 
         <repository> <!-- Local repo containing dependencies -->
             <id>project_repo</id>
-            <url>file://${project.parent.basedir}/project_repo</url>
+            <url>file://${project.basedir}/../project_repo</url> <!-- ugly but maven -->
         </repository>
 	</repositories>
 
@@ -118,7 +118,7 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.17</version>
-            <scope>runtime</scope>
+            <scope>compile</scope> <!-- Used in project as well -->
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
