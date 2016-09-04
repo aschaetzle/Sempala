@@ -23,6 +23,110 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala.QueryOption;
  */
 public class Main {
 
+	/**
+	 * The main routine.
+	 * @param args The arguments passed to the program
+	 */
+	public static void main(String[] args) {
+
+		// Parse command line
+		Options options = buildOptions();
+		CommandLine commandLine = null;
+		CommandLineParser parser = new DefaultParser();
+		try {
+			commandLine = parser.parse(options, args);
+		} catch (ParseException e) {
+			// Commons CLI is poorly designed and uses exceptions for missing
+			// required options. Therefore we can not print help without throwing
+			// an exception. We'll just print it on every exception.
+			System.err.println(e.getLocalizedMessage());
+			HelpFormatter formatter = new HelpFormatter();
+			formatter.setWidth(100);
+			formatter.printHelp("sempala-loader", options, true);
+			System.exit(1);
+		}
+
+		// Connect to the impala daemon
+		Impala impala = null;
+		try {
+			String host = commandLine.getOptionValue(OptionNames.HOST.toString());
+			String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
+			String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
+			impala = new Impala(host, port, database);
+
+			// Set compression codec to snappy
+			impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
+		} catch (SQLException e) {
+			System.err.println(e.getLocalizedMessage());
+			System.exit(1);
+		}
+
+		/*
+		 *  Setup loader
+		 */
+
+		Loader loader = null;
+
+		// Construct the loader corresponding to format
+		String hdfsInputDirectory = commandLine.getOptionValue(OptionNames.INPUT.toString());
+		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
+		if (format.equals(Format.PROPERTYTABLE.toString()))
+			loader = new PropertyTableLoader(impala, hdfsInputDirectory);
+//		else if (format.equals(Format.EXTVP.toString())
+//			throw new NotImplementedException("Extended vertical partitioning is not implemented yet");
+		else if (format.equals(Format.SINGLETABLE.toString()))
+			loader = new SingleTableLoader(impala, hdfsInputDirectory);
+		else {
+			System.err.println("Fatal: Invalid format.");
+			System.exit(1);
+		}
+
+		// Set the options of the loader
+		if(commandLine.hasOption(OptionNames.OUTPUT.toString()))
+			loader.tablename_output = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
+
+		if(commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
+			loader.column_name_subject = commandLine.getOptionValue(OptionNames.COLUMN_NAME_SUBJECT.toString());
+
+		if(commandLine.hasOption(OptionNames.COLUMN_NAME_PREDICATE.toString()))
+			loader.column_name_predicate = commandLine.getOptionValue(OptionNames.COLUMN_NAME_PREDICATE.toString());
+
+		if(commandLine.hasOption(OptionNames.COLUMN_NAME_OBJECT.toString()))
+			loader.column_name_object = commandLine.getOptionValue(OptionNames.COLUMN_NAME_OBJECT.toString());
+
+		if(commandLine.hasOption(OptionNames.FIELD_TERMINATOR.toString()))
+			loader.field_terminator = commandLine.getOptionValue(OptionNames.FIELD_TERMINATOR.toString());
+
+		if(commandLine.hasOption(OptionNames.KEEP.toString()))
+			loader.keep = commandLine.hasOption(OptionNames.KEEP.toString());
+
+		if(commandLine.hasOption(OptionNames.LINE_TERMINATOR.toString()))
+			loader.line_terminator = commandLine.getOptionValue(OptionNames.LINE_TERMINATOR.toString());
+
+		if(commandLine.hasOption(OptionNames.PREFIX_FILE.toString()))
+			loader.prefix_file = commandLine.getOptionValue(OptionNames.PREFIX_FILE.toString());
+
+		if(commandLine.hasOption(OptionNames.STRIP_DOT.toString()))
+			loader.strip_dot = commandLine.hasOption(OptionNames.STRIP_DOT.toString());
+
+		if(commandLine.hasOption(OptionNames.SHUFFLE.toString()))
+			loader.shuffle = commandLine.hasOption(OptionNames.SHUFFLE.toString());
+
+		if(commandLine.hasOption(OptionNames.UNIQUE.toString()))
+			loader.unique = commandLine.hasOption(OptionNames.UNIQUE.toString());
+
+		/*
+		 *  Run loader
+		 */
+
+		try {
+			loader.load();
+		} catch (SQLException e) {
+			System.err.println("Fatal: SQL exception: " + e.getLocalizedMessage());
+			System.exit(1);
+		}
+	}
+
 	/** An enumeration of the data formats supported by this loader */
 	private enum Format {
 		PROPERTYTABLE,
@@ -62,125 +166,20 @@ public class Main {
 	}
 
 	/**
-	 * The main routine.
-	 *
-	 * @param args The arguments passed to the program
-	 */
-	public static void main(String[] args) {
-
-		// Parse the command line
-		Options options = buildOptions();
-		CommandLine commandLine = null;
-		CommandLineParser parser = new DefaultParser();
-		try {
-			commandLine = parser.parse(options, args);
-		} catch (ParseException e) {
-			System.err.println("Fatal: Parsing failed. Reason: " + e.getMessage());
-			printHelpAndExit(1);
-		}
-
-		// Get the required options
-		String host = commandLine.getOptionValue(OptionNames.HOST.toString());
-		String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
-		String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
-		String hdfsInputDirectory = commandLine.getOptionValue(OptionNames.INPUT.toString());
-
-		// Print help if requested
-		if (commandLine.hasOption(OptionNames.HELP.toString()))
-			printHelpAndExit(0);
-
-		// Connect to impalad
-		Impala impala = null;
-		try {
-			impala = new Impala(host, port, database);
-
-			// Set compression codec to snappy
-			impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
-		} catch (SQLException e) {
-			System.err.println("Fatal: Could not connect to impalad: " + e.getLocalizedMessage());
-			System.exit(1);
-		}
-
-		// Construct the loader corresponding to format
-		Loader loader = null;
-		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
-		if (format.equals(Format.PROPERTYTABLE.toString()))
-			loader = new PropertyTableLoader(impala, hdfsInputDirectory);
-//		else if (format.equals(Format.EXTVP.toString())
-//			throw new NotImplementedException("Extended vertical partitioning is not implemented yet");
-		else if (format.equals(Format.SINGLETABLE.toString()))
-			loader = new SingleTableLoader(impala, hdfsInputDirectory);
-		else {
-			System.err.println("Fatal: Invalid format.");
-			printHelpAndExit(1);
-		}
-
-		// Set the options of the loader
-		if(commandLine.hasOption(OptionNames.OUTPUT.toString()))
-			loader.tablename_output = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
-
-		if(commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
-			loader.column_name_subject = commandLine.getOptionValue(OptionNames.COLUMN_NAME_SUBJECT.toString());
-
-		if(commandLine.hasOption(OptionNames.COLUMN_NAME_PREDICATE.toString()))
-			loader.column_name_predicate = commandLine.getOptionValue(OptionNames.COLUMN_NAME_PREDICATE.toString());
-
-		if(commandLine.hasOption(OptionNames.COLUMN_NAME_OBJECT.toString()))
-			loader.column_name_object = commandLine.getOptionValue(OptionNames.COLUMN_NAME_OBJECT.toString());
-
-		if(commandLine.hasOption(OptionNames.FIELD_TERMINATOR.toString()))
-			loader.field_terminator = commandLine.getOptionValue(OptionNames.FIELD_TERMINATOR.toString());
-
-		if(commandLine.hasOption(OptionNames.KEEP.toString()))
-			loader.keep = commandLine.hasOption(OptionNames.KEEP.toString());
-
-		if(commandLine.hasOption(OptionNames.LINE_TERMINATOR.toString()))
-			loader.line_terminator = commandLine.getOptionValue(OptionNames.LINE_TERMINATOR.toString());
-
-		if(commandLine.hasOption(OptionNames.PREFIX_FILE.toString()))
-			loader.prefix_file = commandLine.getOptionValue(OptionNames.PREFIX_FILE.toString());
-
-		if(commandLine.hasOption(OptionNames.STRIP_DOT.toString()))
-			loader.strip_dot = commandLine.hasOption(OptionNames.STRIP_DOT.toString());
-
-		if(commandLine.hasOption(OptionNames.SHUFFLE.toString()))
-			loader.shuffle = commandLine.hasOption(OptionNames.SHUFFLE.toString());
-
-		if(commandLine.hasOption(OptionNames.UNIQUE.toString()))
-			loader.unique = commandLine.hasOption(OptionNames.UNIQUE.toString());
-
-		// Eventually build the table
-		try {
-			loader.load();
-		} catch (SQLException e) {
-			System.err.println("Fatal: SQL exception: " + e.getLocalizedMessage());
-			System.exit(1);
-		}
-	}
-
-	/**
-	 * Prints the commons cli help and exits with given return value
-	 */
-	private static void  printHelpAndExit(int exitValue) {
-		HelpFormatter formatter = new HelpFormatter();
-		formatter.printHelp("java -jar <path to jar> loader [options]", buildOptions());
-		System.exit(exitValue);
-	}
-
-	/**
 	 * Builds the options for this application
-	 *
 	 * @return The options collection
 	 */
 	public static Options buildOptions() {
 
 		Options options = new Options();
 
+		// Add all other options
 		options.addOption(
 				Option.builder("cs")
 				.longOpt(OptionNames.COLUMN_NAME_SUBJECT.toString())
 				.desc("Overwrites the column name to use. (subject)")
 				.hasArg()
+				.argName("name")
 				.build());
 
 		options.addOption(
@@ -188,6 +187,7 @@ public class Main {
 				.longOpt(OptionNames.COLUMN_NAME_PREDICATE.toString())
 				.desc("Overwrites the column name to use. (predicate)")
 				.hasArg()
+				.argName("name")
 				.build());
 
 		options.addOption(
@@ -195,6 +195,7 @@ public class Main {
 				.longOpt(OptionNames.COLUMN_NAME_OBJECT.toString())
 				.desc("Overwrites the column name to use. (object)")
 				.hasArg()
+				.argName("name")
 				.build());
 
 		options.addOption(
@@ -202,6 +203,7 @@ public class Main {
 				.longOpt(OptionNames.DATABASE.toString())
 				.desc("The database to use.")
 				.hasArg()
+				.argName("databse")
 				.required()
 				.build());
 
@@ -213,6 +215,7 @@ public class Main {
 //						+ Format.EXTVP.toString() + ": (Not implemented) see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
 						+ Format.SINGLETABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon")
 				.hasArg()
+				.argName("format")
 				.required()
 				.build());
 
@@ -221,14 +224,13 @@ public class Main {
 				.longOpt(OptionNames.FIELD_TERMINATOR.toString())
 				.desc("The character used to separate the fields in the data. (Defaults to '\\t')")
 				.hasArg()
-				.build()
-				);
+				.argName("sep")
+				.build());
 
 		options.addOption(
 				Option.builder("h")
 				.longOpt(OptionNames.HELP.toString())
 				.desc("Print this help.")
-				.hasArg()
 				.build());
 
 		options.addOption(
@@ -236,6 +238,7 @@ public class Main {
 				.longOpt(OptionNames.HOST.toString())
 				.desc("The host to connect to.")
 				.hasArg()
+				.argName("host")
 				.required()
 				.build());
 
@@ -244,9 +247,9 @@ public class Main {
 				.longOpt(OptionNames.INPUT.toString())
 				.desc("The HDFS location of the RDF data (N-Triples).")
 				.hasArg()
+				.argName("path")
 				.required()
-				.build()
-				);
+				.build());
 
 		options.addOption(
 				Option.builder("k")
@@ -259,6 +262,7 @@ public class Main {
 				.longOpt(OptionNames.LINE_TERMINATOR.toString())
 				.desc("The character used to separate the lines in the data. (Defaults to '\\n')")
 				.hasArg()
+				.argName("terminator")
 				.build());
 
 		options.addOption(
@@ -266,6 +270,7 @@ public class Main {
 				.longOpt(OptionNames.OUTPUT.toString())
 				.desc("Overwrites the name of the output table.")
 				.hasArg()
+				.argName("name")
 				.build());
 
 		options.addOption(
@@ -273,6 +278,7 @@ public class Main {
 				.longOpt(OptionNames.PORT.toString())
 				.desc("The port to connect to. (Defaults to 21050)")
 				.hasArg()
+				.argName("port")
 				.build());
 
 		options.addOption(
@@ -280,8 +286,8 @@ public class Main {
 				.longOpt(OptionNames.PREFIX_FILE.toString())
 				.desc("The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.")
 				.hasArg()
-				.build()
-				);
+				.argName("file")
+				.build());
 
 		options.addOption(
 				Option.builder("s")

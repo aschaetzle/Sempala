@@ -40,38 +40,27 @@ public class Main {
 	private static final Logger logger = Logger.getLogger(Main.class);
 
 	/**
-	 * Main method invoked on program start. It parses the commandline arguments
-	 * and calls the Translator.
-	 *
-	 * @param args
-	 *            commandline arguments
+	 * The main routine.
+	 * It parses the commandline arguments and calls the Translator.
+	 * @param args commandline arguments
 	 */
 	public static void main(String[] args) {
 
-		Translator translator = new Translator();
-
-		/*
-		 *  Parse the command line
-		 */
-
+		// Parse command line
 		Options options = buildOptions();
-		CommandLineParser parser = new DefaultParser();
 		CommandLine commandLine = null;
+		CommandLineParser parser = new DefaultParser();
 		try {
 			commandLine = parser.parse(options, args);
 		} catch (ParseException e) {
-			// error when parsing commandline arguments
-			// automatically generate the help statement
+			// Commons CLI is poorly designed and uses exceptions for missing
+			// required options. Therefore we can not print help without throwing
+			// an exception. We'll just print it on every exception.
+			System.err.println(e.getLocalizedMessage());
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("SparqlEvaluator", options, true);
-			logger.fatal(e.getLocalizedMessage());
-			System.exit(-1);
-		}
-
-		if (commandLine.hasOption(OptionNames.HELP.toString())) {
-			// automatically generate the help statement
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("SparqlEvaluator", options, true);
+			formatter.setWidth(100);
+			formatter.printHelp("sempala-translator", options, true);
+			System.exit(1);
 		}
 
 		// If host, port or database is defined, host and database are required
@@ -105,6 +94,12 @@ public class Main {
 				System.exit(1);
 			}
 		}
+
+		/*
+		 *  Setup translator
+		 */
+
+		Translator translator = new Translator();
 
 		// Enable optimizations if requested
 		if (commandLine.hasOption(OptionNames.OPTIMIZE.toString())) {
@@ -221,15 +216,21 @@ public class Main {
 		}
 	}
 
-
 	/**
 	 * Builds the options for this application
-	 *
 	 * @return The options collection
 	 */
 	public static Options buildOptions() {
 
 		Options options = new Options();
+
+		options.addOption(
+				Option.builder("d")
+				.longOpt(OptionNames.DATABASE.toString())
+				.desc("The database to use.")
+				.hasArg()
+				.argName("database")
+				.build());
 
 		options.addOption(
 				Option.builder("e")
@@ -244,13 +245,22 @@ public class Main {
 						+ Format.PROPERTYTABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
 						+ Format.SINGLETABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon")
 				.hasArg()
+				.argName("format")
 				.required()
 				.build());
 
 		options.addOption(
 				Option.builder("h")
 				.longOpt(OptionNames.HELP.toString())
-				.desc("print this message")
+				.desc("Print this help.")
+				.build());
+
+		options.addOption(
+				Option.builder("H")
+				.longOpt(OptionNames.HOST.toString())
+				.desc("The host to connect to.")
+				.hasArg()
+				.argName("host")
 				.build());
 
 		options.addOption(
@@ -269,30 +279,13 @@ public class Main {
 				.build());
 
 		options.addOption(
-				Option.builder("d")
-				.longOpt(OptionNames.DATABASE.toString())
-				.desc("The database to use.")
-				.hasArg()
-				.build());
-
-		options.addOption(
-				Option.builder("H")
-				.longOpt(OptionNames.HOST.toString())
-				.desc("The host to connect to.")
-				.hasArg()
-				.build());
-
-		options.addOption(
 				Option.builder("p")
 				.longOpt(OptionNames.PORT.toString())
 				.desc("The port to connect to. (Defaults to 21050)")
 				.hasArg()
+				.argName("port")
 				.build());
-
-
 
 		return options;
 	}
-
-
 }
