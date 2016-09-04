@@ -161,23 +161,28 @@ public class Main {
 			if (connection != null) {
 
 				// If a connection is set run the query
+				// Build a unique impala conform tablename
+				String resultsTableName = String.format("%s_%d", file.getName(), System.currentTimeMillis());
+				resultsTableName =  resultsTableName.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
+
+				// Sleep a second to give impalad some time to calm down
+			    try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+
+			    // Run the translated query and put it into the unique results table
+				System.out.print(file.getName() + ": ");
+				long startTime = System.currentTimeMillis();
 				try {
-					// Build a unique impala conform tablename
-					String resultsTableName = String.format("%s_%d", file.getName(), System.currentTimeMillis());
-					resultsTableName =  resultsTableName.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
-
-					// Run the translated query and put it into the unique results table
-
-					System.out.print(file.getName() + ": ");
-					long startTime = System.currentTimeMillis();
 					connection.createStatement().executeUpdate(String.format("CREATE TABLE %s.%s AS (%s);", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlString));
-					long elapsedTime = System.currentTimeMillis() - startTime;
-					System.out.println(elapsedTime + " ms");
-
 				} catch (SQLException e) {
 					logger.fatal("SQLException: " + e.getLocalizedMessage());
 					System.exit(1);
 				}
+				long elapsedTime = System.currentTimeMillis() - startTime;
+				System.out.println(elapsedTime + " ms");
 			} else {
 				// Print resulting SQL script to output file
 				PrintWriter printWriter;
