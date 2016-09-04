@@ -166,32 +166,42 @@ public class Main {
 				String resultsTableName = String.format("%s_%d", file.getName(), System.currentTimeMillis());
 				resultsTableName =  resultsTableName.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
 
-				// Sleep a second to give impalad some time to calm down
-			    try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+				// Run the translated query and put it into the unique results table
+				System.out.print(String.format("%s:", file.getName()));
 
-			    // Run the translated query and put it into the unique results table
 				try {
-					System.out.print(String.format("%s:", file.getName()));
-					long startTime = System.currentTimeMillis();
+					// Sleep a second to give impalad some time to calm down
+					Thread.sleep(10000);
 
-					// Run the query on the cluster
+					// Execute the query
+					long startTime = System.currentTimeMillis();
 					connection.createStatement().executeUpdate(String.format("CREATE TABLE %s.%s AS (%s);", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlString));
 					System.out.print(String.format(" %s ms", System.currentTimeMillis() - startTime));
+
+					// Sleep a second to give impalad some time to calm down
+					Thread.sleep(10000);
 
 					// Count the results
 					ResultSet result = connection.createStatement().executeQuery(String.format("SELECT COUNT(*) FROM %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
 					result.next();
-					int tableSize = result.getInt(1);
-					System.out.println(String.format(" %s pc", tableSize));;
+					long tableSize = result.getLong(1);
+					System.out.println(String.format(" %s pc", tableSize));
 
+					// Sleep a second to give impalad some time to calm down
+					Thread.sleep(10000);
+
+					// Immediately delete the results if this is just a benchmark run
+					if (commandLine.hasOption(OptionNames.BENCHMARK.toString())) {
+						connection.createStatement().executeUpdate(String.format("DROP TABLE IF EXISTS %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
+					}
 				} catch (SQLException e) {
-					logger.fatal("SQLException: " + e.getLocalizedMessage());
+					e.printStackTrace();
+					System.exit(1);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 					System.exit(1);
 				}
+
 			} else {
 				// Print resulting SQL script to output file
 				PrintWriter printWriter;
@@ -215,6 +225,7 @@ public class Main {
 	 * -o, --output <file> Impala output script file
 	 */
 	private enum OptionNames {
+		BENCHMARK,
 		EXPAND,
 		DATABASE,
 		FORMAT,
@@ -239,17 +250,23 @@ public class Main {
 		Options options = new Options();
 
 		options.addOption(
-				Option.builder("d")
-				.longOpt(OptionNames.DATABASE.toString())
-				.desc("The database to use.")
-				.hasArg()
-				.argName("database")
+				Option.builder("b")
+				.longOpt(OptionNames.BENCHMARK.toString())
+				.desc("Just print runtimes and delete results.")
 				.build());
 
 		options.addOption(
 				Option.builder("e")
 				.longOpt(OptionNames.EXPAND.toString())
-				.desc("expand URI prefixes")
+				.desc("Expand URI prefixes.")
+				.build());
+
+		options.addOption(
+				Option.builder("d")
+				.longOpt(OptionNames.DATABASE.toString())
+				.desc("The database to use.")
+				.hasArg()
+				.argName("database")
 				.build());
 
 		options.addOption(
