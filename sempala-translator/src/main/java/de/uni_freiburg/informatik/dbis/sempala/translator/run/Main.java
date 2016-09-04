@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -173,16 +174,24 @@ public class Main {
 				}
 
 			    // Run the translated query and put it into the unique results table
-				System.out.print(file.getName() + ": ");
-				long startTime = System.currentTimeMillis();
 				try {
+					System.out.print(String.format("%s:", file.getName()));
+					long startTime = System.currentTimeMillis();
+
+					// Run the query on the cluster
 					connection.createStatement().executeUpdate(String.format("CREATE TABLE %s.%s AS (%s);", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlString));
+					System.out.print(String.format(" %s ms", System.currentTimeMillis() - startTime));
+
+					// Count the results
+					ResultSet result = connection.createStatement().executeQuery(String.format("SELECT COUNT(*) FROM %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
+					result.next();
+					int tableSize = result.getInt(1);
+					System.out.println(String.format(" %s pc", tableSize));;
+
 				} catch (SQLException e) {
 					logger.fatal("SQLException: " + e.getLocalizedMessage());
 					System.exit(1);
 				}
-				long elapsedTime = System.currentTimeMillis() - startTime;
-				System.out.println(elapsedTime + " ms");
 			} else {
 				// Print resulting SQL script to output file
 				PrintWriter printWriter;
