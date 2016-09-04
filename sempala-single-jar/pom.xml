@@ -10,9 +10,9 @@
         <version>1.0</version>
     </parent>
 
-    <artifactId>sempala-single-jar</artifactId>
+    <artifactId>sempala</artifactId>
     <packaging>jar</packaging>
-    <name>Sempala Single Jar</name>
+    <name>Sempala</name>
 
     <dependencies>
         <dependency>
@@ -71,7 +71,31 @@
 				</executions>
 			</plugin>
 
-			<!-- Build a jar with dependencies -->
+			<!-- Add ./dist to clean phase -->
+			<plugin>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<filesets>
+						<fileset>
+							<directory>dist</directory>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+
+			<!-- Build a jar with dependencies 
+			
+			Maven shade make major problems with log4j. I have not really a clue
+			why and since it is not strictly a goal of my project is will stop 
+			trying it, although it would be nice to have e stressless jar to
+			pass/scp around in the cluster.
+			I will leave the section commented, if someone wants to continue to 
+			work on it. 
+			If you are the one start with the crooked classpath in the final
+			uberjar that is somehow copied from the two dependencies. (loader, 
+			translator)
+			
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
@@ -99,20 +123,7 @@
 						</transformer>
 					</transformers>
 				</configuration>
-			</plugin>
-
-			<!-- Add ./dist to clean phase -->
-			<plugin>
-				<artifactId>maven-clean-plugin</artifactId>
-				<version>3.0.0</version>
-				<configuration>
-					<filesets>
-						<fileset>
-							<directory>dist</directory>
-						</fileset>
-					</filesets>
-				</configuration>
-			</plugin>
+			</plugin>-->
 
 		</plugins>
 	</build>
