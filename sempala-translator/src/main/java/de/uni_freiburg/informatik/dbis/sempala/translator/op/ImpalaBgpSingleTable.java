@@ -180,7 +180,7 @@ public class ImpalaBgpSingleTable extends ImpalaBGP {
 			SQLStatement left = joinedPartitions.get(0);
 			List<SQLStatement> rights = new ArrayList<>();
 			rights.addAll(joinedPartitions.subList(1, joinedPartitions.size()));
-			List<String> onClauses = new ArrayList<String>(Collections.nCopies(rights.size(), ""));
+			List<String> onClauses = new ArrayList<>(Collections.nCopies(rights.size(), ""));
 			result = new Join("res", left, rights, onClauses, JoinType.CROSS);
 		}
 		else
@@ -269,7 +269,7 @@ public class ImpalaBgpSingleTable extends ImpalaBGP {
 					continue;
 
 				// If the neighbour.s equals triple.o add OS relation. Implies neighbour.getSubject().isVariable().
-				if (neighbour.getObject().equals(triple.getSubject()) )
+				if (neighbour.getSubject().equals(triple.getObject()) )
 					stmt.addWhereConjunction(String.format("os_%s",
 							toImpalaColumnName(FmtUtils.stringForNode(neighbour.getPredicate(), prefixes))));
 			}
