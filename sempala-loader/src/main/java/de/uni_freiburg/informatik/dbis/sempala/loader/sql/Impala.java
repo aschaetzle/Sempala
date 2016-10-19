@@ -10,7 +10,7 @@ import java.sql.SQLException;
 /**
  * This is an Java binding for Impala JDBC.
  *
- * This class lets you write Impala queries in Java. The statesments that are
+ * This class lets you write Impala queries in Java. The statements that are
  * sent to the impala daemon are build with convenient builders and finally
  * executed. This class is work in progress and is nowhere near final. Things
  * are getting implemented not until they are needed in the context of sempala.

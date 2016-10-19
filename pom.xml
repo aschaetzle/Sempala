@@ -9,7 +9,7 @@
     <version>1.0</version>
     <packaging>pom</packaging>
     <name>Sempala Parent</name>
-    
+
     <organization>
         <name>University of Freiburg, Department of Computer Science</name>
         <url>http://www.informatik.uni-freiburg.de</url>
@@ -22,7 +22,7 @@
     <modules>
         <module>sempala-loader</module>
         <module>sempala-translator</module>
-        <module>sempala-single-jar</module>
+        <module>sempala</module>
     </modules>
 
     <build>
@@ -39,9 +39,9 @@
 						<target>1.7</target>
 					</configuration>
 				</plugin>
-			
+
             </plugins>
         </pluginManagement>
     </build>
-    
+
 </project>

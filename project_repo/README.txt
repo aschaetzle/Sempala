@@ -1,4 +1,4 @@
-### WHAT IS THE PURPOSE OF THE "project_repo" DIRECTORY
+### PURPOSE OF THIS DIRECTORY
 
 Cloudera Impala JDBC connector ships with several libraries. All but the 
 connector itself are available in the maven or cloudera central repositories
@@ -9,7 +9,7 @@ central repository.
 To update the current version of impala in the in-project repository, completely
 remove and rebuild the project repository. To build the project repo get the
 JDBC driver by downloading it from cloudera.com [1] and install it with the
-maven install plugin. This will take care of checksum. An example:
+maven install plugin. This will take care of checksums. An example:
 
   mvn install:install-file
     -DlocalRepositoryPath=project_repo
@@ -22,7 +22,7 @@ maven install plugin. This will take care of checksum. An example:
 
 
 
-### INSTALLING A PACKAGE
+### Official guide to installing 3rd party JARs
 
 Although rarely, but sometimes you will have 3rd party JARs that you need to put
 in your local repository for use in your builds, since they don't exist in any
