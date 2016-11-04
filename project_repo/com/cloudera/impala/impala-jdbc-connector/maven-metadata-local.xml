@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.cloudera.impala</groupId>
+  <artifactId>impala-jdbc-connector</artifactId>
+  <versioning>
+    <release>4.1</release>
+    <versions>
+      <version>4.1</version>
+    </versions>
+    <lastUpdated>20151105161553</lastUpdated>
+  </versioning>
+</metadata>
