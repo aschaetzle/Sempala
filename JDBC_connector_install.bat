@@ -1,0 +1,1 @@
+mvn install:install-file -DlocalRepositoryPath=project_repo -DcreateChecksum=true -Dpackaging=jar -Dfile=ImpalaJDBC41.jar -DgroupId=com.cloudera.impala -DartifactId=impala-jdbc-4.1-connector -Dversion=<version>
