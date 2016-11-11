@@ -1,3 +1,11 @@
+### BUILD project
+You need to have Maven installed on your system.
+Then simply run "mvn package" from the root directory.
+It will build 'sempala-loader', 'sempala-translator' and finally 'sempala'.
+You can also build 'sepala-loader' or 'sempala-translator' only by
+running "mvn package" from the corresponding subdirectory.
+
+
 ### PURPOSE OF project_repo DIRECTORY
 
 Cloudera Impala JDBC connector ships with several libraries. All but the 
@@ -20,7 +28,6 @@ and install it with the maven install plugin. This will take care of checksums:
     -DgroupId=com.cloudera.impala
     -DartifactId=impala-jdbc-4.1-connector
     -Dversion=<version>
-
 
 
 ### Official guide to installing 3rd party JARs
