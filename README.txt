@@ -7,9 +7,10 @@ connector is installed in a in-project repository, which behaves like a remote
 central repository.
 
 To update the version of the Impala JDBC connector in the in-project repository,
-completely remove and rebuild the project repository. To build the project repo get the
-JDBC driver by downloading it from cloudera.com [1] and install it with the
-maven install plugin. This will take care of checksums. An example:
+you can install a newer version of it and update the POM of sempala-parent
+(main POM in root directory of this project) to use that version.
+To do this, get the JDBC driver by downloading it from cloudera.com [1]
+and install it with the maven install plugin. This will take care of checksums:
 
   mvn install:install-file
     -DlocalRepositoryPath=project_repo
@@ -17,7 +18,7 @@ maven install plugin. This will take care of checksums. An example:
     -Dpackaging=jar
     -Dfile=<path_to:jdbc_driver.jar>
     -DgroupId=com.cloudera.impala
-    -DartifactId=impala-jdbc-connector
+    -DartifactId=impala-jdbc-4.1-connector
     -Dversion=<version>
 
 
@@ -49,4 +50,4 @@ directory, which will be read by default. In that case, all you need to do is:
 
 
 
-[1] http://www.cloudera.com/content/www/en-us/downloads.html.html
+[1] http://www.cloudera.com/downloads/connectors/impala/jdbc.html
