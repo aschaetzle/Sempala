@@ -13,6 +13,7 @@
     <artifactId>sempala</artifactId>
     <packaging>jar</packaging>
     <name>Sempala</name>
+	<url>http://dbis.informatik.uni-freiburg.de/Sempala</url>
 
     <dependencies>
         <dependency>

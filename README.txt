@@ -1,3 +1,11 @@
+### BUILD project
+You need to have Maven installed on your system.
+Then simply run "mvn package" from the root directory.
+It will build 'sempala-loader', 'sempala-translator' and finally 'sempala'.
+You can also build 'sepala-loader' or 'sempala-translator' only by
+running "mvn package" from the corresponding subdirectory.
+
+
 ### PURPOSE OF project_repo DIRECTORY
 
 Cloudera Impala JDBC connector ships with several libraries. All but the 
@@ -7,9 +15,10 @@ connector is installed in a in-project repository, which behaves like a remote
 central repository.
 
 To update the version of the Impala JDBC connector in the in-project repository,
-completely remove and rebuild the project repository. To build the project repo get the
-JDBC driver by downloading it from cloudera.com [1] and install it with the
-maven install plugin. This will take care of checksums. An example:
+you can install a newer version of it and update the POM of sempala-parent
+(main POM in root directory of this project) to use that version.
+To do this, get the JDBC driver by downloading it from cloudera.com [1]
+and install it with the maven install plugin. This will take care of checksums:
 
   mvn install:install-file
     -DlocalRepositoryPath=project_repo
@@ -17,9 +26,8 @@ maven install plugin. This will take care of checksums. An example:
     -Dpackaging=jar
     -Dfile=<path_to:jdbc_driver.jar>
     -DgroupId=com.cloudera.impala
-    -DartifactId=impala-jdbc-connector
+    -DartifactId=impala-jdbc-4.1-connector
     -Dversion=<version>
-
 
 
 ### Official guide to installing 3rd party JARs
@@ -49,4 +57,4 @@ directory, which will be read by default. In that case, all you need to do is:
 
 
 
-[1] http://www.cloudera.com/content/www/en-us/downloads.html.html
+[1] http://www.cloudera.com/downloads/connectors/impala/jdbc.html
