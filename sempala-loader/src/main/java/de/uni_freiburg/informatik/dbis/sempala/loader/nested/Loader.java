@@ -61,7 +61,7 @@ public class Loader {
 	public static void buildPropertyTable(HiveContext hc, String[] allProperties, Boolean[] isComplexProperty){
 		
 		// create a new aggregation environment
-		PropertiesAggregateFunction2 aggregator = new PropertiesAggregateFunction2(allProperties);
+		PropertiesAggregateFunction aggregator = new PropertiesAggregateFunction(allProperties);
 		
 		// get the compressed table
 		DataFrame compressedTriples = hc.sql("SELECT s, CONCAT(p, ' ', o) AS po FROM triple_table");
