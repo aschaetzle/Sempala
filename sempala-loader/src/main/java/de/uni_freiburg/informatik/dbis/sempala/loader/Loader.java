@@ -7,11 +7,14 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.SelectStatement;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.DataType;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.FileFormat;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.InsertStatement;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Framework;
 
+//TODO add comments
 /**
  * 
  * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
@@ -19,8 +22,8 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.FileFo
  */
 public abstract class Loader {
 	
-	/** The impala wrapper */
-	protected Impala impala;
+	/** The Impala or Spark wrapper */
+	protected Framework frameworkWrapper;
 
 	/*
 	 * Input configurations  
@@ -74,13 +77,13 @@ public abstract class Loader {
 	public boolean keep;
 
 	/** The constructor */
-	public Loader(Impala wrapper, String hdfsLocation) {
-		impala = wrapper;
+	public Loader(Framework wrapper, String hdfsLocation) {
+		this.frameworkWrapper = wrapper;
 		hdfs_input_directory = hdfsLocation;
 	}
 		
 	/**
-	 * Loads RDF data into an impala parquet table.
+	 * Loads RDF data into a parquet table.
 	 *
 	 * The input data has to be in N-Triple format and reside in a readable HDFS
 	 * directory. The output will be parquet encoded in a raw triple table
@@ -93,19 +96,20 @@ public abstract class Loader {
 
 		final String tablename_external_tripletable = "external_tripletable";
 
-		// Import the table from hdfs into impala
+		// Import the table from hdfs
 		System.out.println(String.format("Creating external table '%s' from hdfs data", tablename_external_tripletable));
-		impala
-		.createTable(tablename_external_tripletable)
+		CreateStatement createStm = CreateStatement.createNew()
+		.tablename(tablename_external_tripletable)
 		.external()
 		.addColumnDefinition(column_name_subject, DataType.STRING)
 		.addColumnDefinition(column_name_predicate, DataType.STRING)
 		.addColumnDefinition(column_name_object, DataType.STRING)
 		.fieldTermintor(field_terminator)
 		.lineTermintor(line_terminator)
-		.location(hdfs_input_directory)
-		.execute();
-		impala.computeStats(tablename_external_tripletable);
+		.location(hdfs_input_directory);	
+		frameworkWrapper.execute(createStm);
+		
+		frameworkWrapper.computeStats(tablename_external_tripletable);
 
 		
 		// Read the prefix file if there is one
@@ -134,14 +138,14 @@ public abstract class Loader {
 		System.out.print(String.format("Creating internal partitioned table '%s' from '%s'", tablename_triple_table, tablename_external_tripletable));
 		
 		long timestamp = System.currentTimeMillis();
-		impala
-		.createTable(tablename_triple_table)
+		createStm = CreateStatement.createNew()
+		.tablename(tablename_triple_table)
 		.ifNotExists()
 		.storedAs(FileFormat.PARQUET)
 		.addColumnDefinition(column_name_subject, DataType.STRING)
 		.addColumnDefinition(column_name_object, DataType.STRING)
-		.addPartitionDefinition(column_name_predicate, DataType.STRING)
-		.execute();
+		.addPartitionDefinition(column_name_predicate, DataType.STRING);	
+		frameworkWrapper.execute(createStm);
 
 		// First create a select statement for the INSERT statement.
 		SelectStatement ss;
@@ -151,17 +155,19 @@ public abstract class Loader {
 				? String.format("regexp_replace(%s, '\\\\s*\\\\.\\\\s*$', '')", column_name_object)
 				: column_name_object;
 
+		SelectStatement selectStm = new SelectStatement();
 		// Replace prefixes
 		if (prefix_map != null) {
 			// Build a select statement _WITH_ prefix replaced values
-			ss = impala
-					.select(prefixHelper(column_name_subject, prefix_map))
+			
+			ss = selectStm
+					.addProjection(prefixHelper(column_name_subject, prefix_map))
 					.addProjection(prefixHelper(column_name_object_dot_stripped, prefix_map))
 					.addProjection(prefixHelper(column_name_predicate, prefix_map));
 		} else {
 			// Build a select statement _WITH_OUT_ prefix replaced values
-			ss = impala
-					.select(column_name_subject)
+			ss = selectStm
+					.addProjection(column_name_subject)
 					.addProjection(column_name_object_dot_stripped)
 					.addProjection(column_name_predicate);
 		}
@@ -170,17 +176,19 @@ public abstract class Loader {
 		ss.from(tablename_external_tripletable);
 
 		// Now insert the data into the new table
-		impala
-		.insertOverwrite(tablename_triple_table)
+		InsertStatement insertStatement = InsertStatement.createNew()
+		.tablename(tablename_triple_table)
 		.addPartition(column_name_predicate)
-		.selectStatement(ss)
-		.execute();
+		.selectStatement(ss).overwrite();
+		frameworkWrapper.execute(insertStatement);
+		
+		
 		System.out.println(String.format(" [%.3fs]", (float)(System.currentTimeMillis() - timestamp)/1000));
-		impala.computeStats(tablename_triple_table);
+		frameworkWrapper.computeStats(tablename_triple_table);
 
 		// Drop intermediate tables
 		if (!keep)
-			impala.dropTable(tablename_external_tripletable);
+			frameworkWrapper.dropTable(tablename_external_tripletable);
 	}
 
 	/**
@@ -209,16 +217,17 @@ public abstract class Loader {
 	}
 	
 	/**
-	 * Makes the string conform to the requirements for impala column names.
+	 * Makes the string conform to the requirements for column names.
 	 * I.e. remove braces, replace non word characters, trim spaces.
 	 * @param The string to make impala conform
 	 * @return The impala conform string
 	 */
 	protected static String toImpalaColumnName(String s) {
-		// Space is a nonword character so trim before replacing chars.
+		// Space is a non-word character so trim before replacing chars.
 		return s.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
 	}
 
+	//TODO remove throws SQLException because it is not valid for Spark
 	/** Abstract method that has to be implemented */
 	public abstract void load() throws SQLException;
 }

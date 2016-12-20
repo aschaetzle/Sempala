@@ -1,3 +1,4 @@
+package de.uni_freiburg.informatik.dbis.sempala.loader.udf;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,8 +13,11 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
 
+// TODO add class comments
 public class PropertiesAggregateFunction extends UserDefinedAggregateFunction {
 	private static final long serialVersionUID = 1L;
+	
+	//TODO explain why do we need this
 	private String[] allProperties;
 	
 	public PropertiesAggregateFunction(String[] allProperties){

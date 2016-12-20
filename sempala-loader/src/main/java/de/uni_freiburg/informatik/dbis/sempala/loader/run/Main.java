@@ -10,11 +10,13 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import de.uni_freiburg.informatik.dbis.sempala.loader.ComplexPropertyTableLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.Loader;
-import de.uni_freiburg.informatik.dbis.sempala.loader.PropertyTableLoader;
+import de.uni_freiburg.informatik.dbis.sempala.loader.SimplePropertyTableLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.SingleTableLoader;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala.QueryOption;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Impala;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Impala.QueryOption;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Spark;
 
 /**
  *
@@ -46,20 +48,30 @@ public class Main {
 			System.exit(1);
 		}
 
-		// Connect to the impala daemon
+		// parse the format of the table that will be built
+		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
+		String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 		Impala impala = null;
-		try {
-			String host = commandLine.getOptionValue(OptionNames.HOST.toString());
-			String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
-			String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
-			impala = new Impala(host, port, database);
+		Spark spark = null;
+		if (format.equals(Format.SIMPLE_PROPERTY_TABLE.toString()) || format.equals(Format.SINGLE_TABLE.toString())) {
+			// Connect to the impala daemon
+			try {
+				String host = commandLine.getOptionValue(OptionNames.HOST.toString());
+				String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
+				impala = new Impala(host, port, database);
 
-			// Set compression codec to snappy
-			impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
-		} catch (SQLException e) {
-			System.err.println(e.getLocalizedMessage());
-			System.exit(1);
+				// Set compression codec to snappy
+				impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
+			} catch (SQLException e) {
+				System.err.println(e.getLocalizedMessage());
+				System.exit(1);
+			}
+		} else if(format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())) {
+			// use spark 
+			// TODO make spark name a parameter or think about sth else
+			spark = new Spark("sempalaApp", database);
 		}
+
 
 		/*
 		 *  Setup loader
@@ -69,13 +81,17 @@ public class Main {
 
 		// Construct the loader corresponding to format
 		String hdfsInputDirectory = commandLine.getOptionValue(OptionNames.INPUT.toString());
-		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
-		if (format.equals(Format.PROPERTYTABLE.toString()))
-			loader = new PropertyTableLoader(impala, hdfsInputDirectory);
-//		else if (format.equals(Format.EXTVP.toString())
-//			throw new NotImplementedException("Extended vertical partitioning is not implemented yet");
-		else if (format.equals(Format.SINGLETABLE.toString()))
+		if (format.equals(Format.SIMPLE_PROPERTY_TABLE.toString())) {
+			loader = new SimplePropertyTableLoader(impala, hdfsInputDirectory);
+		}
+		else if (format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())){
+			loader = new ComplexPropertyTableLoader(spark, hdfsInputDirectory);
+		}
+		else if (format.equals(Format.SINGLE_TABLE.toString())){
 			loader = new SingleTableLoader(impala, hdfsInputDirectory);
+		}
+//		else if (format.equals(Format.EXTVP.toString())
+//		throw new NotImplementedException("Extended vertical partitioning is not implemented yet");
 		else {
 			System.err.println("Fatal: Invalid format.");
 			System.exit(1);
@@ -129,9 +145,10 @@ public class Main {
 
 	/** An enumeration of the data formats supported by this loader */
 	private enum Format {
-		PROPERTYTABLE,
+		SIMPLE_PROPERTY_TABLE,
+		COMPLEX_PROPERTY_TABLE,
 //		EXTVP,
-		SINGLETABLE;
+		SINGLE_TABLE,;
 
 	    @Override
 	    public String toString() {
@@ -211,9 +228,11 @@ public class Main {
 				Option.builder("f")
 				.longOpt(OptionNames.FORMAT.toString())
 				.desc("The format to use to create the table. (case insensitive)\n"
-						+ Format.PROPERTYTABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
+						+ Format.SIMPLE_PROPERTY_TABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
+						//TODO change this when the final paper is ready
+						+ Format.COMPLEX_PROPERTY_TABLE.toString() + ": (see Polina and Matteo's Master project paper) \n"
 //						+ Format.EXTVP.toString() + ": (Not implemented) see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
-						+ Format.SINGLETABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon")
+						+ Format.SINGLE_TABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon")
 				.hasArg()
 				.argName("format")
 				.required()
