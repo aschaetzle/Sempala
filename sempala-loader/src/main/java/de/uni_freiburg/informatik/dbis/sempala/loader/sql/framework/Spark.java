@@ -35,13 +35,15 @@ public class Spark implements Framework {
 	 *            connection
 	 * @param database
 	 *            name of the database that will be used with this Spark
-	 *            connection
+	 *            connection 
+	 * @param master
+	 * 			  the master URI
 	 */
-	public Spark(String appName, String database) {
+	public Spark(String appName, String database, String master) {
 
 		// TODO check what will happen if there is already in use the same app
 		// name
-		this.sparkConfiguration = new SparkConf().setAppName(appName);
+		this.sparkConfiguration = new SparkConf().setAppName(appName).setMaster(master);
 		this.javaContext = new JavaSparkContext(sparkConfiguration);
 		this.hiveContext = new HiveContext(javaContext);
 		// TODO check what kind of exception can be thrown here if there is a

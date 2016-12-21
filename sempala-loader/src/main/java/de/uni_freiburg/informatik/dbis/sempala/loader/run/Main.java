@@ -69,7 +69,8 @@ public class Main {
 		} else if(format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())) {
 			// use spark 
 			// TODO make spark name a parameter or think about sth else
-			spark = new Spark("sempalaApp", database);
+			String master = commandLine.getOptionValue(OptionNames.MASTER.toString(), "local");
+			spark = new Spark("sempalaApp", database, master);
 		}
 
 
@@ -116,6 +117,9 @@ public class Main {
 		if(commandLine.hasOption(OptionNames.KEEP.toString()))
 			loader.keep = commandLine.hasOption(OptionNames.KEEP.toString());
 
+		if(commandLine.hasOption(OptionNames.MASTER.toString()))
+			loader.master = commandLine.getOptionValue(OptionNames.MASTER.toString());
+		
 		if(commandLine.hasOption(OptionNames.LINE_TERMINATOR.toString()))
 			loader.line_terminator = commandLine.getOptionValue(OptionNames.LINE_TERMINATOR.toString());
 
@@ -168,6 +172,7 @@ public class Main {
 		HOST,
 		INPUT,
 		KEEP,
+		MASTER,
 		LINE_TERMINATOR,
 		OUTPUT,
 		PORT,
@@ -284,6 +289,14 @@ public class Main {
 				.argName("terminator")
 				.build());
 
+		options.addOption(
+				Option.builder("m")
+				.longOpt(OptionNames.MASTER.toString())
+				.desc("The link for the spark master (Defaults to local)")
+				.hasArg()
+				.argName("master")
+				.build());
+		
 		options.addOption(
 				Option.builder("o")
 				.longOpt(OptionNames.OUTPUT.toString())

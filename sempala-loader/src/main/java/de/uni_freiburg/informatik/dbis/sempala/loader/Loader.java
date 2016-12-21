@@ -46,6 +46,9 @@ public abstract class Loader {
 
 	/** The separator of the lines in the rdf data */
 	public String line_terminator = "\\n";
+	
+	/** The master for Spark configuration */
+	public String master = "local";
 
 	/*
 	 * Triplestore configurations  
