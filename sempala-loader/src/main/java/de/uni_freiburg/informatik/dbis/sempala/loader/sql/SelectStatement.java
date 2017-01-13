@@ -1,14 +1,18 @@
 package de.uni_freiburg.informatik.dbis.sempala.loader.sql;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
-//TODO add comments if time left
 /**
  *
  * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
  *
  */
-public class SelectStatement {
+public final class SelectStatement {
+
+	private Connection connection;
 
 	private boolean distinct = false;
 	private String from = null;
@@ -19,10 +23,19 @@ public class SelectStatement {
 	private String having = null;
 	private String limit = null;
 
-	public static SelectStatement createNew(){
-		return new SelectStatement();
+	public SelectStatement(Connection connection) {
+		this.connection = connection;
 	}
-	
+
+	public SelectStatement(Connection connection, final String projection) {
+		this.connection = connection;
+		addProjection(projection);
+	}
+
+	public ResultSet execute() throws IllegalArgumentException, SQLException {
+		return connection.createStatement().executeQuery(toString());
+	}
+
 	public SelectStatement distinct() {
 		this.distinct = true;
 		return this;

@@ -6,11 +6,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.SelectStatement;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.DataType;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.FileFormat;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.InsertStatement;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Impala;
 
 /**
  * 
@@ -50,17 +49,18 @@ public final class SingleTableLoader extends Loader {
 		
 		System.out.print(String.format("Creating table '%s'", tablename_distinct_sp_relations));
 		long timestamp = System.currentTimeMillis();
-		CreateStatement createStm = CreateStatement.createNew().tablename(tablename_distinct_sp_relations)
+		impala
+		.createTable(tablename_distinct_sp_relations)
 		.storedAs(FileFormat.PARQUET)
 		.asSelect(
-				SelectStatement.createNew().addProjection(column_name_subject)
+				impala
+				.select(column_name_subject)
 				.addProjection(column_name_predicate)
 				.distinct()
-				.from(tablename_triple_table));
-		frameworkWrapper.execute(createStm);
-		
+				.from(tablename_triple_table))
+		.execute();
 		System.out.println(String.format(" [%.3fs]", (float)(System.currentTimeMillis() - timestamp)/1000));
-		frameworkWrapper.computeStats(tablename_distinct_sp_relations);
+		impala.computeStats(tablename_distinct_sp_relations);
 
 		/*
 		 * Create a table for the distinct object-predicate tuples (not partitioned)
@@ -68,20 +68,19 @@ public final class SingleTableLoader extends Loader {
 
 		System.out.print(String.format("Creating table '%s'", tablename_distinct_op_relations));
 		timestamp = System.currentTimeMillis();
-		createStm = CreateStatement.createNew()
-		.tablename(tablename_distinct_op_relations)
+		impala
+		.createTable(tablename_distinct_op_relations)
 		.storedAs(FileFormat.PARQUET)
 		.ifNotExists()
 		.asSelect(
-				SelectStatement.createNew()
-				.addProjection(column_name_object)
+				impala
+				.select(column_name_object)
 				.addProjection(column_name_predicate)
 				.distinct()
-				.from(tablename_triple_table));
-		frameworkWrapper.execute(createStm);
-		
+				.from(tablename_triple_table))
+		.execute();
 		System.out.println(String.format(" [%.3fs]", (float)(System.currentTimeMillis() - timestamp)/1000));
-		frameworkWrapper.computeStats(tablename_distinct_op_relations);
+		impala.computeStats(tablename_distinct_op_relations);
 
 		/*
 		 * Create the single table
@@ -91,15 +90,13 @@ public final class SingleTableLoader extends Loader {
 		
 		// Get a list of all predicates
 		ArrayList<String> predicates = new ArrayList<String>();
-		SelectStatement selectStm = SelectStatement.createNew().addProjection(column_name_predicate).distinct().from(tablename_triple_table);
-		ResultSet resultSet = frameworkWrapper.execute(selectStm);
-		
+		ResultSet resultSet = impala.select(column_name_predicate).distinct().from(tablename_triple_table).execute();
 		while (resultSet.next())
 			predicates.add(resultSet.getString(column_name_predicate));
 		
 		// Create the new single table "s, p, o, [ss_p1, so_p1, os_p1], ..."
-		CreateStatement cstmt = CreateStatement.createNew()
-				.tablename(tablename_output)
+		CreateStatement cstmt = impala
+				.createTable(tablename_output)
 				.addColumnDefinition(column_name_subject, DataType.STRING)
 				.addPartitionDefinition(column_name_predicate, DataType.STRING)
 				.addColumnDefinition(column_name_object, DataType.STRING);
@@ -110,7 +107,7 @@ public final class SingleTableLoader extends Loader {
 			cstmt.addColumnDefinition(String.format("os_%s", impalaConformPred), DataType.BOOLEAN);
 		}
 		cstmt.storedAs(FileFormat.PARQUET);
-		frameworkWrapper.execute(cstmt);
+		cstmt.execute();
 
 		/*
 		 * Fill the single table
@@ -132,44 +129,47 @@ public final class SingleTableLoader extends Loader {
 			OS_relations.clear();
 			
 			// Get all predicates that are in a SS relation to any triples in this partition (predicate)
-			selectStm = SelectStatement.createNew()
-					.addProjection(column_name_predicate).distinct()
+			resultSet =
+					impala
+					.select(column_name_predicate).distinct()
 					.from(String.format("%s sp", tablename_distinct_sp_relations))
 					.leftSemiJoin(
 							String.format("%s tt", tablename_triple_table),
 							String.format("tt.%s=sp.%s AND tt.%s='%s'",
 									column_name_subject, column_name_subject, column_name_predicate, predicate),
-							shuffle);
-			resultSet = frameworkWrapper.execute(selectStm);
+							shuffle)
+					.execute();
 			while (resultSet.next())
 				SS_relations.add(resultSet.getString(column_name_predicate));
 			
     		// Get all predicates that are in a SO relation to any triples in this partition (predicate)
-			selectStm = SelectStatement.createNew().addProjection(column_name_predicate).distinct()
+			resultSet = impala.select(column_name_predicate).distinct()
 					.from(String.format("%s op", tablename_distinct_op_relations))
 					.leftSemiJoin(
 							String.format("%s tt", tablename_triple_table),
 							String.format("tt.%s=op.%s AND tt.%s='%s'",
 									column_name_subject, column_name_object, column_name_predicate, predicate),
-							shuffle);
-			resultSet = frameworkWrapper.execute(selectStm);
+							shuffle)
+					.execute();
 			while (resultSet.next())
 				SO_relations.add(resultSet.getString(column_name_predicate));
 			
 			// Get all predicates that are in a OS relation to any triples in this partition (predicate)
-			selectStm = SelectStatement.createNew().addProjection(column_name_predicate).distinct()
+			resultSet =
+					impala
+					.select(column_name_predicate).distinct()
 					.from(String.format("%s sp", tablename_distinct_sp_relations))
 					.leftSemiJoin(
 							String.format("%s tt", tablename_triple_table),
 							String.format("tt.%s=sp.%s AND tt.%s='%s'",
 									column_name_object, column_name_subject, column_name_predicate, predicate),
-							shuffle);
-			resultSet = frameworkWrapper.execute(selectStm);
-			
+							shuffle)
+					.execute();
 			while (resultSet.next())
 				OS_relations.add(resultSet.getString(column_name_predicate));
+
 			// Build a select stmt for the Insert-as-select statement
-			SelectStatement ss = SelectStatement.createNew();
+			SelectStatement ss = impala.select();
 
 			// Build the huge select clause
 			ss.addProjection(String.format("tt.%s", column_name_subject));
@@ -246,21 +246,22 @@ public final class SingleTableLoader extends Loader {
 			ss.where(String.format("tt.%s='%s'", column_name_predicate, predicate));
 			
 			// Insert data into the single table using the built select stmt
-			InsertStatement insertStatement = InsertStatement.createNew().overwrite().tablename(tablename_output)
+			impala
+			.insertInto(tablename_output)
 			.addPartition(column_name_predicate)
-			.selectStatement(ss);	
-			frameworkWrapper.execute(insertStatement);
+			.selectStatement(ss)
+			.execute();
 			
 			System.out.println(String.format(" [%.3fs]", (float)(System.currentTimeMillis() - localtimestamp)/1000));
 		}
 		System.out.println(String.format("Singletable created in [%.3fs]", (float)(System.currentTimeMillis() - timestamp)/1000));
-		frameworkWrapper.computeStats(tablename_output);
+		impala.computeStats(tablename_output);
 		
 		// Drop intermediate tables
 		if (!keep){
-			frameworkWrapper.dropTable(tablename_triple_table);
-			frameworkWrapper.dropTable(tablename_distinct_sp_relations);
-			frameworkWrapper.dropTable(tablename_distinct_op_relations);
+			impala.dropTable(tablename_triple_table);
+			impala.dropTable(tablename_distinct_sp_relations);
+			impala.dropTable(tablename_distinct_op_relations);
 		}
 	}
 }

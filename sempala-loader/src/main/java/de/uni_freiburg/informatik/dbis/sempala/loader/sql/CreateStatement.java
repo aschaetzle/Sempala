@@ -1,17 +1,19 @@
 package de.uni_freiburg.informatik.dbis.sempala.loader.sql;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-//TODO add comments if time left
 /**
  * 
  * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
  *
  */
-public class CreateStatement {
+public final class CreateStatement {
 	
-	/** An enumeration of the data types supported by impala 2.2 */
+
+	/** An enumertation of the data types supported by impala 2.2 */
 	public enum DataType {
 		TINYINT,
 		SMALLINT,
@@ -27,7 +29,7 @@ public class CreateStatement {
 		TIMESTAMP
 	}
 
-	/** An enumeration of the file formats supported by impala 2.2 */
+	/** An enumertation of the file formats supported by impala 2.2 */
 	public enum FileFormat {
 	    PARQUET,
 	    TEXTFILE,
@@ -45,6 +47,7 @@ public class CreateStatement {
 		}
 	}
 	
+	private Connection connection; 
 	private String tablename = null;
 	private Boolean external = false;
 	private Boolean ifNotExists = false;
@@ -56,10 +59,19 @@ public class CreateStatement {
 	private String location = null;
 	private String selectStatement = null;
 
-	public static CreateStatement createNew(){
-		return new CreateStatement();
+	public CreateStatement(Connection connection) {
+		this.connection = connection;
 	}
-	
+
+	public CreateStatement(Connection connection, String tablename) {
+		this.connection = connection;
+		this.tablename(tablename);
+	}
+
+	public int execute() throws IllegalArgumentException, SQLException {
+		return connection.createStatement().executeUpdate(toString());
+	}
+
 	public CreateStatement tablename(String tablename) {
 		this.tablename = tablename;
 		return this;
@@ -157,4 +169,5 @@ public class CreateStatement {
 			sb.append(String.format("\nAS\n%s", this.selectStatement));
 		return sb.toString();
 	}
+
 }
