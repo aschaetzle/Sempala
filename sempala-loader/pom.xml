@@ -1,80 +1,80 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/maven-v4_0_0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+	<modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
-        <artifactId>sempala-parent</artifactId>
-        <version>2.0</version>
-    </parent>
+	<parent>
+		<groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
+		<artifactId>sempala-parent</artifactId>
+		<version>2.0</version>
+	</parent>
 
-    <artifactId>sempala-loader</artifactId>
-    <packaging>jar</packaging>
-    <name>Sempala Loader</name>
+	<artifactId>sempala-loader</artifactId>
+	<packaging>jar</packaging>
+	<name>Sempala Loader</name>
 
-    <repositories>
-        <repository> <!-- Online cloudera repo -->
-            <id>cloudera</id>
-            <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
-        </repository>
+	<repositories>
+		<repository> <!-- Online cloudera repo -->
+			<id>cloudera</id>
+			<url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+		</repository>
 
-        <repository> <!-- Local repo containing dependencies -->
-            <id>project_repo</id>
-            <url>file://${project.basedir}/../project_repo</url> <!-- ugly but maven -->
-        </repository>
-    </repositories>
+		<repository> <!-- Local repo containing dependencies -->
+			<id>project_repo</id>
+			<url>file://${project.basedir}/../project_repo</url> <!-- ugly but maven -->
+		</repository>
+	</repositories>
 
-    <dependencies>
-        <dependency>
-            <groupId>commons-cli</groupId>
-            <artifactId>commons-cli</artifactId>
-        </dependency>
+	<dependencies>
+		<dependency>
+			<groupId>commons-cli</groupId>
+			<artifactId>commons-cli</artifactId>
+			<version>1.2</version>
+		</dependency>
+
+		<!-- BEGIN: Dependencies necessary for Impala JDBC -->
+		<!-- Version and Scope taken from parent POM <dependencyManagement> -->
+		<dependency>
+			<groupId>com.cloudera.impala</groupId>
+			<artifactId>impala-jdbc-4.1-connector</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hive</groupId>
+			<artifactId>hive-metastore</artifactId>
+		</dependency>
+		<!-- contains /org/apache/hive/service/cli/thrift/ aka TCLIServiceClient -->
+		<dependency>
+			<groupId>org.apache.hive</groupId>
+			<artifactId>hive-service</artifactId>
+		</dependency>
+		<!--contains /org/apache/hadoop/hive/ql/plan/api/ aka ql -->
+		<dependency>
+			<groupId>org.apache.hive</groupId>
+			<artifactId>hive-exec</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.thrift</groupId>
+			<artifactId>libfb303</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.thrift</groupId>
+			<artifactId>libthrift</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+		</dependency>
+		<!-- END: Dependencies necessary for Impala JDBC -->   
         
-        <!-- BEGIN: Dependecies necessary for Impala JDBC -->
-		<!-- Version and Scope taken from paren POM <dependencyManagement> -->
-        <dependency>
-            <groupId>com.cloudera.impala</groupId>
-            <artifactId>impala-jdbc-4.1-connector</artifactId>
-        </dependency>
-        <dependency> 
-            <groupId>org.apache.hive</groupId>
-            <artifactId>hive-metastore</artifactId>
-        </dependency>
-        <!-- contains /org/apache/hive/service/cli/thrift/ aka TCLIServiceClient -->
-        <dependency> 
-            <groupId>org.apache.hive</groupId>
-            <artifactId>hive-service</artifactId>
-        </dependency>
-        <!--contains /org/apache/hadoop/hive/ql/plan/api/ aka ql-->
-        <dependency>
-            <groupId>org.apache.hive</groupId>
-            <artifactId>hive-exec</artifactId>
-        </dependency> 
-        <dependency>
-            <groupId>org.apache.thrift</groupId>
-            <artifactId>libfb303</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.thrift</groupId>
-            <artifactId>libthrift</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-        </dependency>
-        <!-- END: Dependecies necessary for Impala JDBC -->    
-        
-        <!-- BEGIN: Dependecies for SPARK --> 
+        <!-- BEGIN: Dependencies for SPARK --> 
         <dependency>
   		 <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_2.10</artifactId>
@@ -100,31 +100,60 @@
 	  		<artifactId>spark-yarn_2.10</artifactId>
 	  		<version>1.6.0-cdh5.9.0</version>
 	  	</dependency>
-        <!-- END: Dependecies for SPARK -->  
+        <!-- END: Dependencies for SPARK -->  
           
     </dependencies>
 
-
 	<build>
 		<plugins>
-		
-			<!-- Set main class + class path in manifestand put jar in ./dist/ -->
+			<!-- Set main class + class path in manifest and put jar in ./dist/ -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>2.4</version>
-				<configuration>
-					<archive>
-						<manifest>
-							<addClasspath>true</addClasspath>
-							<classpathPrefix>lib/</classpathPrefix>
-							<mainClass>de.uni_freiburg.informatik.dbis.sempala.loader.run.Main</mainClass>
-						</manifest>
-					</archive>
-					<outputDirectory>${project.basedir}/dist</outputDirectory>
-				</configuration>
-			</plugin>
-		
+				<executions>
+					<execution>
+						<id>loader</id>
+						<goals><goal>jar</goal></goals>
+						<phase>package</phase>
+						<configuration>
+						<classifier>loader</classifier>
+						 <excludes>
+               				 <exclude>**/SparkTest*</exclude>
+              			</excludes>
+							<archive>
+								<manifest>
+									<addClasspath>true</addClasspath>
+									<classpathPrefix>lib/</classpathPrefix>
+									<mainClass>de.uni_freiburg.informatik.dbis.sempala.loader.run.Main</mainClass>
+								</manifest>
+							</archive>
+							<outputDirectory>${project.basedir}/dist</outputDirectory>
+						</configuration>
+					</execution>
+					<execution>
+						<id>spark</id>
+						<goals><goal>jar</goal></goals>
+						<phase>package</phase>
+						<configuration>
+						<classifier>spark</classifier>
+						 <includes>
+               				 <include>**/*</include>
+              			</includes>
+							<archive>
+								<manifest>
+									<packageName>sample-test</packageName>
+									<addClasspath>true</addClasspath>
+									<classpathPrefix>lib/</classpathPrefix>
+									<mainClass>de.uni_freiburg.informatik.dbis.sempala.loader.spark.SparkTest</mainClass>
+								</manifest>
+							</archive>
+							<outputDirectory>${project.basedir}/dist</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>	
+			</plugin> 
+			
 			<!-- Add ./dist to clean phase -->
 			<plugin>
 				<artifactId>maven-clean-plugin</artifactId>
@@ -137,7 +166,7 @@
 					</filesets>
 				</configuration>
 			</plugin>
-	
+
 			<!-- Put dependencies in ./dist/lib -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -161,8 +190,8 @@
 					</execution>
 				</executions>
 			</plugin>
-				
+
 		</plugins>
-    </build>
+	</build>
 
 </project>

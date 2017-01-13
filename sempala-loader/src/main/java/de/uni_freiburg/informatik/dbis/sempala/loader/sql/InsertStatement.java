@@ -1,6 +1,8 @@
 package de.uni_freiburg.informatik.dbis.sempala.loader.sql;
 
-//TODO add comments if time left
+import java.sql.Connection;
+import java.sql.SQLException;
+
 /**
  * 
  * @author Manuel Schneider <schneidm@informatik.uni-freiburg.de>
@@ -8,21 +10,20 @@ package de.uni_freiburg.informatik.dbis.sempala.loader.sql;
  */
 public final class InsertStatement {
 	
+	private Connection connection; 
+	
 	private String tablename = null;
 	private Boolean overwrite = false;
 	private String partitions = null;
 	private String selectStatement = null;
 
-	public InsertStatement() {
-	
-	} 
-	
-	public InsertStatement(String tablename) {
+	public InsertStatement(Connection connection, String tablename) {
+		this.connection = connection;
 		this.tablename = tablename;
 	}
-	
-	public static InsertStatement createNew(){
-		return new InsertStatement();
+
+	public int execute() throws IllegalArgumentException, SQLException {
+		return connection.createStatement().executeUpdate(toString());
 	}
 
 	public InsertStatement tablename(String tablename) {

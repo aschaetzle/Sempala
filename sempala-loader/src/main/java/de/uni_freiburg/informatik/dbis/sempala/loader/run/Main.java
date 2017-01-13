@@ -2,21 +2,21 @@ package de.uni_freiburg.informatik.dbis.sempala.loader.run;
 
 import java.sql.SQLException;
 
+import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import de.uni_freiburg.informatik.dbis.sempala.loader.ComplexPropertyTableLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.Loader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.SimplePropertyTableLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.SingleTableLoader;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Impala;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Impala.QueryOption;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Spark;
+import de.uni_freiburg.informatik.dbis.sempala.loader.spark.ComplexPropertyTableLoader;
+import de.uni_freiburg.informatik.dbis.sempala.loader.spark.Spark;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala.QueryOption;
 
 /**
  *
@@ -34,7 +34,7 @@ public class Main {
 		// Parse command line
 		Options options = buildOptions();
 		CommandLine commandLine = null;
-		CommandLineParser parser = new DefaultParser();
+		CommandLineParser parser = new BasicParser();
 		try {
 			commandLine = parser.parse(options, args);
 		} catch (ParseException e) {
@@ -53,6 +53,7 @@ public class Main {
 		String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 		Impala impala = null;
 		Spark spark = null;
+		System.out.println(format);
 		if (format.equals(Format.SIMPLE_PROPERTY_TABLE.toString()) || format.equals(Format.SINGLE_TABLE.toString())) {
 			// Connect to the impala daemon
 			try {
@@ -79,14 +80,14 @@ public class Main {
 		 */
 
 		Loader loader = null;
-
+		ComplexPropertyTableLoader complexPropertyLoader = null;
 		// Construct the loader corresponding to format
 		String hdfsInputDirectory = commandLine.getOptionValue(OptionNames.INPUT.toString());
 		if (format.equals(Format.SIMPLE_PROPERTY_TABLE.toString())) {
 			loader = new SimplePropertyTableLoader(impala, hdfsInputDirectory);
 		}
 		else if (format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())){
-			loader = new ComplexPropertyTableLoader(spark, hdfsInputDirectory);
+			complexPropertyLoader = new ComplexPropertyTableLoader(spark, hdfsInputDirectory);
 		}
 		else if (format.equals(Format.SINGLE_TABLE.toString())){
 			loader = new SingleTableLoader(impala, hdfsInputDirectory);
@@ -116,9 +117,6 @@ public class Main {
 
 		if(commandLine.hasOption(OptionNames.KEEP.toString()))
 			loader.keep = commandLine.hasOption(OptionNames.KEEP.toString());
-
-		if(commandLine.hasOption(OptionNames.MASTER.toString()))
-			loader.master = commandLine.getOptionValue(OptionNames.MASTER.toString());
 		
 		if(commandLine.hasOption(OptionNames.LINE_TERMINATOR.toString()))
 			loader.line_terminator = commandLine.getOptionValue(OptionNames.LINE_TERMINATOR.toString());
@@ -139,11 +137,15 @@ public class Main {
 		 *  Run loader
 		 */
 
-		try {
-			loader.load();
-		} catch (SQLException e) {
-			System.err.println("Fatal: SQL exception: " + e.getLocalizedMessage());
-			System.exit(1);
+		if (loader != null) {
+			try {
+				loader.load();
+			} catch (SQLException e) {
+				System.err.println("Fatal: SQL exception: " + e.getLocalizedMessage());
+				System.exit(1);
+			}
+		} else if(format.equals(Format.COMPLEX_PROPERTY_TABLE.toString()) && complexPropertyLoader != null) {
+			complexPropertyLoader.load();
 		}
 	}
 
@@ -187,6 +189,7 @@ public class Main {
 	    }
 	}
 
+	
 	/**
 	 * Builds the options for this application
 	 * @return The options collection
@@ -196,148 +199,46 @@ public class Main {
 		Options options = new Options();
 
 		// Add all other options
-		options.addOption(
-				Option.builder("cs")
-				.longOpt(OptionNames.COLUMN_NAME_SUBJECT.toString())
-				.desc("Overwrites the column name to use. (subject)")
-				.hasArg()
-				.argName("name")
-				.build());
+		options.addOption("cs", OptionNames.COLUMN_NAME_SUBJECT.toString(), true, "Overwrites the column name to use. (subject)");
 
-		options.addOption(
-				Option.builder("cp")
-				.longOpt(OptionNames.COLUMN_NAME_PREDICATE.toString())
-				.desc("Overwrites the column name to use. (predicate)")
-				.hasArg()
-				.argName("name")
-				.build());
-
-		options.addOption(
-				Option.builder("co")
-				.longOpt(OptionNames.COLUMN_NAME_OBJECT.toString())
-				.desc("Overwrites the column name to use. (object)")
-				.hasArg()
-				.argName("name")
-				.build());
-
-		options.addOption(
-				Option.builder("d")
-				.longOpt(OptionNames.DATABASE.toString())
-				.desc("The database to use.")
-				.hasArg()
-				.argName("databse")
-				.required()
-				.build());
-
-		options.addOption(
-				Option.builder("f")
-				.longOpt(OptionNames.FORMAT.toString())
-				.desc("The format to use to create the table. (case insensitive)\n"
-						+ Format.SIMPLE_PROPERTY_TABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
-						//TODO change this when the final paper is ready
-						+ Format.COMPLEX_PROPERTY_TABLE.toString() + ": (see Polina and Matteo's Master project paper) \n"
-//						+ Format.EXTVP.toString() + ": (Not implemented) see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
-						+ Format.SINGLE_TABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon")
-				.hasArg()
-				.argName("format")
-				.required()
-				.build());
-
-		options.addOption(
-				Option.builder("F")
-				.longOpt(OptionNames.FIELD_TERMINATOR.toString())
-				.desc("The character used to separate the fields in the data. (Defaults to '\\t')")
-				.hasArg()
-				.argName("sep")
-				.build());
-
-		options.addOption(
-				Option.builder("h")
-				.longOpt(OptionNames.HELP.toString())
-				.desc("Print this help.")
-				.build());
-
-		options.addOption(
-				Option.builder("H")
-				.longOpt(OptionNames.HOST.toString())
-				.desc("The host to connect to.")
-				.hasArg()
-				.argName("host")
-				.required()
-				.build());
-
-		options.addOption(
-				Option.builder("i")
-				.longOpt(OptionNames.INPUT.toString())
-				.desc("The HDFS location of the RDF data (N-Triples).")
-				.hasArg()
-				.argName("path")
-				.required()
-				.build());
-
-		options.addOption(
-				Option.builder("k")
-				.longOpt(OptionNames.KEEP.toString())
-				.desc("Do not drop temporary tables.")
-				.build());
-
-		options.addOption(
-				Option.builder("L")
-				.longOpt(OptionNames.LINE_TERMINATOR.toString())
-				.desc("The character used to separate the lines in the data. (Defaults to '\\n')")
-				.hasArg()
-				.argName("terminator")
-				.build());
-
-		options.addOption(
-				Option.builder("m")
-				.longOpt(OptionNames.MASTER.toString())
-				.desc("The link for the spark master (Defaults to local)")
-				.hasArg()
-				.argName("master")
-				.build());
+		options.addOption("cp", OptionNames.COLUMN_NAME_PREDICATE.toString(), true, "Overwrites the column name to use. (predicate)");
 		
-		options.addOption(
-				Option.builder("o")
-				.longOpt(OptionNames.OUTPUT.toString())
-				.desc("Overwrites the name of the output table.")
-				.hasArg()
-				.argName("name")
-				.build());
+		options.addOption("co", OptionNames.COLUMN_NAME_OBJECT.toString(), true, "Overwrites the column name to use. (object)");
+		
+		options.addOption("d",OptionNames.DATABASE.toString(), true, "The database to use.");
+		
+		options.addOption("f", OptionNames.FORMAT.toString(), true, "The format to use to create the table. (case insensitive)\n"
+				+ Format.SIMPLE_PROPERTY_TABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
+				//TODO change this when the final paper is ready
+				+ Format.COMPLEX_PROPERTY_TABLE.toString() + ": (see Polina and Matteo's Master project paper) \n"
+//				+ Format.EXTVP.toString() + ": (Not implemented) see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
+				+ Format.SINGLE_TABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon");
 
-		options.addOption(
-				Option.builder("p")
-				.longOpt(OptionNames.PORT.toString())
-				.desc("The port to connect to. (Defaults to 21050)")
-				.hasArg()
-				.argName("port")
-				.build());
+		options.addOption("F",OptionNames.FIELD_TERMINATOR.toString(), true, "The character used to separate the fields in the data. (Defaults to '\\t')");
 
-		options.addOption(
-				Option.builder("P")
-				.longOpt(OptionNames.PREFIX_FILE.toString())
-				.desc("The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.")
-				.hasArg()
-				.argName("file")
-				.build());
+		options.addOption("h", OptionNames.HELP.toString(), false, "Print this help.");
 
-		options.addOption(
-				Option.builder("s")
-				.longOpt(OptionNames.STRIP_DOT.toString())
-				.desc("Strip the dot in the last field (N-Triples)")
-				.build());
+		options.addOption("H", OptionNames.HOST.toString(), true, "The host to connect to.");
 
-		options.addOption(
-				Option.builder("S")
-				.longOpt(OptionNames.SHUFFLE.toString())
-				.desc("Use shuffle strategy for join operations")
-				.build());
+		options.addOption("i", OptionNames.INPUT.toString(), true, "The HDFS location of the RDF data (N-Triples).");
 
-		options.addOption(
-				Option.builder("u")
-				.longOpt(OptionNames.UNIQUE.toString())
-				.desc("Detect and ignore duplicates in the input (Memoryintensive!)")
-				.build());
+		options.addOption("k", OptionNames.KEEP.toString(), false, "Do not drop temporary tables.");
+		
+		options.addOption("L", OptionNames.LINE_TERMINATOR.toString(), true, "The character used to separate the lines in the data. (Defaults to '\\n')");
+		
+		options.addOption("m", OptionNames.MASTER.toString(), true, "The link for the spark master (Defaults to local)");
+		
+		options.addOption("o", OptionNames.OUTPUT.toString(), true, "Overwrites the name of the output table.");
+
+		options.addOption("p", OptionNames.PORT.toString(), true, "The port to connect to. (Defaults to 21050)");
+	
+		options.addOption("P", OptionNames.PREFIX_FILE.toString(), true, "The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.");
+
+		options.addOption("s", OptionNames.STRIP_DOT.toString(), false, "Strip the dot in the last field (N-Triples)");
+
+		options.addOption("S", OptionNames.SHUFFLE.toString(), false, "Use shuffle strategy for join operations");
+
+		options.addOption("u", OptionNames.UNIQUE.toString(), false,"Detect and ignore duplicates in the input (Memoryintensive!)");
 
 		return options;
 	}

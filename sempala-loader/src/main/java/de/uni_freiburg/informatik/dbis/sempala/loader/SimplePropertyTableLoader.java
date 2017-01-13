@@ -5,11 +5,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement;
+import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.SelectStatement;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.DataType;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.FileFormat;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.InsertStatement;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework.Impala;
 
 /**
  * 
@@ -44,29 +43,28 @@ public final class SimplePropertyTableLoader extends Loader {
 		// Build a table containing distinct subjects
 		System.out.print(String.format("Creating table containing distinct subjects (%s)", tablename_distinct_subjects));
 		long timestamp = System.currentTimeMillis();
-		CreateStatement createStm = CreateStatement.createNew()
-		.tablename(tablename_distinct_subjects)
+		impala
+		.createTable(tablename_distinct_subjects)
 		.storedAs(FileFormat.PARQUET)
 		.asSelect(
-				SelectStatement.createNew().addProjection(column_name_subject)
+				impala
+				.select(column_name_subject)
 				.distinct()
 				.from(tablename_triple_table)
-				);
-		frameworkWrapper.execute(createStm);
-		
-		
+				)
+		.execute();
 		System.out.println(String.format(" [%.3fs]", (float)(System.currentTimeMillis() - timestamp)/1000));
-		frameworkWrapper.computeStats(tablename_distinct_subjects);
+		impala.computeStats(tablename_distinct_subjects);
 
 		System.out.print(String.format("Creating property table (%s)", tablename_output));
 		timestamp = System.currentTimeMillis();
 		
 		// Get properties
-		SelectStatement selectStm = SelectStatement.createNew()
-		.addProjection(column_name_predicate)
+		ResultSet resultSet = impala
+				.select(column_name_predicate)
 				.distinct()
-				.from(tablename_triple_table);
-		ResultSet resultSet = frameworkWrapper.execute(selectStm);
+				.from(tablename_triple_table)
+				.execute();
 
 		// Convert the result set to a list
 		ArrayList<String> predicates = new ArrayList<String>();
@@ -74,7 +72,7 @@ public final class SimplePropertyTableLoader extends Loader {
 			predicates.add(resultSet.getString(column_name_predicate));
 
 		// Build a select stmt for the Insert-as-select statement
-		SelectStatement sstmt = SelectStatement.createNew();
+		SelectStatement sstmt = impala.select();
 
 		// Add the subject column
 		sstmt.addProjection(String.format("subjects.%s", column_name_subject));
@@ -98,26 +96,25 @@ public final class SimplePropertyTableLoader extends Loader {
    	    			shuffle);
 
 		// Create the property table "s, p, o[, p1, ...]"
-		CreateStatement cstmt = CreateStatement.createNew().tablename(tablename_output).ifNotExists();
+		CreateStatement cstmt = impala.createTable(tablename_output).ifNotExists();
 		cstmt.addColumnDefinition(column_name_subject, DataType.STRING);
 		for (String pred : predicates)
 			cstmt.addColumnDefinition(toImpalaColumnName(pred), DataType.STRING);
 		cstmt.storedAs(FileFormat.PARQUET);
-		frameworkWrapper.execute(cstmt);
+		cstmt.execute();
 		
 		// Insert data into the single table using the built select stmt
-		InsertStatement insertStm = InsertStatement.createNew()
-		.tablename(tablename_output).overwrite()
-		.selectStatement(sstmt);
-		frameworkWrapper.execute(insertStm);
-		
+		impala
+		.insertOverwrite(tablename_output)
+		.selectStatement(sstmt)
+		.execute();
 		System.out.println(String.format(" [%.3fs]", (float)(System.currentTimeMillis() - timestamp)/1000));
-		frameworkWrapper.computeStats(tablename_output);
+		impala.computeStats(tablename_output);
 		
 		// Drop intermediate tables
 		if (!keep){
-			frameworkWrapper.dropTable(tablename_triple_table);
-			frameworkWrapper.dropTable(tablename_distinct_subjects);
+			impala.dropTable(tablename_triple_table);
+			impala.dropTable(tablename_distinct_subjects);
 		}
 	}
 }

@@ -1,17 +1,8 @@
-package de.uni_freiburg.informatik.dbis.sempala.loader.sql.framework;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+package de.uni_freiburg.informatik.dbis.sempala.loader.spark;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.hive.HiveContext;
-
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.InsertStatement;
-import de.uni_freiburg.informatik.dbis.sempala.loader.sql.SelectStatement;
 
 /**
  * Wrapper of Spark connection. This class contains the initialization of needed
@@ -20,7 +11,7 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.sql.SelectStatement;
  * @author Polina Koleva
  *
  */
-public class Spark implements Framework {
+public class Spark {
 
 	private SparkConf sparkConfiguration;
 	private JavaSparkContext javaContext;
@@ -51,8 +42,9 @@ public class Spark implements Framework {
 
 		// try {
 		// Try to create the database
-		this.getHiveContext().sql(String.format("CREATE DATABASE %s", database));
+		this.hiveContext.sql(String.format("CREATE DATABASE %s", database));
 		// TODO check what kind of exception is thrown if database already
+		
 		// exists
 		// } catch (SQLException e) {
 		// inputloop: while (true) {
@@ -91,35 +83,4 @@ public class Spark implements Framework {
 	public HiveContext getHiveContext() {
 		return hiveContext;
 	}
-
-	@Override
-	public void execute(CreateStatement createStm) {
-		// TODO catch exception if possible
-		this.hiveContext.sql(createStm.toString());
-	}
-
-	@Override
-	public void execute(InsertStatement insertStm) {
-		// TODO catch exception if possible
-		this.hiveContext.sql(insertStm.toString());
-	}
-
-	@Override
-	public void computeStats(String tablename) {
-		// TODO implement if needed
-	}
-
-	@Override
-	public void dropTable(String tablename) {
-		// TODO catch exception if possible
-		this.hiveContext.sql("DROP TABLE " + tablename);
-	}
-
-	@Override
-	public DataFrame execute(SelectStatement selectStm) {
-		// TODO catch exception if possible
-		return this.hiveContext.sql(selectStm.toString());
-
-	}
-
 }
