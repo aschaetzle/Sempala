@@ -1,5 +1,11 @@
 package de.uni_freiburg.informatik.dbis.sempala.loader.spark;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -10,17 +16,12 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.udf.PropertiesAggregateFun
 // TODO add class comments - TODO THIS IS NOT A FINAL VERSION OF THE CLASS 
 public class ComplexPropertyTableLoader {
 
-	// TODO add comments
-	protected static final String tablename_properties = "properties";
-	protected static final String tablename_complex_property_table = "complex_property_table";
-	protected static final String column_name_is_complex = "is_complex";
-	
 	/** The location of the input data */
 	protected String hdfs_input_directory;
-	
+
 	/** The map containing the prefixes */
 	public String prefix_file;
-	
+
 	/** Indicates if dot at the end of the line is to be stripped */
 	public boolean strip_dot;
 
@@ -34,37 +35,36 @@ public class ComplexPropertyTableLoader {
 	public String line_terminator = "\\n";
 
 	/*
-	 * Triplestore configurations  
+	 * Triplestore configurations
 	 */
-	
+
 	/** The table name of the triple table */
 	protected static final String tablename_triple_table = "tripletable";
-	
-	/** The name used for RDF subject columns */
+	// TODO add comments
+	protected static final String tablename_properties = "properties";
+	protected static final String tablename_complex_property_table = "complex_property_table";
+	protected static final String column_name_is_complex = "is_complex";
+
+	/** The name used for RDF subject columns. */
 	public String column_name_subject = "s";
 
-	/** The name used for RDF predicate columns */
+	/** The name used for RDF predicate columns. */
 	public String column_name_predicate = "p";
 
-	/** The name used for RDF object columns */
+	/** The name used for RDF object columns. */
 	public String column_name_object = "o";
-	
-	protected static final String table_format_parquet = "parquet";
-	
-	/** The name of the output table */
-	public String tablename_output;
 
-	/** Indicates if shuffle strategy should be used for join operations */
-	public boolean shuffle;
-	
-	/** Indicates if temporary tables must not dropped */
-	//TODO this has to be given as a parameter
-	public boolean keep = true;
+	protected static final String table_format_parquet = "parquet";
+
+	/** Indicates if temporary tables must not dropped. */
+	public boolean keep;
 
 	private Spark connection;
+	private HiveContext hiveContext;
 
 	public ComplexPropertyTableLoader(Spark connection, String hdfsLocation) {
 		this.connection = connection;
+		this.hiveContext = connection.getHiveContext();
 		this.hdfs_input_directory = hdfsLocation;
 	}
 
@@ -74,25 +74,105 @@ public class ComplexPropertyTableLoader {
 	}
 
 	// TODO add comments
-	public static void buildTripleTable(String path, HiveContext hc) {
-		hc.sql("CREATE EXTERNAL TABLE triple_table(s STRING, p STRING, o STRING) "
-				+ "ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' " + "LOCATION '" + path + "'");
+	public void buildTripleTable() {
+
+		// TODO remove this after testing
+		// hc.sql("CREATE EXTERNAL TABLE triple_table(s STRING, p STRING, o
+		// STRING) "
+		// + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' " + "LOCATION '" +
+		// path + "'");
+
+		// create initial table from a rdf file
+		final String tablename_external_tripletable = "external_tripletable";
+		String createExternalTable = String.format(
+				"CREATE EXTERNAL TABLE %s(%s STRING, %s STRING, %s STRING) ROW FORMAT DELIMITED"
+						+ " FIELDS TERMINATED BY '%s'  LINES TERMINATED BY '%s' LOCATION '%s'",
+				tablename_external_tripletable, column_name_subject, column_name_predicate, column_name_object,
+				field_terminator, line_terminator, hdfs_input_directory);
+
+		this.hiveContext.sql(createExternalTable);
+
+		// Read the prefix file if there is one
+		Map<String, String> prefix_map = null;
+		if (prefix_file != null) {
+			// Get the prefixes and remove braces from long format
+			prefix_map = new HashMap<String, String>();
+			try {
+				BufferedReader br = new BufferedReader(new FileReader(prefix_file));
+				for (String line; (line = br.readLine()) != null;) {
+					String[] splited = line.split("\\s+");
+					if (splited.length < 2) {
+						System.out.printf("Line in prefix file has invalid format. Skip. ('%s')\n", line);
+						continue;
+					}
+					prefix_map.put(splited[1].substring(1, splited[1].length() - 1), splited[0]);
+				}
+				br.close();
+			} catch (IOException e) {
+				System.err.println("[ERROR] Could not open prefix file. Reason: " + e.getMessage());
+				System.exit(1);
+			}
+		}
+		
+		// Strip point if necessary (four slashes: one escape for java one for
+		// sql
+		String column_name_object_dot_stripped = (strip_dot)
+				? String.format("regexp_replace(%s, '\\\\s*\\\\.\\\\s*$', '')", column_name_object)
+				: column_name_object;
+
+		// select from the initial triple table replacing the prefixes
+		StringBuilder selectStatement = new StringBuilder();
+		selectStatement.append("SELECT ");
+		if (unique) {
+			selectStatement.append("DISTINCT ");
+		}
+		
+		String projectionSubject = null;
+		String projectionObject = null;
+		String projectionPredicate = null;
+		// Replace prefixes
+		if (prefix_map != null) {
+			// Build a select statement _WITH_ prefix replaced values
+			// TODO TEST IF this works
+			projectionSubject = prefixHelper(column_name_subject, prefix_map);
+			projectionObject = prefixHelper(column_name_object_dot_stripped, prefix_map);
+			projectionPredicate = prefixHelper(column_name_predicate, prefix_map);
+			 
+		} else {
+			// Build a select statement _WITH_OUT_ prefix replaced values
+			projectionSubject = column_name_subject;
+			projectionObject = column_name_object_dot_stripped;
+			projectionPredicate = column_name_object;
+		}
+		selectStatement.append(projectionSubject + ", ");
+		selectStatement.append(projectionObject + ", ");
+		selectStatement.append(projectionPredicate);
+		selectStatement.append("FROM " + tablename_external_tripletable);
+		
+		DataFrame triples = this.hiveContext.sql(selectStatement.toString());
+		
+		// save triples with prefixes replaced
+		triples.write().mode(SaveMode.Overwrite).saveAsTable(tablename_triple_table);
+			
+		// Drop intermediate tables
+		if (!keep) {
+			dropTemporaryTables(tablename_external_tripletable);
+		}
 	}
 
 	// TODO add comments
-	public void savePropertiesIntoTable(HiveContext hiveContext, String tableName) {
+	public void savePropertiesIntoTable(String tableName) {
 		// return rows of format <predicate, is_complex>
 		// is_complex can be 1 or 0
 		// 1 for multivalued predicate, 0 for single predicate
 
 		// select the properties that are complex
-		DataFrame multivaluedProperties = hiveContext.sql(String.format(
+		DataFrame multivaluedProperties = this.hiveContext.sql(String.format(
 				"SELECT DISTINCT(%1$s) AS %1$s FROM (SELECT %2$s, %1$s, COUNT(*) AS rc FROM %3$s GROUP BY %2$s, %1$s HAVING rc > 1) AS grouped",
 				column_name_predicate, column_name_subject, tablename_triple_table));
 
-
 		// select all the properties
-		DataFrame allProperties = hiveContext.sql(String.format("SELECT DISTINCT(%1$s) AS %1$s FROM %2$s",
+		DataFrame allProperties = this.hiveContext.sql(String.format("SELECT DISTINCT(%1$s) AS %1$s FROM %2$s",
 				column_name_predicate, tablename_triple_table));
 
 		// select the properties that are not complex
@@ -113,7 +193,7 @@ public class ComplexPropertyTableLoader {
 	 * allProperties) the boolean value that indicates if that property is
 	 * complex (called also multi valued) or simple.
 	 */
-	public void buildPropertyTable(HiveContext hc, String[] allProperties, Boolean[] isComplexProperty) {
+	public void buildPropertyTable(String[] allProperties, Boolean[] isComplexProperty) {
 
 		// create a new aggregation environment
 		PropertiesAggregateFunction aggregator = new PropertiesAggregateFunction(allProperties);
@@ -122,7 +202,7 @@ public class ComplexPropertyTableLoader {
 		String groupColumn = "group";
 
 		// get the compressed table
-		DataFrame compressedTriples = hc.sql(String.format("SELECT %s, CONCAT(%s, ' ', %s) AS po FROM %s",
+		DataFrame compressedTriples = this.hiveContext.sql(String.format("SELECT %s, CONCAT(%s, ' ', %s) AS po FROM %s",
 				column_name_subject, column_name_predicate, column_name_object, tablename_triple_table));
 
 		// group by the subject and get all the data
@@ -149,11 +229,12 @@ public class ComplexPropertyTableLoader {
 
 	public void load() {
 
-		// table name - properties
-		savePropertiesIntoTable(this.connection.getHiveContext(), tablename_properties);
+		buildTripleTable();
 
-		Row[] props = this.connection.getHiveContext().sql(String.format("SELECT * FROM %s", tablename_properties))
-				.collect();
+		// table name - properties
+		savePropertiesIntoTable(tablename_properties);
+
+		Row[] props = this.hiveContext.sql(String.format("SELECT * FROM %s", tablename_properties)).collect();
 		String[] allProperties = new String[props.length];
 		Boolean[] isComplexProperty = new Boolean[props.length];
 		for (int i = 0; i < props.length; i++) {
@@ -161,18 +242,46 @@ public class ComplexPropertyTableLoader {
 			isComplexProperty[i] = props[i].getInt(1) == 1;
 		}
 
-		buildPropertyTable(this.connection.getHiveContext(), allProperties, isComplexProperty);
+		buildPropertyTable(allProperties, isComplexProperty);
 
 		// Drop intermediate tables
 		if (!keep) {
-			dropTemporaryTables(this.connection.getHiveContext(), tablename_triple_table);
+			dropTemporaryTables(tablename_triple_table);
 		}
 	}
 
+	// TODO change comments
+	/**
+	 * Creates the enormous prefix replace case statements for
+	 * buildTripleStoreTable.
+	 *
+	 * buildTripleStoreTable makes use of regex_replace in its select clause
+	 * which is dynamically created for each column. This function takes over
+	 * this part to not violate DRY principle.
+	 *
+	 * Note: Replace this with lambdas in Java 8.
+	 *
+	 * @param column_name
+	 *            The column name for which to create the case statement
+	 * 
+	 * @return The complete CASE statement for this column
+	 */
+	private static String prefixHelper(String column_name, Map<String, String> prefix_map) {
+		// For each prefix append a case with a regex_replace stmt
+		StringBuilder case_clause_builder = new StringBuilder();
+		for (Map.Entry<String, String> entry : prefix_map.entrySet()) {
+			case_clause_builder.append(String.format(
+					"\n\t WHEN %1$s LIKE '<%2$s%%'"
+							+ "\n\t THEN regexp_replace(translate(%1$s, '<>', ''), '%2$s', '%3$s')",
+					column_name, entry.getKey(), entry.getValue()));
+		}
+		return String.format("CASE %s \n\tELSE %s\n\tEND", case_clause_builder.toString(), column_name);
+	}
+
 	// drop all the unnecessary tables
-	public static void dropTemporaryTables(HiveContext hc, String... tableNames) {
+	public void dropTemporaryTables(String... tableNames) {
 		for (String tb : tableNames)
-			hc.sql("DROP TABLE " + tb);
+			this.hiveContext.sql("DROP TABLE " + tb);
 	}
 
 }
