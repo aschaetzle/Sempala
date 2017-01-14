@@ -91,8 +91,8 @@ public class Main {
 		else if (format.equals(Format.SINGLE_TABLE.toString())){
 			loader = new SingleTableLoader(impala, hdfsInputDirectory);
 		}
-//		else if (format.equals(Format.EXTVP.toString())
-//		throw new NotImplementedException("Extended vertical partitioning is not implemented yet");
+		else if (format.equals(Format.EXTVP.toString())
+			loader = new ExtVPLoader(impala, hdfsInputDirectory);		
 		else {
 			System.err.println("Fatal: Invalid format.");
 			System.exit(1);
@@ -152,7 +152,7 @@ public class Main {
 	private enum Format {
 		SIMPLE_PROPERTY_TABLE,
 		COMPLEX_PROPERTY_TABLE,
-//		EXTVP,
+		EXTVP,
 		SINGLE_TABLE,;
 
 	    @Override
@@ -167,6 +167,7 @@ public class Main {
 		COLUMN_NAME_PREDICATE,
 		COLUMN_NAME_OBJECT,
 		DATABASE,
+		EXTVP_TYPES,
 		FORMAT,
 		FIELD_TERMINATOR,
 		HELP,
@@ -175,11 +176,13 @@ public class Main {
 		KEEP,
 		MASTER,
 		LINE_TERMINATOR,
+		LIST_OF_PREDICATES,
 		OUTPUT,
 		PORT,
 		PREFIX_FILE,
 		STRIP_DOT,
 		SHUFFLE,
+		THRESHOLD,
 		UNIQUE;
 
 	    @Override
@@ -193,52 +196,172 @@ public class Main {
 	 * Builds the options for this application
 	 * @return The options collection
 	 */
-	public static Options buildOptions() {
+public static Options buildOptions() {
 
 		Options options = new Options();
 
 		// Add all other options
-		options.addOption("cs", OptionNames.COLUMN_NAME_SUBJECT.toString(), true, "Overwrites the column name to use. (subject)");
+		options.addOption(
+				Option.builder("cs")
+				.longOpt(OptionNames.COLUMN_NAME_SUBJECT.toString())
+				.desc("Overwrites the column name to use. (subject)")
+				.hasArg()
+				.argName("name")
+				.build());
 
-		options.addOption("cp", OptionNames.COLUMN_NAME_PREDICATE.toString(), true, "Overwrites the column name to use. (predicate)");
+		options.addOption(
+				Option.builder("cp")
+				.longOpt(OptionNames.COLUMN_NAME_PREDICATE.toString())
+				.desc("Overwrites the column name to use. (predicate)")
+				.hasArg()
+				.argName("name")
+				.build());
+
+		options.addOption(
+				Option.builder("co")
+				.longOpt(OptionNames.COLUMN_NAME_OBJECT.toString())
+				.desc("Overwrites the column name to use. (object)")
+				.hasArg()
+				.argName("name")
+				.build());
+
+		options.addOption(
+				Option.builder("d")
+				.longOpt(OptionNames.DATABASE.toString())
+				.desc("The database to use.")
+				.hasArg()
+				.argName("databse")
+				.required()
+				.build());
 		
-		options.addOption("co", OptionNames.COLUMN_NAME_OBJECT.toString(), true, "Overwrites the column name to use. (object)");
+		options.addOption(
+				Option.builder("e")
+				.longOpt(OptionNames.EXTVP_TYPES.toString())
+				.desc("Formats of ExtVP to be computed. By default all four formats of ExtVP (SS/SO/OS/OO) are computed")
+				.hasArg()
+				.argName("path")
+				.build());
+
+		options.addOption(
+				Option.builder("f")
+				.longOpt(OptionNames.FORMAT.toString())
+				.desc("The format to use to create the table. (case insensitive)\n"
+						+ Format.SIMPLE_PROPERTY_TABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
+						+ Format.COMPLEX_PROPERTY_TABLE.toString() + ": (see Polina and Matteo's Master project paper) \n"
+						+ Format.EXTVP.toString() + ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
+						+ Format.SINGLE_TABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon");
+				.hasArg()
+				.argName("format")
+				.required()
+				.build());
+
+		options.addOption(
+				Option.builder("F")
+				.longOpt(OptionNames.FIELD_TERMINATOR.toString())
+				.desc("The character used to separate the fields in the data. (Defaults to '\\t')")
+				.hasArg()
+				.argName("sep")
+				.build());
+
+		options.addOption(
+				Option.builder("h")
+				.longOpt(OptionNames.HELP.toString())
+				.desc("Print this help.")
+				.build());
+
+		options.addOption(
+				Option.builder("H")
+				.longOpt(OptionNames.HOST.toString())
+				.desc("The host to connect to.")
+				.hasArg()
+				.argName("host")
+				.required()
+				.build());
+
+		options.addOption(
+				Option.builder("i")
+				.longOpt(OptionNames.INPUT.toString())
+				.desc("The HDFS location of the RDF data (N-Triples).")
+				.hasArg()
+				.argName("path")
+				.required()
+				.build());
+
+		options.addOption(
+				Option.builder("k")
+				.longOpt(OptionNames.KEEP.toString())
+				.desc("Do not drop temporary tables.")
+				.build());
 		
-		options.addOption("d",OptionNames.DATABASE.toString(), true, "The database to use.");
+		options.addOption(
+				Option.builder("lp")
+				.longOpt(OptionNames.LIST_OF_PREDICATES.toString())
+				.desc("List of predicates over which the ExtVP tables will be created")
+				.hasArg()
+				.argName("path")
+				.build());
 		
-		options.addOption("f", OptionNames.FORMAT.toString(), true, "The format to use to create the table. (case insensitive)\n"
-				+ Format.SIMPLE_PROPERTY_TABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
-				//TODO change this when the final paper is ready
-				+ Format.COMPLEX_PROPERTY_TABLE.toString() + ": (see Polina and Matteo's Master project paper) \n"
-//				+ Format.EXTVP.toString() + ": (Not implemented) see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
-				+ Format.SINGLE_TABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon");
+		options.addOption(
+				Option.builder("L")
+				.longOpt(OptionNames.LINE_TERMINATOR.toString())
+				.desc("The character used to separate the lines in the data. (Defaults to '\\n')")
+				.hasArg()
+				.argName("terminator")
+				.build());
 
-		options.addOption("F",OptionNames.FIELD_TERMINATOR.toString(), true, "The character used to separate the fields in the data. (Defaults to '\\t')");
-
-		options.addOption("h", OptionNames.HELP.toString(), false, "Print this help.");
-
-		options.addOption("H", OptionNames.HOST.toString(), true, "The host to connect to.");
-
-		options.addOption("i", OptionNames.INPUT.toString(), true, "The HDFS location of the RDF data (N-Triples).");
-
-		options.addOption("k", OptionNames.KEEP.toString(), false, "Do not drop temporary tables.");
-		
-		options.addOption("L", OptionNames.LINE_TERMINATOR.toString(), true, "The character used to separate the lines in the data. (Defaults to '\\n')");
-		
 		options.addOption("m", OptionNames.MASTER.toString(), true, "The link for the spark master (Defaults to local)");
+				
+		options.addOption(
+				Option.builder("o")
+				.longOpt(OptionNames.OUTPUT.toString())
+				.desc("Overwrites the name of the output table.")
+				.hasArg()
+				.argName("name")
+				.build());
+
+		options.addOption(
+				Option.builder("p")
+				.longOpt(OptionNames.PORT.toString())
+				.desc("The port to connect to. (Defaults to 21050)")
+				.hasArg()
+				.argName("port")
+				.build());
+
+		options.addOption(
+				Option.builder("P")
+				.longOpt(OptionNames.PREFIX_FILE.toString())
+				.desc("The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.")
+				.hasArg()
+				.argName("file")
+				.build());
+
+		options.addOption(
+				Option.builder("s")
+				.longOpt(OptionNames.STRIP_DOT.toString())
+				.desc("Strip the dot in the last field (N-Triples)")
+				.build());
+
+		options.addOption(
+				Option.builder("S")
+				.longOpt(OptionNames.SHUFFLE.toString())
+				.desc("Use shuffle strategy for join operations")
+				.build());
+
+		options.addOption(
+				Option.builder("t")
+				.longOpt(OptionNames.THRESHOLD.toString())
+				.desc("Threshold of ExtVP if ExtVP format is selected. Default (SF=1)")
+				.hasArg()
+				.argName("threshold")
+				.build());
 		
-		options.addOption("o", OptionNames.OUTPUT.toString(), true, "Overwrites the name of the output table.");
-
-		options.addOption("p", OptionNames.PORT.toString(), true, "The port to connect to. (Defaults to 21050)");
-	
-		options.addOption("P", OptionNames.PREFIX_FILE.toString(), true, "The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.");
-
-		options.addOption("s", OptionNames.STRIP_DOT.toString(), false, "Strip the dot in the last field (N-Triples)");
-
-		options.addOption("S", OptionNames.SHUFFLE.toString(), false, "Use shuffle strategy for join operations");
-
-		options.addOption("u", OptionNames.UNIQUE.toString(), false,"Detect and ignore duplicates in the input (Memoryintensive!)");
+		options.addOption(
+				Option.builder("u")
+				.longOpt(OptionNames.UNIQUE.toString())
+				.desc("Detect and ignore duplicates in the input (Memoryintensive!)")
+				.build());
 
 		return options;
 	}
 }
+
