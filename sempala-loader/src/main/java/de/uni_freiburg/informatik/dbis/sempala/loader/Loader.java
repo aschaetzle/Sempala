@@ -43,7 +43,8 @@ public abstract class Loader {
 
 	/** The separator of the lines in the rdf data */
 	public String line_terminator = "\\n";
-
+	
+	
 	/*
 	 * Triplestore configurations  
 	 */
@@ -73,6 +74,15 @@ public abstract class Loader {
 	/** Indicates if temporary tables must not dropped */
 	public boolean keep;
 
+	/** The location of the list of predicates */
+	public String path_of_list_of_predicates = "\\n";
+	
+	/** The types of ExtVP tables*/
+	public String extvp_types_selected = "\\n";
+
+	/** The value of threshold*/
+	public String threshold;
+	
 	/** The constructor */
 	public Loader(Impala wrapper, String hdfsLocation) {
 		impala = wrapper;
