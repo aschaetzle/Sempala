@@ -26,7 +26,7 @@ public final class ExtVPLoader extends Loader {
 	private ArrayList<String> ExtVPTypes = new ArrayList<String>();
 	private ArrayList<String> ListOfPredicates = new ArrayList<>();
 	// Temporary for testing
-	private String TT = "test";
+	private String TT = "tripletable";
 
 	/**
 	 * Creates Extended Vertical Partitioning tables from a triple table.
