@@ -122,6 +122,9 @@ public class Main {
 		} else if (format.equals(Format.SINGLETABLE.toString())) {
 			translator.setFormat(Format.SINGLETABLE);
 			logger.info("Format set to singletable.");
+		} else if (format.equals(Format.EXTVP.toString())) {
+			translator.setFormat(Format.EXTVP);
+			logger.info("Format set to ExtVP");
 		} else {
 			logger.fatal("Fatal: Invalid format specified.");
 			System.exit(1);
@@ -158,7 +161,6 @@ public class Main {
 			// Translate the sparql query
 			translator.setInputFile(file.getAbsolutePath());
 			String sqlString = translator.translateQuery();
-
 			if (connection != null) {
 
 				// If a connection is set run the query
@@ -274,7 +276,8 @@ public class Main {
 				.longOpt(OptionNames.FORMAT.toString())
 				.desc("The database format the query is built for.\n"
 						+ Format.PROPERTYTABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
-						+ Format.SINGLETABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon")
+						+ Format.SINGLETABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon \n"
+						+ Format.EXTVP.toString() + ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n")
 				.hasArg()
 				.argName("format")
 				.required()
