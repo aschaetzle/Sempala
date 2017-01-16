@@ -56,7 +56,7 @@ public class Main {
 		String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 		Impala impala = null;
 		Spark spark = null;
-		System.out.println(format);
+
 		if (format.equals(Format.SIMPLE_PROPERTY_TABLE.toString()) || format.equals(Format.SINGLE_TABLE.toString())) {
 			// Connect to the impala daemon
 			try {
