@@ -56,7 +56,6 @@ public class Main {
 		String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 		Impala impala = null;
 		Spark spark = null;
-
 		if (format.equals(Format.EXTVP.toString()) || format.equals(Format.SIMPLE_PROPERTY_TABLE.toString()) || format.equals(Format.SINGLE_TABLE.toString())) {
 			// Connect to the impala daemon
 			try {
@@ -72,7 +71,6 @@ public class Main {
 			}
 		} else if (format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())) {
 			// use spark
-			// TODO make spark name a parameter or think about sth else
 			String master = commandLine.getOptionValue(OptionNames.MASTER.toString(), "local");
 			spark = new Spark("sempalaApp", database, master);
 		}

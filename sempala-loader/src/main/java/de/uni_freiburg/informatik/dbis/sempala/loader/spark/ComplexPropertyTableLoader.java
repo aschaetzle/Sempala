@@ -13,37 +13,75 @@ import org.apache.spark.sql.hive.HiveContext;
 
 import de.uni_freiburg.informatik.dbis.sempala.loader.udf.PropertiesAggregateFunction;
 
-// TODO add class comments - TODO THIS IS NOT A FINAL VERSION OF THE CLASS 
+/**
+ * Class that construct complex property table. It operates over set of rdf
+ * triples, collects and transforms information about them into a table. If we have
+ * a list of predicates/properties p1, ... , pN, then the scheme of the table is
+ * (s: STRING, p1: LIST<STRING> OR STRING, ..., pN: LIST<STRING> OR STRING).
+ * Column s contains subjects. For each subject , there is only one row in the
+ * table. Each predicate can be of complex or simple type. If a predicate is of
+ * simple type means that there is no subject which has more than one triple
+ * containing this property/predicate. Then the predicate column is of type
+ * STRING. Otherwise, if a predicate is of complex type which means that there
+ * exists at least one subject which has more than one triple containing this
+ * property/predicate. Then the predicate column is of type LIST<STRING>.
+ * 
+ * @author Polina Koleva, Matteo Cossu
+ *
+ */
 public class ComplexPropertyTableLoader {
 
-	/** The location of the input data */
+	/** The location of the input data. */
 	protected String hdfs_input_directory;
 
-	/** The map containing the prefixes */
+	/** The file containing the prefixes. */
 	public String prefix_file;
 
-	/** Indicates if dot at the end of the line is to be stripped */
+	/** Indicates if dot at the end of the line is to be stripped. */
 	public boolean strip_dot;
 
-	/** Indicates if duplicates in the input are to be ignored */
+	/** Indicates if duplicates in the input are to be ignored. */
 	public boolean unique;
 
-	/** The separator of the fields in the rdf data */
+	/** The separator of the fields in the rdf data. */
 	public String field_terminator = "\\t";
 
-	/** The separator of the lines in the rdf data */
+	/** The separator of the lines in the rdf data. */
 	public String line_terminator = "\\n";
 
 	/*
 	 * Triplestore configurations
 	 */
 
-	/** The table name of the triple table */
+	/**
+	 * The table name of the table that contains all rdf triples. The scheme of
+	 * the table is (s:STRING, p:STRING, o:OBJECT). All prefixes if a file with
+	 * prefixes is given are replaced in the table.
+	 */
 	protected static final String tablename_triple_table = "tripletable";
-	// TODO add comments
+
+	/**
+	 * The name of the table that stores all properties/predicates and their
+	 * type - are they simple or complex. The scheme of the table is (p :
+	 * STRING, is_complex : BOOLEAN). There is a row for each predicate.
+	 */
 	protected static final String tablename_properties = "properties";
+
+	/**
+	 * The name of the table that stores the transformed triple table into a
+	 * complex property table (the result of this loader). If we have a list of
+	 * predicates/properties p1, ... , pN, then the scheme of the table is (s:
+	 * STRING, p1: LIST<STRING> OR STRING, ..., pN: LIST<STRING> OR STRING).
+	 * Column s contains subjects. For each subject , there is only one row in
+	 * the table. Each predicate can be of complex or simple type. If a
+	 * predicate is of simple type means that there is no subject which has more
+	 * than one triple containing this property/predicate. Then the predicate
+	 * column is of type STRING. Otherwise, if a predicate is of complex type
+	 * which means that there exists at least one subject which has more than
+	 * one triple containing this property/predicate. Then the predicate column
+	 * is of type LIST<STRING>.
+	 */
 	protected static final String tablename_complex_property_table = "complex_property_table";
-	protected static final String column_name_is_complex = "is_complex";
 
 	/** The name used for RDF subject columns. */
 	public String column_name_subject = "s";
@@ -54,12 +92,25 @@ public class ComplexPropertyTableLoader {
 	/** The name used for RDF object columns. */
 	public String column_name_object = "o";
 
+	/**
+	 * The name used for an properties table column which indicates if a
+	 * property is simple or complex.
+	 */
+	protected static final String column_name_is_complex = "is_complex";
+
+	/**
+	 * The format in which the tables in Spark are stored especially the result
+	 * table of this loader.
+	 */
 	protected static final String table_format_parquet = "parquet";
 
 	/** Indicates if temporary tables must not dropped. */
 	public boolean keep;
 
+	/** Spark connection used for executing queries. */
 	private Spark connection;
+
+	/** Hive context of a Spark connection. */
 	private HiveContext hiveContext;
 
 	public ComplexPropertyTableLoader(Spark connection, String hdfsLocation) {
@@ -68,19 +119,12 @@ public class ComplexPropertyTableLoader {
 		this.hdfs_input_directory = hdfsLocation;
 	}
 
-	// TODO add comments
-	private static String getValidName(String name) {
-		return name.replaceAll("[^a-zA-Z0-9_]", "_");
-	}
-
-	// TODO add comments
+	/**
+	 * Build a table that contains all rdf triples. If a file with prefixes is
+	 * given, they will be replaced. See
+	 * {@link ComplexPropertyTableLoader#tablename_triple_table}.
+	 */
 	public void buildTripleTable() {
-
-		// TODO remove this after testing
-		// hc.sql("CREATE EXTERNAL TABLE triple_table(s STRING, p STRING, o
-		// STRING) "
-		// + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' " + "LOCATION '" +
-		// path + "'");
 
 		// create initial table from a rdf file
 		final String tablename_external_tripletable = "external_tripletable";
@@ -113,7 +157,7 @@ public class ComplexPropertyTableLoader {
 				System.exit(1);
 			}
 		}
-		
+
 		// Strip point if necessary (four slashes: one escape for java one for
 		// sql
 		String column_name_object_dot_stripped = (strip_dot)
@@ -126,42 +170,44 @@ public class ComplexPropertyTableLoader {
 		if (unique) {
 			selectStatement.append("DISTINCT ");
 		}
-		
+
 		String projectionSubject = null;
 		String projectionObject = null;
 		String projectionPredicate = null;
+
 		// Replace prefixes
 		if (prefix_map != null) {
 			// Build a select statement _WITH_ prefix replaced values
-			// TODO TEST IF this works
-	
 			projectionSubject = prefixHelper(column_name_subject, prefix_map);
 			projectionObject = prefixHelper(column_name_object_dot_stripped, prefix_map);
 			projectionPredicate = prefixHelper(column_name_predicate, prefix_map);
-			 
+
 		} else {
 			// Build a select statement _WITH_OUT_ prefix replaced values
 			projectionSubject = column_name_subject;
 			projectionObject = column_name_object_dot_stripped;
 			projectionPredicate = column_name_predicate;
 		}
-		selectStatement.append(projectionSubject + " AS " + column_name_subject +", ");
-		selectStatement.append(projectionPredicate  + " AS " + column_name_predicate + ", ");
+		selectStatement.append(projectionSubject + " AS " + column_name_subject + ", ");
+		selectStatement.append(projectionPredicate + " AS " + column_name_predicate + ", ");
 		selectStatement.append(projectionObject + " AS " + column_name_object);
 		selectStatement.append(" FROM " + tablename_external_tripletable);
 		DataFrame triples = this.hiveContext.sql(selectStatement.toString());
-		
+
 		// save triples with prefixes replaced
 		triples.write().mode(SaveMode.Overwrite).saveAsTable(tablename_triple_table);
-			
+
 		// Drop intermediate tables
 		if (!keep) {
-			dropTemporaryTables(tablename_external_tripletable);
+			dropTables(tablename_external_tripletable);
 		}
 	}
 
-	// TODO add comments
-	public void savePropertiesIntoTable(String tableName) {
+	/**
+	 * Create "properties" table. See:
+	 * {@link ComplexPropertyTableLoader#tablename_properties}.
+	 */
+	public void savePropertiesIntoTable() {
 		// return rows of format <predicate, is_complex>
 		// is_complex can be 1 or 0
 		// 1 for multivalued predicate, 0 for single predicate
@@ -184,16 +230,16 @@ public class ComplexPropertyTableLoader {
 				.unionAll(multivaluedProperties.selectExpr(column_name_predicate, "1 AS " + column_name_is_complex));
 
 		// write the result
-		combinedProperties.write().mode(SaveMode.Overwrite).saveAsTable(tableName);
+		combinedProperties.write().mode(SaveMode.Overwrite).saveAsTable(tablename_properties);
 	}
 
-	/*
+	/**
 	 * Create the final property table, allProperties contains the list of all
 	 * possible properties isComplexProperty contains (in the same order used by
 	 * allProperties) the boolean value that indicates if that property is
 	 * complex (called also multi valued) or simple.
 	 */
-	public void buildPropertyTable(String[] allProperties, Boolean[] isComplexProperty) {
+	public void buildComplexPropertyTable(String[] allProperties, Boolean[] isComplexProperty) {
 
 		// create a new aggregation environment
 		PropertiesAggregateFunction aggregator = new PropertiesAggregateFunction(allProperties);
@@ -215,8 +261,8 @@ public class ComplexPropertyTableLoader {
 		for (int i = 0; i < allProperties.length; i++) {
 			// if is not a complex type, extract the value
 			String newProperty = isComplexProperty[i]
-					? " " + groupColumn + "[" + String.valueOf(i) + "] AS " + getValidName(allProperties[i])
-					: " " + groupColumn + "[" + String.valueOf(i) + "][0] AS " + getValidName(allProperties[i]);
+					? " " + groupColumn + "[" + String.valueOf(i) + "] AS " + getValidColumnName(allProperties[i])
+					: " " + groupColumn + "[" + String.valueOf(i) + "][0] AS " + getValidColumnName(allProperties[i]);
 			selectProperties[i + 1] = newProperty;
 		}
 
@@ -227,13 +273,41 @@ public class ComplexPropertyTableLoader {
 				.saveAsTable(tablename_complex_property_table);
 	}
 
+	/**
+	 * Replace all not allowed characters of a DB column name by an
+	 * underscore("_") and return a valid DB column name.
+	 * 
+	 * @param columnName
+	 *            column name that will be validated and fixed
+	 * @return name of a DB column
+	 */
+	private String getValidColumnName(String columnName) {
+		return columnName.replaceAll("[^a-zA-Z0-9_]", "_");
+	}
+
+	/**
+	 * Method that contains the full process of creating of complex property
+	 * table. Initially, from the rdf triples a table is created. If a file with
+	 * prefixes is given, they are replaced. Information of this table is
+	 * collected and move to another table named complex_property_table. It
+	 * contains one row for each subject and a list of list of its predicates.
+	 * Besides a table containing all extracted predicates and their type is
+	 * also created and it is named "properties". Finally, the initial triple
+	 * table could be deleted if intermediate results are discarded. For more
+	 * information about the created and used tables see: TRIPLE TABLE:
+	 * {@link ComplexPropertyTableLoader#tablename_triple_table}, PROPERTIES
+	 * TABLE: {@link ComplexPropertyTableLoader#tablename_properties}, COMPLEX
+	 * PROPERTY TABLE:
+	 * {@link ComplexPropertyTableLoader#tablename_complex_property_table}.
+	 */
 	public void load() {
 
 		buildTripleTable();
 
-		// table name - properties
-		savePropertiesIntoTable(tablename_properties);
+		// create properties table
+		savePropertiesIntoTable();
 
+		// collect information for all properties
 		Row[] props = this.hiveContext.sql(String.format("SELECT * FROM %s", tablename_properties)).collect();
 		String[] allProperties = new String[props.length];
 		Boolean[] isComplexProperty = new Boolean[props.length];
@@ -242,22 +316,20 @@ public class ComplexPropertyTableLoader {
 			isComplexProperty[i] = props[i].getInt(1) == 1;
 		}
 
-		buildPropertyTable(allProperties, isComplexProperty);
+		// create complex property table
+		buildComplexPropertyTable(allProperties, isComplexProperty);
 
 		// Drop intermediate tables
 		if (!keep) {
-			dropTemporaryTables(tablename_triple_table);
+			dropTables(tablename_triple_table);
 		}
 	}
 
-	// TODO change comments
 	/**
-	 * Creates the enormous prefix replace case statements for
-	 * buildTripleStoreTable.
+	 * Creates the enormous prefix replace case statements.
 	 *
 	 * buildTripleStoreTable makes use of regex_replace in its select clause
-	 * which is dynamically created for each column. This function takes over
-	 * this part to not violate DRY principle.
+	 * which is dynamically created for each column.
 	 *
 	 * Note: Replace this with lambdas in Java 8.
 	 *
@@ -278,8 +350,13 @@ public class ComplexPropertyTableLoader {
 		return String.format("CASE %s \n\tELSE %s\n\tEND", case_clause_builder.toString(), column_name);
 	}
 
-	// drop all the unnecessary tables
-	public void dropTemporaryTables(String... tableNames) {
+	/**
+	 * Drop tables.
+	 * 
+	 * @param tableNames
+	 *            list of table names that will be dropped
+	 */
+	public void dropTables(String... tableNames) {
 		for (String tb : tableNames)
 			this.hiveContext.sql("DROP TABLE " + tb);
 	}

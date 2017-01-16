@@ -26,9 +26,9 @@ public class Spark {
 	 *            connection
 	 * @param database
 	 *            name of the database that will be used with this Spark
-	 *            connection 
+	 *            connection
 	 * @param master
-	 * 			  the master URI
+	 *            the master URI
 	 */
 	public Spark(String appName, String database, String master) {
 
@@ -40,38 +40,10 @@ public class Spark {
 		// TODO check what kind of exception can be thrown here if there is a
 		// problem with spark connection
 
-		// try {
-		// Try to create the database
 		this.hiveContext.sql(String.format("CREATE DATABASE %s", database));
 		// TODO check what kind of exception is thrown if database already
-		
-		// exists
-		// } catch (SQLException e) {
-		// inputloop: while (true) {
-		// System.out.printf("Database '%s' exists. (D)rop it, (u)se it,
-		// (a)bort? [d/u/a]: ", database);
-		// BufferedReader br = new BufferedReader(new
-		// InputStreamReader(System.in));
-		// String input = null;
-		// try {
-		// input = br.readLine().toLowerCase();
-		// } catch (IOException e1) {
-		// e1.printStackTrace();
-		// System.exit(1);
-		// }
-		// switch (input) {
-		// case "d":
-		// hiveContext.sql(String.format("DROP DATABASE %s CASCADE", database));
-		// hiveContext.sql((String.format("CREATE DATABASE IF NOT EXISTS %s",
-		// database)));
-		// break inputloop;
-		// case "u":
-		// break inputloop;
-		// case "a":
-		// System.exit(1);
-		// }
-		// }
-		// }
+
+		// use the created database
 		this.hiveContext.sql((String.format("USE %s", database)));
 	}
 
