@@ -9,11 +9,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
@@ -50,7 +49,7 @@ public class Main {
 		// Parse command line
 		Options options = buildOptions();
 		CommandLine commandLine = null;
-		CommandLineParser parser = new DefaultParser();
+		CommandLineParser parser = new BasicParser();
 		try {
 			commandLine = parser.parse(options, args);
 		} catch (ParseException e) {
@@ -122,6 +121,12 @@ public class Main {
 		} else if (format.equals(Format.SINGLETABLE.toString())) {
 			translator.setFormat(Format.SINGLETABLE);
 			logger.info("Format set to singletable.");
+		} else if (format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())) {
+			translator.setFormat(Format.COMPLEX_PROPERTY_TABLE);
+			logger.info("Format set to complex property table.");
+		} else if (format.equals(Format.COMPLEX_PROPERTY_TABLE_SPARK.toString())) {
+			translator.setFormat(Format.COMPLEX_PROPERTY_TABLE_SPARK);
+			logger.info("Format set to complex property table (Spark).");
 		} else if (format.equals(Format.EXTVP.toString())) {
 			translator.setFormat(Format.EXTVP);
 			logger.info("Format set to ExtVP");
@@ -226,7 +231,7 @@ public class Main {
 	 * -i, --input <file> SPARQL query file to translate
 	 * -o, --output <file> Impala output script file
 	 */
-	private enum OptionNames {
+	public enum OptionNames {
 		BENCHMARK,
 		EXPAND,
 		DATABASE,
@@ -250,75 +255,39 @@ public class Main {
 	public static Options buildOptions() {
 
 		Options options = new Options();
+		
+		options.addOption("b", OptionNames.BENCHMARK.toString(), false,
+				"Just print runtimes and delete results.");
 
-		options.addOption(
-				Option.builder("b")
-				.longOpt(OptionNames.BENCHMARK.toString())
-				.desc("Just print runtimes and delete results.")
-				.build());
+		options.addOption("e", OptionNames.EXPAND.toString(), false,
+				"Expand URI prefixes.");
 
-		options.addOption(
-				Option.builder("e")
-				.longOpt(OptionNames.EXPAND.toString())
-				.desc("Expand URI prefixes.")
-				.build());
-
-		options.addOption(
-				Option.builder("d")
-				.longOpt(OptionNames.DATABASE.toString())
-				.desc("The database to use.")
-				.hasArg()
-				.argName("database")
-				.build());
-
-		options.addOption(
-				Option.builder("f")
-				.longOpt(OptionNames.FORMAT.toString())
-				.desc("The database format the query is built for.\n"
+		options.addOption("d", OptionNames.DATABASE.toString(), true,
+				"The database to use..");
+		
+		options.addOption("f", OptionNames.FORMAT.toString(), true,
+				"The database format the query is built for.\n"
 						+ Format.PROPERTYTABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
+						+ Format.COMPLEX_PROPERTY_TABLE.toString() + ": (see Polina and Matteo's Master project paper) Impala Version\n"
+						+ Format.COMPLEX_PROPERTY_TABLE_SPARK.toString() + ": (see Polina and Matteo's Master project paper) Spark Version\n"
 						+ Format.SINGLETABLE.toString() + ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon \n"
-						+ Format.EXTVP.toString() + ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n")
-				.hasArg()
-				.argName("format")
-				.required()
-				.build());
+						+ Format.EXTVP.toString() + ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n");
+		
 
-		options.addOption(
-				Option.builder("h")
-				.longOpt(OptionNames.HELP.toString())
-				.desc("Print this help.")
-				.build());
+		options.addOption("h", OptionNames.HELP.toString(), false,
+				"Print this help.");
 
-		options.addOption(
-				Option.builder("H")
-				.longOpt(OptionNames.HOST.toString())
-				.desc("The host to connect to.")
-				.hasArg()
-				.argName("host")
-				.build());
+		options.addOption("H", OptionNames.HOST.toString(), true,
+				"The host to connect to.");
+		
+		options.addOption("i", OptionNames.INPUT.toString(), true,
+				"SPARQL query file to translate or folder containing sparql query files.");
 
-		options.addOption(
-				Option.builder("i")
-				.longOpt(OptionNames.INPUT.toString())
-				.hasArg()
-				.argName("path")
-				.desc("SPARQL query file to translate or folder containing sparql query files.")
-				.required()
-				.build());
+		options.addOption("opt", OptionNames.OPTIMIZE.toString(), false,
+				"turn on SPARQL algebra optimization");
 
-		options.addOption(
-				Option.builder("opt")
-				.longOpt(OptionNames.OPTIMIZE.toString())
-				.desc("turn on SPARQL algebra optimization")
-				.build());
-
-		options.addOption(
-				Option.builder("p")
-				.longOpt(OptionNames.PORT.toString())
-				.desc("The port to connect to. (Defaults to 21050)")
-				.hasArg()
-				.argName("port")
-				.build());
+		options.addOption("p", OptionNames.PORT.toString(), true,
+				"The port to connect to. (Defaults to 21050)");
 
 		return options;
 	}
