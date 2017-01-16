@@ -57,7 +57,7 @@ public class Main {
 		Impala impala = null;
 		Spark spark = null;
 
-		if (format.equals(Format.SIMPLE_PROPERTY_TABLE.toString()) || format.equals(Format.SINGLE_TABLE.toString())) {
+		if (format.equals(Format.EXTVP.toString()) || format.equals(Format.SIMPLE_PROPERTY_TABLE.toString()) || format.equals(Format.SINGLE_TABLE.toString())) {
 			// Connect to the impala daemon
 			try {
 				String host = commandLine.getOptionValue(OptionNames.HOST.toString());
