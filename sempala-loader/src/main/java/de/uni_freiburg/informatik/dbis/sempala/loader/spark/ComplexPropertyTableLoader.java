@@ -134,6 +134,7 @@ public class ComplexPropertyTableLoader {
 		if (prefix_map != null) {
 			// Build a select statement _WITH_ prefix replaced values
 			// TODO TEST IF this works
+	
 			projectionSubject = prefixHelper(column_name_subject, prefix_map);
 			projectionObject = prefixHelper(column_name_object_dot_stripped, prefix_map);
 			projectionPredicate = prefixHelper(column_name_predicate, prefix_map);
@@ -142,13 +143,12 @@ public class ComplexPropertyTableLoader {
 			// Build a select statement _WITH_OUT_ prefix replaced values
 			projectionSubject = column_name_subject;
 			projectionObject = column_name_object_dot_stripped;
-			projectionPredicate = column_name_object;
+			projectionPredicate = column_name_predicate;
 		}
-		selectStatement.append(projectionSubject + ", ");
-		selectStatement.append(projectionObject + ", ");
-		selectStatement.append(projectionPredicate);
-		selectStatement.append("FROM " + tablename_external_tripletable);
-		
+		selectStatement.append(projectionSubject + " AS " + column_name_subject +", ");
+		selectStatement.append(projectionPredicate  + " AS " + column_name_predicate + ", ");
+		selectStatement.append(projectionObject + " AS " + column_name_object);
+		selectStatement.append(" FROM " + tablename_external_tripletable);
 		DataFrame triples = this.hiveContext.sql(selectStatement.toString());
 		
 		// save triples with prefixes replaced
