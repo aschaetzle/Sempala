@@ -99,40 +99,49 @@ public class Main {
 			System.exit(1);
 		}
 
-		// Set the options of the loader
+		// Set the options of the loader 
 		if (loader != null) {
-			if (commandLine.hasOption(OptionNames.OUTPUT.toString()))
+			if(commandLine.hasOption(OptionNames.OUTPUT.toString()))
 				loader.tablename_output = commandLine.getOptionValue(OptionNames.OUTPUT.toString());
 
-			if (commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
+			if(commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
 				loader.column_name_subject = commandLine.getOptionValue(OptionNames.COLUMN_NAME_SUBJECT.toString());
 
-			if (commandLine.hasOption(OptionNames.COLUMN_NAME_PREDICATE.toString()))
+			if(commandLine.hasOption(OptionNames.COLUMN_NAME_PREDICATE.toString()))
 				loader.column_name_predicate = commandLine.getOptionValue(OptionNames.COLUMN_NAME_PREDICATE.toString());
 
-			if (commandLine.hasOption(OptionNames.COLUMN_NAME_OBJECT.toString()))
+			if(commandLine.hasOption(OptionNames.COLUMN_NAME_OBJECT.toString()))
 				loader.column_name_object = commandLine.getOptionValue(OptionNames.COLUMN_NAME_OBJECT.toString());
 
-			if (commandLine.hasOption(OptionNames.FIELD_TERMINATOR.toString()))
+			if(commandLine.hasOption(OptionNames.FIELD_TERMINATOR.toString()))
 				loader.field_terminator = commandLine.getOptionValue(OptionNames.FIELD_TERMINATOR.toString());
 
-			if (commandLine.hasOption(OptionNames.KEEP.toString()))
+			if(commandLine.hasOption(OptionNames.KEEP.toString()))
 				loader.keep = commandLine.hasOption(OptionNames.KEEP.toString());
-
-			if (commandLine.hasOption(OptionNames.LINE_TERMINATOR.toString()))
+			
+			if(commandLine.hasOption(OptionNames.LINE_TERMINATOR.toString()))
 				loader.line_terminator = commandLine.getOptionValue(OptionNames.LINE_TERMINATOR.toString());
 
-			if (commandLine.hasOption(OptionNames.PREFIX_FILE.toString()))
+			if(commandLine.hasOption(OptionNames.PREFIX_FILE.toString()))
 				loader.prefix_file = commandLine.getOptionValue(OptionNames.PREFIX_FILE.toString());
 
-			if (commandLine.hasOption(OptionNames.STRIP_DOT.toString()))
+			if(commandLine.hasOption(OptionNames.STRIP_DOT.toString()))
 				loader.strip_dot = commandLine.hasOption(OptionNames.STRIP_DOT.toString());
 
-			if (commandLine.hasOption(OptionNames.SHUFFLE.toString()))
+			if(commandLine.hasOption(OptionNames.SHUFFLE.toString()))
 				loader.shuffle = commandLine.hasOption(OptionNames.SHUFFLE.toString());
 
-			if (commandLine.hasOption(OptionNames.UNIQUE.toString()))
+			if(commandLine.hasOption(OptionNames.UNIQUE.toString()))
 				loader.unique = commandLine.hasOption(OptionNames.UNIQUE.toString());
+			
+			if(commandLine.hasOption(OptionNames.EXTVP_TYPES.toString()))
+				loader.extvp_types_selected = commandLine.getOptionValue(OptionNames.EXTVP_TYPES.toString());
+			
+			if(commandLine.hasOption(OptionNames.LIST_OF_PREDICATES.toString()))
+				loader.path_of_list_of_predicates = commandLine.getOptionValue(OptionNames.LIST_OF_PREDICATES.toString());
+			
+			if(commandLine.hasOption(OptionNames.THRESHOLD.toString()))
+				loader.threshold = commandLine.getOptionValue(OptionNames.THRESHOLD.toString());
 		// set the option of loader that is responsible for complex property table (spark)
 		} else if (complexPropertyLoader != null) {
 			if (commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
