@@ -91,6 +91,9 @@ public class ComplexPropertyTableLoader {
 
 	/** The name used for RDF object columns. */
 	public String column_name_object = "o";
+	
+	/** Separator used to distinguish two values in the same string  */
+	public String columns_separator = " ";
 
 	/**
 	 * The name used for an properties table column which indicates if a
@@ -242,14 +245,14 @@ public class ComplexPropertyTableLoader {
 	public void buildComplexPropertyTable(String[] allProperties, Boolean[] isComplexProperty) {
 
 		// create a new aggregation environment
-		PropertiesAggregateFunction aggregator = new PropertiesAggregateFunction(allProperties);
+		PropertiesAggregateFunction aggregator = new PropertiesAggregateFunction(allProperties, columns_separator);
 
 		String predicateObjectColumn = "po";
 		String groupColumn = "group";
 
 		// get the compressed table
-		DataFrame compressedTriples = this.hiveContext.sql(String.format("SELECT %s, CONCAT(%s, ' ', %s) AS po FROM %s",
-				column_name_subject, column_name_predicate, column_name_object, tablename_triple_table));
+		DataFrame compressedTriples = this.hiveContext.sql(String.format("SELECT %s, CONCAT(%s, '%s', %s) AS po FROM %s",
+				column_name_subject, column_name_predicate, columns_separator, column_name_object, tablename_triple_table));
 
 		// group by the subject and get all the data
 		DataFrame grouped = compressedTriples.groupBy(column_name_subject)

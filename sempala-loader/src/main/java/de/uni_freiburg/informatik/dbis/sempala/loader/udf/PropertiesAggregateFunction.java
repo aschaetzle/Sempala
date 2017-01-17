@@ -40,9 +40,13 @@ public class PropertiesAggregateFunction extends UserDefinedAggregateFunction {
 	// the returned properties for each subject from this function
 	// are ordered in the same way as their order in this array
 	private String[] allProperties;
+	
+	// string used to distinguish between two values inside a single column
+	private String columns_separator;
 
-	public PropertiesAggregateFunction(String[] allProperties) {
+	public PropertiesAggregateFunction(String[] allProperties, String separator) {
 		this.allProperties = allProperties;
+		this.columns_separator = separator;
 	}
 
 	public StructType inputSchema() {
@@ -79,9 +83,8 @@ public class PropertiesAggregateFunction extends UserDefinedAggregateFunction {
 	// in the buffer
 	public void update(MutableAggregationBuffer buffer, Row input) {
 
-		// TODO: the separator is hard-coded, should be in some way an argument
 		// split the property from the object
-		String[] po = input.getString(0).split(" ");
+		String[] po = input.getString(0).split(columns_separator);
 		String property = po[0];
 		String value = po[1];
 
