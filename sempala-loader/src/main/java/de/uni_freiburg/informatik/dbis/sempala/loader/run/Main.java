@@ -13,6 +13,7 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.ExtVPLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.Loader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.SimplePropertyTableLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.SingleTableLoader;
+import de.uni_freiburg.informatik.dbis.sempala.loader.run.Main.OptionNames;
 import de.uni_freiburg.informatik.dbis.sempala.loader.spark.ComplexPropertyTableLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.spark.Spark;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala;
@@ -110,7 +111,7 @@ public class Main {
 
 			if(commandLine.hasOption(OptionNames.COLUMN_NAME_OBJECT.toString()))
 				loader.column_name_object = commandLine.getOptionValue(OptionNames.COLUMN_NAME_OBJECT.toString());
-
+			
 			if(commandLine.hasOption(OptionNames.FIELD_TERMINATOR.toString()))
 				loader.field_terminator = commandLine.getOptionValue(OptionNames.FIELD_TERMINATOR.toString());
 
@@ -140,6 +141,10 @@ public class Main {
 			
 			if(commandLine.hasOption(OptionNames.THRESHOLD.toString()))
 				loader.threshold = commandLine.getOptionValue(OptionNames.THRESHOLD.toString());
+			
+			if(commandLine.hasOption(OptionNames.EVALUATION_MODE.toString()))
+				loader.EvaluationMode = commandLine.hasOption(OptionNames.EVALUATION_MODE.toString());
+			
 		// set the option of loader that is responsible for complex property table (spark)
 		} else if (complexPropertyLoader != null) {
 			if (commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
@@ -211,6 +216,7 @@ public class Main {
 		COLUMN_NAME_OBJECT,
 		DATABASE, 
 		EXTVP_TYPES, 
+		EVALUATION_MODE,
 		FORMAT, 
 		FIELD_TERMINATOR, 
 		HELP, 
@@ -258,6 +264,8 @@ public class Main {
 		options.addOption("e", OptionNames.EXTVP_TYPES.toString(), true,
 				"Formats of ExtVP to be computed. By default all four formats of ExtVP (SS/SO/OS/OO) are computed");
 
+		options.addOption("em", OptionNames.EVALUATION_MODE.toString(), false, "Executes Sempala in Evaluation Mode");
+		
 		options.addOption("f", OptionNames.FORMAT.toString(), true,
 				"The format to use to create the table. (case insensitive)\n" + Format.SIMPLE_PROPERTY_TABLE.toString()
 						+ ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"

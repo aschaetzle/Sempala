@@ -43,7 +43,7 @@ public final class ExtVPLoader extends Loader {
 	public void load() throws SQLException {
 
 		// Get Threshold from CLI
-		setThreshold(threshold);
+		setThreshold(threshold,EvaluationMode);
 
 		// Omit ExtVP formats given in CLI
 		setExtVPTypes(extvp_types_selected);
@@ -101,14 +101,18 @@ public final class ExtVPLoader extends Loader {
 	 * 
 	 * @param threshold
 	 */
-	private void setThreshold(String threshold) {
-		try {
-			SF = Double.parseDouble(threshold);
-			if (SF <= 0)
-				throw new IllegalArgumentException();
-		} catch (Exception e) {
-			System.out.print(String.format("Threshold '%s' is not a proper value as threshold", threshold));
-			System.exit(1);
+	private void setThreshold(String threshold, boolean evaluation_mode) {
+		if (evaluation_mode) {
+			SF = 1.01;
+		} else {
+			try {
+				SF = Double.parseDouble(threshold);
+				if (SF <= 0)
+					throw new IllegalArgumentException();
+			} catch (Exception e) {
+				System.out.print(String.format("Threshold '%s' is not a proper value as threshold", threshold));
+				System.exit(1);
+			}
 		}
 	}
 

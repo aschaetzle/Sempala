@@ -83,6 +83,9 @@ public abstract class Loader {
 	/** The value of threshold*/
 	public String threshold;
 	
+	/** Indicates if Sempala should run in Evaluation Mode */
+	public boolean EvaluationMode;
+	
 	/** The constructor */
 	public Loader(Impala wrapper, String hdfsLocation) {
 		impala = wrapper;
