@@ -13,7 +13,6 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.ExtVPLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.Loader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.SimplePropertyTableLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.SingleTableLoader;
-import de.uni_freiburg.informatik.dbis.sempala.loader.run.Main.OptionNames;
 import de.uni_freiburg.informatik.dbis.sempala.loader.spark.ComplexPropertyTableLoader;
 import de.uni_freiburg.informatik.dbis.sempala.loader.spark.Spark;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.Impala;
