@@ -93,7 +93,7 @@ public class ComplexPropertyTableLoader {
 	public String column_name_object = "o";
 	
 	/** Separator used to distinguish two values in the same string  */
-	public String columns_separator = "\$%";
+	public String columns_separator = "\\$%";
 
 	/**
 	 * The name used for an properties table column which indicates if a
