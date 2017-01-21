@@ -262,10 +262,14 @@ public class ComplexPropertyTableLoader {
 		String[] selectProperties = new String[allProperties.length + 1];
 		selectProperties[0] = "s";
 		for (int i = 0; i < allProperties.length; i++) {
+			
+			// if property is a full URI, remove the < at the beginning end > at the end
+			String rawProperty = allProperties[i].startsWith("<") && allProperties[i].endsWith(">") ? 
+					allProperties[i].substring(1, allProperties[i].length() - 1) :  allProperties[i];
 			// if is not a complex type, extract the value
 			String newProperty = isComplexProperty[i]
-					? " " + groupColumn + "[" + String.valueOf(i) + "] AS " + getValidColumnName(allProperties[i])
-					: " " + groupColumn + "[" + String.valueOf(i) + "][0] AS " + getValidColumnName(allProperties[i]);
+					? " " + groupColumn + "[" + String.valueOf(i) + "] AS " + getValidColumnName(rawProperty)
+					: " " + groupColumn + "[" + String.valueOf(i) + "][0] AS " + getValidColumnName(rawProperty);
 			selectProperties[i + 1] = newProperty;
 		}
 
