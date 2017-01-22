@@ -2,6 +2,7 @@ package de.uni_freiburg.informatik.dbis.sempala.loader;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -21,31 +22,32 @@ public final class ExtVPLoader extends Loader {
 	/** The constructor */
 	public ExtVPLoader(Impala wrapper, String hdfsLocation) {
 		super(wrapper, hdfsLocation);
-		tablename_output = "ExtVP";
+		tablename_output = "extvp";
 	}
 
-	private double SF = 1;
 	private ArrayList<String> ExtVPTypes = new ArrayList<String>();
 	private ArrayList<String> ListOfPredicates = new ArrayList<>();
-	private String TT = "tripletable";
+	
+	//Default values for threshold, triple table and initial predicate
+	private double SF = 1;
+	private String TT = tablename_triple_table;
 	private int FirstPredicate = 0;
-
+	
 	/**
 	 * Creates Extended Vertical Partitioning tables from a triple table.
 	 *
 	 * The input table has to be in triple table format. The output will be a
-	 * set of tables in format described in 'XXXXXXS2RDF: RDF Querying with
+	 * set of tables in format described in 'S2RDF: RDF Querying with
 	 * SPARQL on Spark'.
 	 *
 	 * @throws SQLException
 	 */
 	@Override
 	public void load() throws SQLException {
-
-		// Get Threshold from CLI
+		// Get value of threshold
 		setThreshold(threshold,EvaluationMode);
 
-		// Omit ExtVP formats given in CLI
+		// Specify ExtVP types to be calculated
 		setExtVPTypes(extvp_types_selected);
 
 		// Load the triple table
@@ -53,14 +55,15 @@ public final class ExtVPLoader extends Loader {
 		buildTripleTable();
 		AddStats("BUILD TRIPLETABLE"," TIME","","Time",0,0, (double) (System.currentTimeMillis() - timestampTT) / 1000);
 		
-		// GetListOfPredicates given by user
+		// Get list of predicates given by user
 		setListOfPredicates(TT);
 		
+		//Set the first predicate from which to start ExtVP calculation
 		FirstPredicate = GetCompletedPredicate(1);
 		
+		//Create ExtVP tables
 		System.out.print(String.format("Creating %s from '%s' \n", "ExtVps", TT));
 		long timestamptotal = System.currentTimeMillis();
-		
 		for (int i = FirstPredicate; i < ListOfPredicates.size(); i++) {
 			String p1 = ListOfPredicates.get(i);
 			SelectStatement leftstmt = SelectPartition(TT, p1);
@@ -90,21 +93,39 @@ public final class ExtVPLoader extends Loader {
 				PhaseCompleted(i, p1, j, p2);
 			}
 		}		
+		
 		System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamptotal) / 1000));
-
 		AddStats("Complete_EXTVP_TABLES"," TIME","","Time",0,0, (double) (System.currentTimeMillis() - timestamptotal) / 1000);
-
+		
+		//Store statistic files in HDFS
+		StoreInHdfs();
+		
+		//Create tables of statistics
+		System.out.print(String.format("Creating %s \n", "ExtVp Statistic Tables"));
+		long timestampStats = System.currentTimeMillis();
+		try {
+			CreateStatsTables("SO");
+			CreateStatsTables("SS");
+			CreateStatsTables("OS");
+			CreateStatsTables("OO");
+			CreateStatsTables("TIME");
+			CreateStatsTables("EMPTY");
+		} catch (IllegalArgumentException | IOException e) {
+			System.out.println("Stats tables could not be created. ");
+			e.printStackTrace();
+		}
+		System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestampStats) / 1000));
+		
 		System.exit(-1);
 	}
 
 	/**
-	 * 
-	 * @param threshold
+	 * Read value of threshold from CLI.
 	 */
 	private void setThreshold(String threshold, boolean evaluation_mode) {
-		if (evaluation_mode) {
+		if (evaluation_mode)
 			SF = 1.01;
-		} else {
+		else {
 			try {
 				SF = Double.parseDouble(threshold);
 				if (SF <= 0)
@@ -116,8 +137,10 @@ public final class ExtVPLoader extends Loader {
 		}
 	}
 
+	/**
+	 * Read types of ExtVP from CLI.
+	 */
 	private void setExtVPTypes(String SelectedTypes) {
-
 		String[] ExtVPTypesSelected;
 		if (SelectedTypes != "\\n") {
 			try {
@@ -143,11 +166,18 @@ public final class ExtVPLoader extends Loader {
 		}
 	}
 
-	// LIST OF PREDICATES ADD PATH PROPERTY
+	/**
+	 * Set the list of predicates for which the ExtVP tables will be calculated,
+	 * if list of predicates is given, that list is used.
+	 * 
+	 * @param TripleTable - Table containing all triples.
+	 * 
+	 * @throws IllegalArgumentException
+	 * @throws SQLException
+	 */
 	private void setListOfPredicates(String TripleTable) throws IllegalArgumentException, SQLException {
 		if (path_of_list_of_predicates != "\\n") {
-			// // Get the prefixes and remove braces from long format
-			System.out.println(String.format("Path for list of predicates is given %s", path_of_list_of_predicates));
+			System.out.println(String.format("Path for list of predicates is given: %s", path_of_list_of_predicates));
 			try {
 				BufferedReader br = new BufferedReader(new FileReader(path_of_list_of_predicates));
 				for (String line; (line = br.readLine()) != null;) {
@@ -168,13 +198,23 @@ public final class ExtVPLoader extends Loader {
 		java.util.Collections.sort(ListOfPredicates);
 	}
 
-	// COMPUTE EXTVPs
+	/**
+	 * Compute ExtVP table of type SO, OS, SS and OO for given predicates.
+	 * 
+	 * @param TT - Triple table.
+	 * @param p1 - First predicate.
+	 * @param p2 - Second predicate.
+	 * @param SF - Selectivity threshold.
+	 * @param leftstmt - Left statement of SemiJoin.
+	 * @param rightstmt - Right statement of SemiJoin.
+	 * @param PartitionSizeP1 - Partition size with predicate equal to first predicate.
+	 * @param PartitionSizeP2 - Partition size with predicate equal to second predicate.
+	 * 
+	 * @throws IllegalArgumentException
+	 * @throws SQLException
+	 */
 	private void Compute_SO(String TT, String p1, String p2, double SF, SelectStatement leftstmt, SelectStatement rightstmt, double PartitionSizeP1, double PartitionSizeP2) throws IllegalArgumentException, SQLException {
-		// CREATE TABLE ExtVP_p1_p2_so AS (SELECT t1.s, t1.o FROM (SELECT s, o
-		// FROM TT WHERE p = p1) t1 LEFT SEMI JOIN (SELECT s, o FROM TT WHERE p
-		// = p2) t2 ON t1.s=t2.o);
-		// COMPUTE STATS ExtVP_p1_p2_so;
-		String ExtVPFormat = "SO";
+		String ExtVPFormat = "so";
 		String TableName_p1p2_SO = TableName(p1, p2, ExtVPFormat);
 		String TableName_p2p1_SO = TableName(p2, p1, ExtVPFormat);
 		
@@ -203,16 +243,10 @@ public final class ExtVPLoader extends Loader {
 		} 
 		else {
 			impala.dropTable(TableName_p1p2_SO);
-			StoreEmptyTables(p1, p2, ExtVPFormat);
+			StoreEmptyTables(TableName_p1p2_SO);
 		}
 
 		if (p1 != p2) {
-			// CREATE TABLE ExtVP_p2_p1_so AS (SELECT t2.s, t2.o FROM (SELECT s,
-			// o
-			// FROM TT WHERE p = p1) t1 RIGHT SEMI JOIN (SELECT s, o FROM TT
-			// WHERE p
-			// = p2) t2 ON t1.o=t2.s);
-			// COMPUTE STATS ExtVP_p2_p1_so;
 			System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_SO, TT));
 			timestamp = System.currentTimeMillis();
 			CreateStatement cstmtSO2 = CreateTable(p2, p1, ExtVPFormat);
@@ -236,17 +270,13 @@ public final class ExtVPLoader extends Loader {
 					impala.dropTable(TableName_p2p1_SO);
 			} else {
 				impala.dropTable(TableName_p2p1_SO);
-				StoreEmptyTables(p2, p1, ExtVPFormat);
+				StoreEmptyTables(TableName_p2p1_SO);
 			}
 		}
 	}
-
+	
 	private void Compute_OS(String TT, String p1, String p2, double SF, SelectStatement leftstmt, SelectStatement rightstmt, double PartitionSizeP1, double PartitionSizeP2) throws IllegalArgumentException, SQLException {
-		// CREATE TABLE ExtVP_p1_p2_os AS (SELECT t1.s, t1.o FROM (SELECT s, o
-		// FROM TT WHERE p = p1) t1 LEFT SEMI JOIN (SELECT s, o FROM TT WHERE p
-		// = p2) t2 ON t1.o=t2.s);
-		// COMPUTE STATS ExtVP_p1_p2_os;
-		String ExtVPFormat = "OS";
+		String ExtVPFormat = "os";
 		String TableName_p1p2_OS = TableName(p1, p2, ExtVPFormat);
 		String TableName_p2p1_OS = TableName(p2, p1, ExtVPFormat);
 		
@@ -274,14 +304,10 @@ public final class ExtVPLoader extends Loader {
 				impala.dropTable(TableName_p1p2_OS);
 		} else {
 			impala.dropTable(TableName_p1p2_OS);
-			StoreEmptyTables(p1, p2, ExtVPFormat);
+			StoreEmptyTables(TableName_p1p2_OS);
 		}
 
 		if (p1 != p2) {
-			// CREATE TABLE ExtVP_p2_p1_os AS (SELECT t2.s, t2.o FROM (SELECT s,
-			// o FROM TT WHERE p = p1) t1 RIGHT SEMI JOIN (SELECT s, o FROM TT
-			// WHERE p = p2) t2 ON t1.s=t2.o);
-			// COMPUTE STATS ExtVP_p2_p1_os;
 			System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_OS, TT));
 			timestamp = System.currentTimeMillis();
 			CreateStatement cstmt2 = CreateTable(p2, p1, ExtVPFormat);
@@ -306,20 +332,15 @@ public final class ExtVPLoader extends Loader {
 					impala.dropTable(TableName_p2p1_OS);
 			} else {
 				impala.dropTable(TableName_p2p1_OS);
-				StoreEmptyTables(p2, p1, ExtVPFormat);
+				StoreEmptyTables(TableName_p2p1_OS);
 			}
 		}
 	}
 
 	private void Compute_SS(String TT, String p1, String p2, double SF, SelectStatement leftstmt, SelectStatement rightstmt, double PartitionSizeP1, double PartitionSizeP2) throws IllegalArgumentException, SQLException {
-
-		String ExtVPFormat = "SS";
+		String ExtVPFormat = "ss";
 		String TableName_p1p2_SS = TableName(p1, p2, ExtVPFormat);
 		String TableName_p2p1_SS = TableName(p2, p1, ExtVPFormat);
-		// CREATE TABLE ExtVP_p1_p2_ss AS (SELECT t1.s, t1.o FROM (SELECT
-		// s, o FROM TT WHERE p = p1) t1 LEFT SEMI JOIN (SELECT s, o FROM TT
-		// WHERE p = p2) t2 ON t1.s=t2.s);
-		// COMPUTE STATS ExtVP_p1_p2_ss;
 		if (p1 != p2) {
 			System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_SS, TT));
 			long timestamp = System.currentTimeMillis();
@@ -337,10 +358,6 @@ public final class ExtVPLoader extends Loader {
 			impala.computeStats(TableName_p1p2_SS);
 
 			if (!isEmpty(TableName_p1p2_SS)) {
-				// CREATE TABLE ExtVP_p2_p1_ss AS (SELECT t2.s, t2.o FROM
-				// (SELECT s, o FROM TT WHERE p = p1) t1 RIGHT SEMI JOIN (SELECT
-				// s, o FROM TT WHERE p = p2) t2 ON t1.s=t2.s);
-				// COMPUTE STATS ExtVP_p2_p1_ss;
 				System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_SS, TT));
 				timestamp = System.currentTimeMillis();
 				CreateStatement cstmtSS2 = CreateTable(p2, p1, ExtVPFormat);
@@ -372,25 +389,17 @@ public final class ExtVPLoader extends Loader {
 
 			} else {
 				impala.dropTable(TableName_p1p2_SS);
-				StoreEmptyTables(p1, p2, ExtVPFormat);
-				StoreEmptyTables(p2, p1, ExtVPFormat);
+				StoreEmptyTables(TableName_p1p2_SS);
+				StoreEmptyTables(TableName_p2p1_SS);
 			}
 		}
 	}
 
 	private void Compute_OO(String TT, String p1, String p2, double SF, SelectStatement leftstmt, SelectStatement rightstmt, double PartitionSizeP1, double PartitionSizeP2) throws IllegalArgumentException, SQLException {
-
-		String ExtVPFormat = "OO";
+		String ExtVPFormat = "oo";
 		String TableName_p1p2_OO = TableName(p1, p2, ExtVPFormat);
 		String TableName_p2p1_OO = TableName(p2, p1, ExtVPFormat);
 		if (p1 != p2) {
-			// CREATE TABLE ExtVP_p1_p2_oo AS (SELECT t1.s, t1.o FROM (SELECT s,
-			// o
-			// FROM TT WHERE p = p1) t1 LEFT SEMI JOIN (SELECT s, o FROM TT
-			// WHERE p
-			// = p2) t2 ON t1.o=t2.o);
-			// COMPUTE STATS ExtVP_p1_p2_oo;
-
 			System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_OO, TT));
 			long timestamp = System.currentTimeMillis();
 			CreateStatement cstmtOO = CreateTable(p1, p2, ExtVPFormat);
@@ -407,12 +416,6 @@ public final class ExtVPLoader extends Loader {
 			impala.computeStats(TableName_p1p2_OO);
 
 			if (!isEmpty(TableName_p1p2_OO)) {
-				// CREATE TABLE ExtVP_p2_p1_oo AS (SELECT t2.s, t2.o FROM
-				// (SELECT s, o
-				// FROM TT WHERE p = p1) t1 RIGHT SEMI JOIN (SELECT s, o FROM TT
-				// WHERE p
-				// = p2) t2 ON t1.o=t2.o);
-				// COMPUTE STATS ExtVP_p2_p1_oo;
 				System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_OO, TT));
 				timestamp = System.currentTimeMillis();
 				CreateStatement cstmtOO2 = CreateTable(p2, p1, ExtVPFormat);
@@ -444,20 +447,15 @@ public final class ExtVPLoader extends Loader {
 
 			} else {
 				impala.dropTable(TableName_p1p2_OO);
-				StoreEmptyTables(p1, p2, ExtVPFormat);
-				StoreEmptyTables(p2, p1, ExtVPFormat);
+				StoreEmptyTables(TableName_p1p2_OO);
+				StoreEmptyTables(TableName_p2p1_OO);
 			}
 		}
 	}
 
-	private void Compute_SOandOS(String TT, String p1, String p2, double SF, SelectStatement leftstmt, SelectStatement rightstmt, double PartitionSizeP1, double PartitionSizeP2)
-			throws IllegalArgumentException, SQLException {
-		// CREATE TABLE ExtVP_p1_p2_so AS (SELECT t1.s, t1.o FROM (SELECT s, o
-		// FROM TT WHERE p = p1) t1 LEFT SEMI JOIN (SELECT s, o FROM TT WHERE p
-		// = p2) t2 ON t1.s=t2.o);
-		// COMPUTE STATS ExtVP_p1_p2_so;
-		String ExtVPFormatSO = "SO";
-		String ExtVPFormatOS = "OS";
+	private void Compute_SOandOS(String TT, String p1, String p2, double SF, SelectStatement leftstmt, SelectStatement rightstmt, double PartitionSizeP1, double PartitionSizeP2) throws IllegalArgumentException, SQLException {
+		String ExtVPFormatSO = "so";
+		String ExtVPFormatOS = "os";
 		String TableName_p1p2_SO = TableName(p1, p2, ExtVPFormatSO);
 		String TableName_p2p1_OS = TableName(p2, p1, ExtVPFormatOS);
 		String TableName_p1p2_OS = TableName(p1, p2, ExtVPFormatOS);
@@ -478,10 +476,6 @@ public final class ExtVPLoader extends Loader {
 		impala.computeStats(TableName_p1p2_SO);
 
 		if (!isEmpty(TableName_p1p2_SO)) {
-			// CREATE TABLE ExtVP_p2_p1_os AS (SELECT t2.s, t2.o FROM
-			// ExtVP_p1_p2_so t1 RIGHT SEMI JOIN (SELECT s, o FROM TT WHERE p =
-			// p2) t2 ON t1.s=t2.o);
-			// COMPUTE STATS ExtVP_p2_p1_os;
 			System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_OS, TT));
 			timestamp = System.currentTimeMillis();
 			CreateStatement cstmtOS = CreateTable(p2, p1, ExtVPFormatOS);
@@ -513,16 +507,10 @@ public final class ExtVPLoader extends Loader {
 
 		} else {
 			impala.dropTable(TableName_p1p2_SO);
-			StoreEmptyTables(p1, p2, ExtVPFormatSO);
-			StoreEmptyTables(p2, p1, ExtVPFormatOS);
+			StoreEmptyTables(TableName_p1p2_SO);
+			StoreEmptyTables(TableName_p2p1_OS);
 		}
 		if (p1 != p2) {
-			// CREATE TABLE ExtVP_p1_p2_os AS (SELECT t1.s, t1.o FROM (SELECT s,
-			// o
-			// FROM TT WHERE p = p1) t1 LEFT SEMI JOIN (SELECT s, o FROM TT
-			// WHERE p
-			// = p2) t2 ON t1.o=t2.s);
-			// COMPUTE STATS ExtVP_p1_p2_os;
 			System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_OS, TT));
 			timestamp = System.currentTimeMillis();
 			CreateStatement cstmtOS2 = CreateTable(p1, p2, ExtVPFormatOS);
@@ -539,11 +527,6 @@ public final class ExtVPLoader extends Loader {
 			impala.computeStats(TableName_p1p2_OS);
 
 			if (!isEmpty(TableName_p1p2_OS)) {
-				// CREATE TABLE ExtVP_p2_p1_so AS (SELECT t2.s, t2.o FROM
-				// ExtVP_p1_p2_os
-				// t1 RIGHT SEMI JOIN (SELECT s, o FROM TT WHERE p = p2) t2 ON
-				// t2.s=t1.o);
-				// COMPUTE STATS ExtVP_p2_p1_os;
 				System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_SO, TT));
 				timestamp = System.currentTimeMillis();
 				CreateStatement cstmtSO2 = CreateTable(p2, p1, ExtVPFormatSO);
@@ -575,25 +558,44 @@ public final class ExtVPLoader extends Loader {
 
 			} else {
 				impala.dropTable(TableName_p1p2_OS);
-				StoreEmptyTables(p1, p2, ExtVPFormatOS);
-				StoreEmptyTables(p2, p1, ExtVPFormatSO);
+				StoreEmptyTables(TableName_p1p2_OS);
+				StoreEmptyTables(TableName_p2p1_SO);
 			}
 		}
 	}
 
-	// GET TABLE STATISTICS, INFORMATION
+	/**
+	 * Check if a given table is empty.
+	 * 
+	 * @param Tablename - Name of the table which is checked
+	 * @return true if table is empty.
+	 * 
+	 * @throws IllegalArgumentException
+	 * @throws SQLException
+	 */
 	private boolean isEmpty(String Tablename) throws IllegalArgumentException, SQLException {
 		ResultSet DataSet = impala.select().addProjection("Count(*) AS NrTuples").from(Tablename).execute();
-		boolean Size = true;
+		boolean Empty = true;
 		DataSet.next();
 		if (Double.parseDouble(DataSet.getString("NrTuples")) != 0) {
-			Size = false;
+			Empty = false;
 		} else {
-			Size = true;
+			Empty = true;
 		}
-		return Size;
+		return Empty;
 	}
 
+	/**
+	 * Get the size of a given table, or the size of a partition inside the given table based on 
+	 * predicate.
+	 * 
+	 * @param Tablename - Name of the table.
+	 * @param Predicate - Specified predicate.
+	 * @return table size.
+	 * 
+	 * @throws IllegalArgumentException
+	 * @throws SQLException
+	 */
 	private double TableSize(String Tablename, String Predicate) throws IllegalArgumentException, SQLException {
 		ResultSet DataSet = impala.select().addProjection("Count(*) AS NrTuples").from(Tablename)
 				.where(String.format("%s='%s'", column_name_predicate, Predicate)).execute();
@@ -602,7 +604,6 @@ public final class ExtVPLoader extends Loader {
 		Nrtuples = Double.parseDouble(DataSet.getString("NrTuples"));
 		return Nrtuples * 1.0000;
 	}
-
 	private double TableSize(String Tablename) throws IllegalArgumentException, SQLException {
 		ResultSet DataSet = impala.select().addProjection("Count(*) AS NrTuples").from(Tablename).execute();
 		double Nrtuples = 0;
@@ -611,6 +612,13 @@ public final class ExtVPLoader extends Loader {
 		return Nrtuples * 1.000;
 	}
 
+	/**
+	 * Select a specified partition inside a table based on predicate.
+	 * 
+	 * @param TableName - Name of the table
+	 * @param Predicate - Specified predicate
+	 * @return Select statement for the partition.
+	 */
 	private SelectStatement SelectPartition(String TableName, String Predicate) {
 		SelectStatement result = impala.select(column_name_subject);
 		result.addProjection(column_name_object);
@@ -618,7 +626,15 @@ public final class ExtVPLoader extends Loader {
 		result.where(String.format("%s='%s'", column_name_predicate, Predicate));
 		return result;
 	}
-
+	
+	/**
+	 * Create empty ExtVP table based on predicates and format, without data.
+	 * 
+	 * @param Predicate1 - First predicate.
+	 * @param Predicate2 - Second predicate.
+	 * @param ExtVPFormat - ExtVP Format.
+	 * @return Create statement for the ExtVP table.
+	 */
 	private CreateStatement CreateTable(String Predicate1, String Predicate2, String ExtVPFormat) {
 		CreateStatement cstmt = impala.createTable(TableName(Predicate1, Predicate2, ExtVPFormat)).ifNotExists();
 		cstmt.storedAs(FileFormat.PARQUET);
@@ -627,30 +643,64 @@ public final class ExtVPLoader extends Loader {
 		return cstmt;
 	}
 
+	/**
+	 * Set the name of the ExtVP table based on predicates and format.
+	 * 
+	 * @param Predicate1 - First predicate.
+	 * @param Predicate2 - Second predicate.
+	 * @param ExtVPFormat - ExtVP Format.
+	 * @return Name of the table.
+	 */
 	private String TableName(String Predicate1, String Predicate2, String ExtVPFormat) {
 		Predicate1 = RenamePredicates(Predicate1);
 		Predicate2 = RenamePredicates(Predicate2);
 		return String.format("%s_%s_%s_%s", tablename_output, Predicate1, Predicate2, ExtVPFormat);
 	}
-
+	
+	/**
+	 * Rename the predicate by replacing restricted characters for table names.
+	 * 
+	 * @param Predicate - Predicate to be modified.
+	 * 
+	 * @return New predicate with replaced characters.
+	 */
 	private String RenamePredicates(String Predicate) {
-		// NOT ALLOWED < > : // - / . , | # @
-		String RenamedPredicate = Predicate.replaceAll("[<>/.,\\s\\-:\\?]", "_");
+		// NOT ALLOWED < > : // - / . , | # @ ` ~
+		String RenamedPredicate = Predicate.replaceAll("[<>/.`~,\\s\\-:\\?]", "_");
 		return RenamedPredicate;
 	}
 
-	private void StoreEmptyTables(String Predicate1, String Predicate2, String ExtVPFormat)
+	/**
+	 * Store empty ExtVP tables in a .txt file.
+	 * 
+	 * @param EmptyTable
+	 * 
+	 * @throws IllegalArgumentException
+	 * @throws SQLException
+	 */
+	private void StoreEmptyTables(String EmptyTable)
 			throws IllegalArgumentException, SQLException {
 
 		try (FileWriter fw = new FileWriter("./EmptyTables.txt", true);
 				BufferedWriter bw = new BufferedWriter(fw);
 				PrintWriter Append = new PrintWriter(bw)) {
-			Append.println(TableName(Predicate1, Predicate2, ExtVPFormat));
+			Append.println(EmptyTable);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-
+	
+	/**
+	 * Store the predicate up to which the ExtVP tables are completed.
+	 * 
+	 * @param Pred1Possition - Position of first predicate of ExtVP table in the list of predicates.
+	 * @param Predicate1 - First predicate.
+	 * @param Pred2Possition - Position of second predicate of ExtVP table in the list of predicates.
+	 * @param Predicate2 - Second predicate.
+	 * 
+	 * @throws IllegalArgumentException
+	 * @throws SQLException
+	 */
 	private void PhaseCompleted(int Pred1Possition, String Predicate1, int Pred2Possition, String Predicate2) throws IllegalArgumentException, SQLException {
 		try (FileWriter fw = new FileWriter("./ExtVpCompleted.txt");
 				BufferedWriter bw = new BufferedWriter(fw);
@@ -661,6 +711,13 @@ public final class ExtVPLoader extends Loader {
 		}
 	}
 
+	/**
+	 * In case loader for ExtVP is executed in several executions, 
+	 * then get the last predicate for which the ExtVP tables have been calculated
+	 * in previous execution. 
+	 * @param PredicatOrder
+	 * @return
+	 */
 	private int GetCompletedPredicate(int PredicatOrder){
 		int i=0;
 		int result=0;
@@ -678,14 +735,134 @@ public final class ExtVPLoader extends Loader {
 		return result;
 	}
 
-	private void AddStats(String TableName, String p1, String p2, String ExtVPformat, double TuplesP1, double TuplesP2, double Selectivity){
+	/**
+	 * Store statistics of ExtVP table in .txt files.
+	 * 
+	 * @param TableName - Name of ExtVP table.
+	 * @param p1 - First predicate.
+	 * @param p2 - Second predicate.
+	 * @param ExtVPformat - ExtVP format.
+	 * @param ExtVPSize - ExtVP table size.
+	 * @param VPSize - Partition size based on first predicate.
+	 * @param Selectivity - Selectivity of ExtVP table size compared to partition size.
+	 */
+	private void AddStats(String TableName, String p1, String p2, String ExtVPformat, double ExtVPSize, double VPSize, double Selectivity){
 		try (FileWriter fw = new FileWriter(String.format("./ExtVpStats_%s.txt", ExtVPformat), true);
 				BufferedWriter bw = new BufferedWriter(fw);
 				PrintWriter Append = new PrintWriter(bw)) {
-			Append.println(String.format("%s\t%s_%s\t%f\t%f\t%f",TableName, p1, p2, TuplesP1, TuplesP2, Selectivity));
+			Append.println(String.format("%s\t%s_%s\t%f\t%f\t%f",TableName, p1, p2, ExtVPSize, VPSize, Selectivity));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-
+	
+	/**
+	 * 
+	 */
+	private void StoreInHdfs(){
+		
+	}
+	
+	/**
+	 * Store the ExtVP Loader phase statistics and ExtVP table statistics as a table.
+	 * 
+	 * @param ExtVPType - Type of statistic (SO, OS, SS, OO, TIME, EMPTY).
+	 * 
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws IllegalArgumentException
+	 * @throws SQLException
+	 */
+	private void CreateStatsTables(String ExtVPType) throws FileNotFoundException, IOException, IllegalArgumentException, SQLException{
+		if(ExtVPType=="TIME"){
+			impala.createTable("external_extvp_tableofstats_time").ifNotExists()
+			.external()
+			.addColumnDefinition("Operation_Name", DataType.STRING)
+			.addColumnDefinition("Description", DataType.STRING)
+			.addColumnDefinition("Time", DataType.DOUBLE)
+			.addColumnDefinition("Measured", DataType.DOUBLE)
+			.addColumnDefinition("Seconds", DataType.DOUBLE)
+			.fieldTermintor(field_terminator)
+			.lineTermintor(line_terminator)
+			.location("/user/admin/extvp_stats/Test/Time/")
+			.execute();
+			
+			impala.createTable("extvp_tableofstats_time").ifNotExists()
+			.storedAs(FileFormat.PARQUET)
+			.addColumnDefinition("Operation_Name", DataType.STRING)
+			.addColumnDefinition("Description", DataType.STRING)
+			.addColumnDefinition("Time", DataType.DOUBLE)
+			.addColumnDefinition("Measured", DataType.DOUBLE)
+			.addColumnDefinition("Seconds", DataType.DOUBLE)
+			.execute();
+			
+			impala
+			.insertOverwrite("extvp_tableofstats_time")
+			.selectStatement(impala.select("Operation_Name")
+			.addProjection("Description")
+			.addProjection("Time") 
+			.addProjection("Measured") 
+			.addProjection("Seconds") 
+			.from("external_extvp_tableofstats_time"))
+			.execute();
+			
+			impala.dropTable("external_extvp_tableofstats_time");
+		}
+		else if(ExtVPType=="EMPTY"){
+			impala.createTable("external_extvp_tableofstats_emptytable").ifNotExists()
+			.external()
+			.addColumnDefinition("ExtVPTable_Name", DataType.STRING)
+			.lineTermintor(line_terminator)
+			.location("/user/admin/extvp_stats/Test/Empty/")
+			.execute();
+			
+			impala.createTable("extvp_tableofstats_emptytable").ifNotExists()
+			.storedAs(FileFormat.PARQUET)
+			.addColumnDefinition("ExtVPTable_Name", DataType.STRING)
+			.execute();
+			
+			impala
+			.insertOverwrite("extvp_tableofstats_emptytable")
+			.selectStatement(impala.select("ExtVPTable_Name")
+			.from("external_extvp_tableofstats_emptytable"))
+			.execute();
+			
+			impala.dropTable("external_extvp_tableofstats_emptytable");
+		}
+		else{
+			impala.createTable("external_extvp_tableofstats_"+ExtVPType).ifNotExists()
+			.external()
+			.addColumnDefinition("ExtVPTable_Name", DataType.STRING)
+			.addColumnDefinition("ExtVPTable_Predicates", DataType.STRING)
+			.addColumnDefinition("ExtVPTable_Nr_Tuples", DataType.DOUBLE)
+			.addColumnDefinition("Partition_Nr_Tuples", DataType.DOUBLE)
+			.addColumnDefinition("ExtVPTable_SF", DataType.DOUBLE)
+			.fieldTermintor(field_terminator)
+			.lineTermintor(line_terminator)
+			.location("/user/admin/extvp_stats/Test/"+ExtVPType+"/")
+			.execute();
+			
+			impala.createTable("extvp_tableofstats_"+ExtVPType)
+			.ifNotExists()
+			.storedAs(FileFormat.PARQUET)
+			.addColumnDefinition("ExtVPTable_Name", DataType.STRING)
+			.addColumnDefinition("ExtVPTable_Predicates", DataType.STRING)
+			.addColumnDefinition("ExtVPTable_Nr_Tuples", DataType.DOUBLE)
+			.addColumnDefinition("Partition_Nr_Tuples", DataType.DOUBLE)
+			.addColumnDefinition("ExtVPTable_SF", DataType.DOUBLE)
+			.execute();
+			
+			impala
+			.insertOverwrite("extvp_tableofstats_"+ExtVPType)
+			.selectStatement(impala.select("ExtVPTable_Name")
+			.addProjection("ExtVPTable_Predicates")
+			.addProjection("ExtVPTable_Nr_Tuples") 
+			.addProjection("Partition_Nr_Tuples") 
+			.addProjection("ExtVPTable_SF") 
+			.from("external_extvp_tableofstats_"+ExtVPType))
+			.execute();
+			
+			impala.dropTable("external_extvp_tableofstats_"+ExtVPType);
+		}
+	}
 }
