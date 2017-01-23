@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.hive.HiveContext;
+import org.apache.spark.sql.functions;
 
 import de.uni_freiburg.informatik.dbis.sempala.loader.udf.PropertiesAggregateFunction;
 
@@ -36,6 +38,9 @@ public class ComplexPropertyTableLoader {
 
 	/** The file containing the prefixes. */
 	public String prefix_file;
+	
+	/** A map containing the prefixes **/
+	private Map<String, String> prefix_map;
 
 	/** Indicates if dot at the end of the line is to be stripped. */
 	public boolean strip_dot;
@@ -139,28 +144,6 @@ public class ComplexPropertyTableLoader {
 
 		this.hiveContext.sql(createExternalTable);
 
-		// Read the prefix file if there is one
-		Map<String, String> prefix_map = null;
-		if (prefix_file != null) {
-			// Get the prefixes and remove braces from long format
-			prefix_map = new HashMap<String, String>();
-			try {
-				BufferedReader br = new BufferedReader(new FileReader(prefix_file));
-				for (String line; (line = br.readLine()) != null;) {
-					String[] splited = line.split("\\s+");
-					if (splited.length < 2) {
-						System.out.printf("Line in prefix file has invalid format. Skip. ('%s')\n", line);
-						continue;
-					}
-					prefix_map.put(splited[1].substring(1, splited[1].length() - 1), splited[0]);
-				}
-				br.close();
-			} catch (IOException e) {
-				System.err.println("[ERROR] Could not open prefix file. Reason: " + e.getMessage());
-				System.exit(1);
-			}
-		}
-
 		// Strip point if necessary (four slashes: one escape for java one for
 		// sql
 		String column_name_object_dot_stripped = (strip_dot)
@@ -231,9 +214,13 @@ public class ComplexPropertyTableLoader {
 		DataFrame combinedProperties = singledValueProperties
 				.selectExpr(column_name_predicate, "0 AS " + column_name_is_complex)
 				.unionAll(multivaluedProperties.selectExpr(column_name_predicate, "1 AS " + column_name_is_complex));
-
+		
+		// remove '<' and '>', convert the characters
+		DataFrame cleanedProperties = combinedProperties.withColumn("p", functions.regexp_replace(functions.translate(combinedProperties.col("p"), "<>", ""), 
+				"[[^\\w]+]", "_"));
+		
 		// write the result
-		combinedProperties.write().mode(SaveMode.Overwrite).saveAsTable(tablename_properties);
+		cleanedProperties.write().mode(SaveMode.Overwrite).saveAsTable(tablename_properties);
 	}
 
 	/**
@@ -309,6 +296,8 @@ public class ComplexPropertyTableLoader {
 	 */
 	public void load() {
 
+		buildPrefixMap();
+		
 		buildTripleTable();
 
 		// create properties table
@@ -355,6 +344,33 @@ public class ComplexPropertyTableLoader {
 					column_name, entry.getKey(), entry.getValue()));
 		}
 		return String.format("CASE %s \n\tELSE %s\n\tEND", case_clause_builder.toString(), column_name);
+	}
+	
+	/**
+	 * create the map containing the prefixes, if they are used
+	 */
+	private void buildPrefixMap() {
+		// Read the prefix file if there is one
+		this.prefix_map = null;
+		if (prefix_file != null) {
+			// Get the prefixes and remove braces from long format
+			prefix_map = new HashMap<String, String>();
+			try {
+				BufferedReader br = new BufferedReader(new FileReader(prefix_file));
+				for (String line; (line = br.readLine()) != null;) {
+					String[] splited = line.split("\\s+");
+					if (splited.length < 2) {
+						System.out.printf("Line in prefix file has invalid format. Skip. ('%s')\n", line);
+						continue;
+					}
+					prefix_map.put(splited[1].substring(1, splited[1].length() - 1), splited[0]);
+				}
+				br.close();
+			} catch (IOException e) {
+				System.err.println("[ERROR] Could not open prefix file. Reason: " + e.getMessage());
+				System.exit(1);
+			}
+		}
 	}
 
 	/**
