@@ -58,24 +58,43 @@ public class Join extends SQLStatement {
 	public String toString() {
 		StringBuilder sb = new StringBuilder("");
 		sb.append(left.toNamedString());
-		for (int i = 0; i < rights.size(); i++) {
-			SQLStatement right = rights.get(i);
-			String onString = onStrings.get(i);
-			if(onString.equals("") || this.type == JoinType.CROSS){
-				sb.append(" CROSS JOIN ");
+		if (this.type == JoinType.INNEREXTVP) {
+			for (int i = 0; i < rights.size(); i++) {
+				SQLStatement right = rights.get(i);
+				sb.append(" JOIN ");
+				sb.append(right.toNamedString());
 			}
-			else if(this.type == JoinType.LEFT){
-			sb.append(" LEFT JOIN ");
-			} else{
-				sb.append(" JOIN ");	
+			for (int i = 0; i < onStrings.size(); i++) {
+				String onString = onStrings.get(i);
+				if (i == 0) {
+					sb.append(" ON ");
+					sb.append(onString);
+					sb.append(" ");
+				} else {
+					sb.append(" AND ");
+					sb.append(onString);
+					sb.append(" ");
+				}
 			}
-			sb.append(right.toNamedString());
-			if(!onString.equals("") && this.type != JoinType.CROSS){
-			sb.append(" ON(");
-			sb.append(onString);
-			sb.append(")");
-			} else if(!onString.equals("") && this.type == JoinType.CROSS){
-				wrapper.addWhereConjunction(onString);
+		} else {
+			for (int i = 0; i < rights.size(); i++) {
+				SQLStatement right = rights.get(i);
+				String onString = onStrings.get(i);
+				if (onString.equals("") || this.type == JoinType.CROSS) {
+					sb.append(" CROSS JOIN ");
+				} else if (this.type == JoinType.LEFT) {
+					sb.append(" LEFT JOIN ");
+				} else {
+					sb.append(" JOIN ");
+				}
+				sb.append(right.toNamedString());
+				if (!onString.equals("") && this.type != JoinType.CROSS) {
+					sb.append(" ON(");
+					sb.append(onString);
+					sb.append(")");
+				} else if (!onString.equals("") && this.type == JoinType.CROSS) {
+					wrapper.addWhereConjunction(onString);
+				}
 			}
 		}
 		wrapper.setFrom(sb.toString());

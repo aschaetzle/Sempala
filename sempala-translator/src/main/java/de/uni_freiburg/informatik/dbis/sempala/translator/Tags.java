@@ -17,7 +17,9 @@ public final class Tags {
 	public static final String COMPLEX_TRIPLETABLE_TABLENAME = "tripletable";
 	public static final String COMPLEX_PROPERTYTABLE_TABLENAME = "complex_property_table";
 	public static final String COMPLEX_PROPERTIES_TABLENAME = "properties";
-
+	
+	//tables produced by the ExtVP loading process
+	public static final String TABLENAME_TRIPLE_TABLE = "tripletable";
 	
 	public static final String SEMPALA_RESULTS_DB_NAME = "sempala_results";
 
