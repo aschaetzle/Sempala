@@ -17,6 +17,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
+import de.uni_freiburg.informatik.dbis.sempala.translator.ComplexProperties;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Format;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
@@ -159,6 +160,11 @@ public class Main {
 			}
 		} else {
 			inputFiles.add(inputFile);
+		}
+		
+		// if complex_property_table is selected, we need to get the list of properties
+		if(connection != null && format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())){
+			ComplexProperties.getInstance(connection);
 		}
 
 		for ( final File file : inputFiles ) {
