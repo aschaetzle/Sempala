@@ -34,7 +34,7 @@ public class Main {
 	private static String inputPath = null;
 
 	/** The connection to the impala daemon */
-    private static Connection connection = null;
+    public static Connection connection = null;
 
 	// Define a static logger variable so that it references the corresponding
 	// Logger instance
