@@ -247,7 +247,7 @@ public class ComplexPropertyTableLoader {
 
 		// build the query to extract the property from the array
 		String[] selectProperties = new String[allProperties.length + 1];
-		selectProperties[0] = "s";
+		selectProperties[0] = column_name_subject;
 		for (int i = 0; i < allProperties.length; i++) {
 			
 			// if property is a full URI, remove the < at the beginning end > at the end
@@ -339,8 +339,8 @@ public class ComplexPropertyTableLoader {
 		StringBuilder case_clause_builder = new StringBuilder();
 		for (Map.Entry<String, String> entry : prefix_map.entrySet()) {
 			case_clause_builder.append(String.format(
-					"\n\t WHEN %1$s LIKE '<%2$s%%'"
-							+ "\n\t THEN regexp_replace(translate(%1$s, '<>', ''), '%2$s', '%3$s')",
+					"\n\t WHEN %1$s LIKE '%2$s%%'"
+							+ "\n\t THEN concat('<', regexp_replace(%1$s, '%2$s', '%3$s'), '>')",
 					column_name, entry.getKey(), entry.getValue()));
 		}
 		return String.format("CASE %s \n\tELSE %s\n\tEND", case_clause_builder.toString(), column_name);
@@ -363,7 +363,7 @@ public class ComplexPropertyTableLoader {
 						System.out.printf("Line in prefix file has invalid format. Skip. ('%s')\n", line);
 						continue;
 					}
-					prefix_map.put(splited[1].substring(1, splited[1].length() - 1), splited[0]);
+					prefix_map.put(splited[0], splited[1].substring(1, splited[1].length() -1));
 				}
 				br.close();
 			} catch (IOException e) {
