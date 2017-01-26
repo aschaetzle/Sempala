@@ -69,10 +69,7 @@ public class ComplexTripleGroup {
 		Node predicate = t.getPredicate();
 		Node object = t.getObject();
 		if (subject.isVariable()){
-			String subjectString = subject.getName();
-			if(subjectString.endsWith(">"))
-				subjectString = subjectString.substring(0, subjectString.length() -1);
-			result.put(subjectString,
+			result.put(subject.getName(),
 					new String[] { Tags.SUBJECT_COLUMN_NAME });
 		}
 		if (predicate.isVariable()) {
@@ -86,13 +83,11 @@ public class ComplexTripleGroup {
 						new String[] { Tags.OBJECT_COLUMN_NAME });
 			} else {
 				String objectString = object.getName();
-				if(objectString.endsWith(">"))
-					objectString = objectString.substring(0, objectString.length() -1);
 				
 				String predicateString = FmtUtils
 						.stringForNode(predicate, prefixMapping);
-				if(predicateString.endsWith(">"))
-					predicateString = predicateString.substring(0, predicateString.length() -1);
+				if(predicateString.startsWith("<") && predicateString.endsWith(">"))
+					predicateString = predicateString.substring(1, predicateString.length() -1);
 				
 				result.put(objectString, new String[] { SpecialCharFilter
 						.filter(predicateString) });
@@ -126,10 +121,8 @@ public class ComplexTripleGroup {
 					whereConditions.add(Tags.SUBJECT_COLUMN_NAME + " = '"
 							+ subjectString + "'");
 				} else {
-					String subjectString = subject.getName();
-					if(subjectString.endsWith(">"))
-						subjectString = subjectString.substring(0, subjectString.length() -1);
-					vars.add(subjectString);
+
+					vars.add(subject.getName());
 					whereConditions.add(Tags.SUBJECT_COLUMN_NAME
 							+ " IS NOT NULL ");
 				}
@@ -145,8 +138,8 @@ public class ComplexTripleGroup {
 				// predicate is bound -> add to Filter
 				String predicateString = FmtUtils
 						.stringForNode(predicate, this.prefixMapping);
-				if(predicateString.endsWith(">"))
-					predicateString = predicateString.substring(0, predicateString.length() -1);
+				if(predicateString.startsWith("<") && predicateString.endsWith(">"))
+					predicateString = predicateString.substring(1, predicateString.length() -1);
 				whereConditions.add(SpecialCharFilter.filter(predicateString)
 						+ " IS NOT NULL");
 
@@ -170,7 +163,7 @@ public class ComplexTripleGroup {
 					String predicateString = FmtUtils
 							.stringForNode(predicate, this.prefixMapping);
 					if(predicateString.endsWith(">"))
-						predicateString = predicateString.substring(0, predicateString.length() -1);
+						predicateString = predicateString.substring(1, predicateString.length() -1);
 					condition = SpecialCharFilter.filter(predicateString)
 							+ " = '" + string + "'";
 				}

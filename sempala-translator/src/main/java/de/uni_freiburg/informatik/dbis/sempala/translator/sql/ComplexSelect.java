@@ -11,7 +11,9 @@ public class ComplexSelect extends SQLStatement {
 	private int limit = -1;
 	private int offset = -1;
 	HashMap<String, String[]> selection = new HashMap<String, String[]>();
+	HashMap<String, String> inverted_selection = new HashMap<String, String>();
 	HashMap<String, Boolean> is_complex_column = new HashMap<String, Boolean>();
+	private boolean contains_complex_vars = false;
 
 	/*
 	 * Subset of schema
@@ -24,6 +26,12 @@ public class ComplexSelect extends SQLStatement {
 	@Override
 	public void addSelector(String alias, String[] selector) {
 		selection.put(alias, selector);
+		if(selector.length > 1){
+			inverted_selection.put(selector[0] + "." + selector[1], alias);
+		} else {
+			inverted_selection.put(selector[0], alias);
+		}
+		
 	}
 
 	public void appendToFrom(String s) {
@@ -40,6 +48,21 @@ public class ComplexSelect extends SQLStatement {
 
 	@Override
 	public void addWhereConjunction(String condition) {
+		if (contains_complex_vars) {
+			// check if it contains a property
+			for (String key : is_complex_column.keySet()) {
+				int pos = condition.indexOf(key);
+				// the property is present in the condition
+				if (pos > -1) {
+					// the property is also of complex type
+					if (is_complex_column.get(key)) {
+						condition = condition.replaceAll(key, "subT_" + inverted_selection.get(key) + ".ITEM ");
+					} else { // if not, add the reference to t1 (the first reference to the table)
+						condition = condition.substring(0, pos) + "t1." + condition.substring(pos);
+					}
+				}
+			} 
+		}
 		if (where.equals("")) {
 			where += condition;
 		} else {
@@ -105,7 +128,16 @@ public class ComplexSelect extends SQLStatement {
 		sb.append("(\nSELECT");
 		if (isDistinct)
 			sb.append(" DISTINCT");
-	
+		
+		/**
+		 *  Impala does not allow to select with '*' complex columns
+		 *  Therefore, all the columns are explicitly listed
+		 */
+		if (selection.size() == 0){
+			int refName = 0;
+			for(String key : is_complex_column.keySet())
+				this.addSelector("v_" + String.valueOf(refName++), new String[]{key});
+		}
 			
 		boolean first = true;
 		for (String key : selection.keySet()) {
@@ -138,21 +170,19 @@ public class ComplexSelect extends SQLStatement {
 		first = true;
 		for (String key : selection.keySet()) {
 			String[] selector = selection.get(key);
-			if (selector != null) {
+			if (selector != null && is_complex_column.get(selector[0])) {
 				if (first) {
 					first = false;
 				} else {
 					sb.append(",");
 				}
-				if (is_complex_column.get(selector[0])) {
-					if (selector.length > 1) {
-						sb.append(" t1." + selector[0] + "." + selector[1]  +" subT_" + key);
-					} else {
-						sb.append(" t1." + selector[0] + " subT_" + key);
-					} 
+
+				if (selector.length > 1) {
+					sb.append(" t1." + selector[0] + "." + selector[1] + " subT_" + key);
 				} else {
-					System.err.println(selector[0] + " properties not found!");
+					sb.append(" t1." + selector[0] + " subT_" + key);
 				}
+
 			}
 		}
 		if (!this.where.equals("")) {
@@ -180,17 +210,21 @@ public class ComplexSelect extends SQLStatement {
 	@Override
 	public String toString() {
 
-		// check if the special select is needed
-		boolean complex_variables = false;
-		for (String key : selection.keySet()){
-			String[] selector =  selection.get(key);
-			if (is_complex_column.get(selector[0])) {
-				complex_variables = true;
-				break;
+		// if there are complex properties -> complex select is needed
+		
+		if (selection.size() == 0)
+			contains_complex_vars = true;
+		else {
+			for (String key : selection.keySet()) {
+				String[] selector = selection.get(key);
+				if (is_complex_column.get(selector[0])) {
+					contains_complex_vars = true;
+					break;
+				}
 			}
 		}
 		
-		if (complex_variables)
+		if (contains_complex_vars)
 			return complexSelect();
 		else
 			return simpleSelect();
@@ -204,6 +238,7 @@ public class ComplexSelect extends SQLStatement {
 	@Override
 	public void updateSelection(Map<String, String[]> resultSchema) {
 		for (String key : resultSchema.keySet()) {
+			// should this be not containsKey?
 			if (this.selection.containsKey(key)) {
 				String[] entry;
 				if (selection.get(key).length > 1) {
