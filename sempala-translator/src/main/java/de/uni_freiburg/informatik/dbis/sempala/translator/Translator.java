@@ -54,6 +54,9 @@ public class Translator {
 
 	/** Indicates if filter optimizations are enabled */
 	private boolean filterOptimizer = true;
+	
+	/** The value of threshold*/
+	public String threshold;
 
 	// Define a static logger variable so that it references the corresponding Logger instance
 	private static final Logger logger = Logger.getLogger(Translator.class);
