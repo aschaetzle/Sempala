@@ -113,6 +113,9 @@ public class Main {
 			translator.setExpandPrefixes(true);
 			logger.info("URI prefix expansion is turned on");
 		}
+		
+		if(commandLine.hasOption(OptionNames.THRESHOLD.toString()))
+			translator.threshold = commandLine.getOptionValue(OptionNames.THRESHOLD.toString());
 
 		// Set requested format
 		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
@@ -246,7 +249,8 @@ public class Main {
 		HOST,
 		INPUT,
 		OPTIMIZE,
-		PORT;
+		PORT,
+		THRESHOLD;
 
 		@Override
 		public String toString() {
@@ -294,6 +298,9 @@ public class Main {
 
 		options.addOption("p", OptionNames.PORT.toString(), true,
 				"The port to connect to. (Defaults to 21050)");
+		
+		options.addOption("t", OptionNames.THRESHOLD.toString(), true,
+				"Threshold of ExtVP if ExtVP format is selected. Default (SF=1)");
 
 		return options;
 	}
