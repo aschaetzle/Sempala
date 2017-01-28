@@ -98,18 +98,22 @@ public final class ExtVPLoader extends Loader {
 		AddStats("Complete_EXTVP_TABLES"," TIME","","Time",0,0, (double) (System.currentTimeMillis() - timestamptotal) / 1000);
 		
 		//Store statistic files in HDFS
-		StoreInHdfs();
+		try {
+			StoreInHdfs(hdfs_input_directory);
+		} catch (IllegalArgumentException | IOException e1) {
+			e1.printStackTrace();
+		}
 		
 		//Create tables of statistics
 		System.out.print(String.format("Creating %s \n", "ExtVp Statistic Tables"));
 		long timestampStats = System.currentTimeMillis();
 		try {
-			CreateStatsTables("SO");
-			CreateStatsTables("SS");
-			CreateStatsTables("OS");
-			CreateStatsTables("OO");
-			CreateStatsTables("TIME");
-			CreateStatsTables("EMPTY");
+			CreateStatsTables("SO",hdfs_input_directory);
+			CreateStatsTables("SS",hdfs_input_directory);
+			CreateStatsTables("OS",hdfs_input_directory);
+			CreateStatsTables("OO",hdfs_input_directory);
+			CreateStatsTables("TIME",hdfs_input_directory);
+			CreateStatsTables("EMPTY",hdfs_input_directory);
 		} catch (IllegalArgumentException | IOException e) {
 			System.out.println("Stats tables could not be created. ");
 			e.printStackTrace();
@@ -666,7 +670,7 @@ public final class ExtVPLoader extends Loader {
 	 */
 	private String RenamePredicates(String Predicate) {
 		// NOT ALLOWED < > : // - / . , | # @ ` ~
-		String RenamedPredicate = Predicate.replaceAll("[<>/.`~,\\s\\-:\\?]", "_");
+		String RenamedPredicate = Predicate.replaceAll("[<>/.`~#,\\s\\-:\\?]", "_");
 		return RenamedPredicate;
 	}
 
@@ -757,10 +761,30 @@ public final class ExtVPLoader extends Loader {
 	}
 	
 	/**
+	 * @throws IllegalArgumentException 
+	 * @throws IOException 
 	 * 
 	 */
-	private void StoreInHdfs(){
+	private void StoreInHdfs(String DataSetName) throws IllegalArgumentException, IOException{	
+		int index = DataSetName.lastIndexOf("/");
+		String HdfsFolderName = DataSetName.substring(index);
 		
+		final Runtime rt = Runtime.getRuntime();
+		rt.exec("hdfs dfs -mkdir ./Stats");
+		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName);
+		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/Empty");
+		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/Time");
+		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/SS");
+		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/SO");
+		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/OS");
+		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/OO");
+		
+		rt.exec("hdfs dfs -put EmptyTables.txt ./Stats"+HdfsFolderName+"/Empty");
+		rt.exec("hdfs dfs -put ExtVpStats_Time.txt ./Stats"+HdfsFolderName+"/Time");
+		rt.exec("hdfs dfs -put ExtVpStats_ss.txt ./Stats"+HdfsFolderName+"/SS");
+		rt.exec("hdfs dfs -put ExtVpStats_so.txt ./Stats"+HdfsFolderName+"/SO");
+		rt.exec("hdfs dfs -put ExtVpStats_os.txt ./Stats"+HdfsFolderName+"/OS");
+		rt.exec("hdfs dfs -put ExtVpStats_oo.txt ./Stats"+HdfsFolderName+"/OO");
 	}
 	
 	/**
@@ -773,7 +797,10 @@ public final class ExtVPLoader extends Loader {
 	 * @throws IllegalArgumentException
 	 * @throws SQLException
 	 */
-	private void CreateStatsTables(String ExtVPType) throws FileNotFoundException, IOException, IllegalArgumentException, SQLException{
+	private void CreateStatsTables(String ExtVPType, String DataSetName) throws FileNotFoundException, IOException, IllegalArgumentException, SQLException{
+		int index = DataSetName.lastIndexOf("/");
+		String HdfsFolderName = DataSetName.substring(index);			
+		
 		if(ExtVPType=="TIME"){
 			impala.createTable("external_extvp_tableofstats_time").ifNotExists()
 			.external()
@@ -784,7 +811,7 @@ public final class ExtVPLoader extends Loader {
 			.addColumnDefinition("Seconds", DataType.DOUBLE)
 			.fieldTermintor(field_terminator)
 			.lineTermintor(line_terminator)
-			.location("/user/admin/extvp_stats/Test/Time/")
+			.location("./Stats"+HdfsFolderName+"/Time/") //PATH SHOULD BE ABSOLUTE
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_time").ifNotExists()
@@ -806,6 +833,8 @@ public final class ExtVPLoader extends Loader {
 			.from("external_extvp_tableofstats_time"))
 			.execute();
 			
+			impala.computeStats("extvp_tableofstats_time");
+			
 			impala.dropTable("external_extvp_tableofstats_time");
 		}
 		else if(ExtVPType=="EMPTY"){
@@ -813,7 +842,7 @@ public final class ExtVPLoader extends Loader {
 			.external()
 			.addColumnDefinition("ExtVPTable_Name", DataType.STRING)
 			.lineTermintor(line_terminator)
-			.location("/user/admin/extvp_stats/Test/Empty/")
+			.location("./Stats"+HdfsFolderName+"/Empty/")
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_emptytable").ifNotExists()
@@ -827,6 +856,8 @@ public final class ExtVPLoader extends Loader {
 			.from("external_extvp_tableofstats_emptytable"))
 			.execute();
 			
+			impala.computeStats("extvp_tableofstats_emptytable");
+			
 			impala.dropTable("external_extvp_tableofstats_emptytable");
 		}
 		else{
@@ -839,7 +870,7 @@ public final class ExtVPLoader extends Loader {
 			.addColumnDefinition("ExtVPTable_SF", DataType.DOUBLE)
 			.fieldTermintor(field_terminator)
 			.lineTermintor(line_terminator)
-			.location("/user/admin/extvp_stats/Test/"+ExtVPType+"/")
+			.location("./Stats"+HdfsFolderName+"/"+ExtVPType+"/")
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_"+ExtVPType)
@@ -861,6 +892,8 @@ public final class ExtVPLoader extends Loader {
 			.addProjection("ExtVPTable_SF") 
 			.from("external_extvp_tableofstats_"+ExtVPType))
 			.execute();
+			
+			impala.computeStats("extvp_tableofstats_"+ExtVPType);
 			
 			impala.dropTable("external_extvp_tableofstats_"+ExtVPType);
 		}
