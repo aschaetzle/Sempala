@@ -19,6 +19,7 @@ import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
 
 import de.uni_freiburg.informatik.dbis.sempala.translator.Format;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaBgpComplexPropertyTable;
+import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaBgpExtVPMultiTable;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaBgpExtVPSingleTable;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaBgpPropertyTable;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaDistinct;
@@ -66,6 +67,9 @@ public class AlgebraTransformer extends OpVisitorBase {
 			break;
 		case SINGLETABLE:
 			stack.push(new ImpalaBgpExtVPSingleTable(opBGP, prefixes));
+			break;
+		case EXTVP:
+			stack.push(new ImpalaBgpExtVPMultiTable(opBGP, prefixes));
 			break;
 		}
 	}
