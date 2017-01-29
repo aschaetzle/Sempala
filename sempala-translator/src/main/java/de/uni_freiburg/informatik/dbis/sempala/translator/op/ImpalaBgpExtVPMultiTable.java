@@ -19,19 +19,15 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Join;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinType;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Select;
+import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 
 public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 
 	private Map<Triple, List<String>> ListOfExtVPTables;
 	private Map<Triple, String> ListOfExtVPTriples = new HashMap<Triple, String>();
 	private Map<String, List<String>> invertedVarIndex;
-	// private List<String> ListOfEmptyExtVPTables = new ArrayList<>();
-	// private List<String> ListOfSSExtVPTables = new ArrayList<>();
-	// private List<String> ListOfSOExtVPTables = new ArrayList<>();
-	// private List<String> ListOfOSExtVPTables = new ArrayList<>();
-	// private List<String> ListOfOOExtVPTables = new ArrayList<>();
 	private List<Triple> QueryTriples;
-	double Threshold = 0.3;//READ FROM CLI?
+	double Threshold = 1.0;	
 
 	public ImpalaBgpExtVPMultiTable(OpBGP opBGP, PrefixMapping prefixes) {
 		super(opBGP, prefixes);
@@ -41,8 +37,9 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	public SQLStatement translate(String resultName) {
 		long startTimeFindExtvp = System.currentTimeMillis();
 		this.resultName = resultName;
-		QueryTriples = opBGP.getPattern().getList();
 
+		setThreshold(Translator.threshold);
+		QueryTriples = opBGP.getPattern().getList();
 		// empty PrefixMapping when prefixes should be expanded
 		if (expandPrefixes)
 			prefixes = PrefixMapping.Factory.create();
@@ -54,7 +51,6 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 				CompareTriples(QueryTriples.get(i), i, QueryTriples.get(j), j);
 			}
 		}
-
 		// Find the best possible table for each corresponding triple.
 		Iterator<Triple> it = ListOfExtVPTables.keySet().iterator();
 		while (it.hasNext()) {
@@ -73,7 +69,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 						String URI = URIPredicate.substring(0, index + 1);
 						String Pred = URIPredicate.substring(index + 1, URIPredicate.length());
 						String Prefix = prefixes.getNsURIPrefix(URI);
-						if(Prefix==null)
+						if (Prefix == null)
 							selected_extvp_table = URI + Pred;
 						else
 							selected_extvp_table = Prefix + ":" + Pred;
@@ -81,11 +77,13 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 				} else {
 					int IndexOfTriple = Extvptable_Triple.indexOf(" ");
 					String Extvptable = Extvptable_Triple.substring(0, IndexOfTriple);
-					if(IsEmpty(Extvptable))
-						break;
+					// if(IsEmpty(Extvptable)){
+					// EmptyResult = true;
+					// return null;
+					// }
 					String ExtvptableType = Extvptable.substring(Extvptable.length() - 2, Extvptable.length());
 					String Query = String.format(
-							"SELECT extvptable_sf FROM lis.extvp_tableofstats_%s WHERE extvptable_name = '%s';",
+							"SELECT extvptable_sf FROM extvp_tableofstats_%s WHERE extvptable_name = '%s';",
 							ExtvptableType, Extvptable);
 					try {
 						ResultSet result = Main.connection.createStatement().executeQuery(Query);
@@ -102,10 +100,11 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 			}
 			ListOfExtVPTriples.put(key, selected_extvp_table);
 		}
-		
-		//Create Joins between best ExtVP tables.
+
+		// Create Joins between best ExtVP tables.
 		SQLStatement result = MakeJoins();
-		System.out.print(String.format("Create query with extvp tables: %s ms\n", System.currentTimeMillis() - startTimeFindExtvp));
+		System.out.print(String.format("Create query with extvp tables: %s ms\n",
+				System.currentTimeMillis() - startTimeFindExtvp));
 		return result;
 	}
 
@@ -144,12 +143,12 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	}
 	
 	/**
-	 * Get only the ExtVP table or tripletable without the corresponding triple of join.
+	 * Get only the ExtVP table or triple table without the corresponding triple of join.
 	 * 
 	 * @param Table - Table which is modified.
 	 * @return
 	 */
-	public String RemoveTripleNumber(String Table) {
+	private String RemoveTripleNumber(String Table) {
 		if (Table.startsWith("extvp_")) {
 			int IndexOfTriple = Table.indexOf(" ");
 			String Extvptable = Table.substring(0, IndexOfTriple);
@@ -174,11 +173,10 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 			Select stmt = new Select("T" + String.valueOf(i));
 			Triple T = QueryTriples.get(i);
 			String From = RemoveTripleNumber(ListOfExtVPTriples.get(T));
-			if(!From.startsWith("extvp_")){
+			if (!From.startsWith("extvp_")) {
 				stmt.addWhereConjunction(Tags.PREDICATE_COLUMN_NAME + "='" + From + "'");
 				stmt.setFrom(Tags.TABLENAME_TRIPLE_TABLE);
-			}
-			else
+			} else
 				stmt.setFrom(From);
 			if (T.getSubject().isLiteral())
 				stmt.addWhereConjunction(Tags.SUBJECT_COLUMN_NAME + "=" + T.getSubject().toString());
@@ -208,16 +206,6 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	}
 	
 	/**
-	 * Define what happens when empty possible ExtVP tables are found.
-	 * 
-	 * @param ExtvpTable - ExtVP table to be checked if empty.
-	 * @return
-	 */
-	private boolean IsEmpty(String ExtvpTable){
-		return false;
-	}
-	
-	/**
 	 * Use defined prefixes for making predicates compatible with 
 	 * ExtVP table naming.
 	 * 
@@ -237,8 +225,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 			return RenamedURI + Pred;
 		}
 		else
-//		return Prefix + "_" + Pred;
-		return Pred;
+		return Prefix + "_" + Pred;
 	}
 	
 	/**
@@ -297,5 +284,42 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 			ListOfExtVPTables.remove(T2);
 			ListOfExtVPTables.put(T2, ExtVpsT2);
 		}
+	}
+
+	/**
+	 * Read value of threshold from CLI.
+	 */
+	private void setThreshold(String threshold) {
+		try {
+			Threshold = Double.parseDouble(threshold);
+			if (Threshold <= 0)
+				throw new IllegalArgumentException();
+		} catch (Exception e) {
+			System.out.print(String.format("Threshold '%s' is not a proper value as threshold", threshold));
+			System.exit(1);
+		}
+	}
+
+	/**
+	 * Define what happens when empty possible ExtVP tables are found.
+	 * 
+	 * @param ExtvpTable - ExtVP table to be checked if empty.
+	 * @return
+	 */
+	private boolean IsEmpty(String ExtvpTable){
+		double NrTuples=1;
+		String Query = String.format(
+				"SELECT COUNT(*) AS NrTuples FROM extvp_tableofstats_emptytable WHERE ExtVPTable_Name = '%s';", ExtvpTable);
+		try {
+			ResultSet result = Main.connection.createStatement().executeQuery(Query);
+			result.next();
+			NrTuples = Double.parseDouble(result.getString("NrTuples"));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		if(NrTuples != 0)
+			return true;
+		else
+			return false;
 	}
 }
