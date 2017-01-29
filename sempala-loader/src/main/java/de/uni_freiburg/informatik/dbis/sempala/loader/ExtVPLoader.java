@@ -30,7 +30,7 @@ public final class ExtVPLoader extends Loader {
 	
 	//Default values for threshold, triple table and initial predicate
 	private double SF = 1;
-	private String TT = tablename_triple_table;
+	private String TT = "test";//tablename_triple_table;
 	private int FirstPredicate = 0;
 	
 	/**
@@ -104,12 +104,19 @@ public final class ExtVPLoader extends Loader {
 			e1.printStackTrace();
 		}
 		
+		// Sleep 10 seconds to give impala some time to calm down
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		
 		//Create tables of statistics
 		System.out.print(String.format("Creating %s \n", "ExtVp Statistic Tables"));
 		long timestampStats = System.currentTimeMillis();
 		try {
-			CreateStatsTables("SO",hdfs_input_directory);
 			CreateStatsTables("SS",hdfs_input_directory);
+			CreateStatsTables("SO",hdfs_input_directory);
 			CreateStatsTables("OS",hdfs_input_directory);
 			CreateStatsTables("OO",hdfs_input_directory);
 			CreateStatsTables("TIME",hdfs_input_directory);
@@ -761,32 +768,66 @@ public final class ExtVPLoader extends Loader {
 	}
 	
 	/**
-	 * @throws IllegalArgumentException 
-	 * @throws IOException 
+	 * Put the statistic files into hdfs directories
 	 * 
+	 * @param DataSetName - Name of Dataset used to create the directory in Stats with the same name
+	 * @throws IllegalArgumentException
+	 * @throws IOException
 	 */
 	private void StoreInHdfs(String DataSetName) throws IllegalArgumentException, IOException{	
 		int index = DataSetName.lastIndexOf("/");
 		String HdfsFolderName = DataSetName.substring(index);
 		
-		final Runtime rt = Runtime.getRuntime();
-		rt.exec("hdfs dfs -mkdir ./Stats");
-		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName);
-		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/Empty");
-		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/Time");
-		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/SS");
-		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/SO");
-		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/OS");
-		rt.exec("hdfs dfs -mkdir ./Stats"+HdfsFolderName+"/OO");
-		
-		rt.exec("hdfs dfs -put EmptyTables.txt ./Stats"+HdfsFolderName+"/Empty");
-		rt.exec("hdfs dfs -put ExtVpStats_Time.txt ./Stats"+HdfsFolderName+"/Time");
-		rt.exec("hdfs dfs -put ExtVpStats_ss.txt ./Stats"+HdfsFolderName+"/SS");
-		rt.exec("hdfs dfs -put ExtVpStats_so.txt ./Stats"+HdfsFolderName+"/SO");
-		rt.exec("hdfs dfs -put ExtVpStats_os.txt ./Stats"+HdfsFolderName+"/OS");
-		rt.exec("hdfs dfs -put ExtVpStats_oo.txt ./Stats"+HdfsFolderName+"/OO");
+		Runtime rt; 
+
+		try {
+			Thread.sleep(10000);
+			rt = Runtime.getRuntime();
+			rt.exec("hdfs dfs -mkdir ./Stats");
+			Thread.sleep(2000);
+			rt = Runtime.getRuntime();
+			rt.exec("hdfs dfs -mkdir ./Stats" + HdfsFolderName);
+			Thread.sleep(2000);
+			rt = Runtime.getRuntime();
+			rt.exec("hdfs dfs -mkdir ./Stats" + HdfsFolderName + "/Empty");
+			Thread.sleep(2000);
+			rt = Runtime.getRuntime();
+			rt.exec("hdfs dfs -mkdir ./Stats" + HdfsFolderName + "/Time");
+			Thread.sleep(2000);
+			rt = Runtime.getRuntime();
+			rt.exec("hdfs dfs -mkdir ./Stats" + HdfsFolderName + "/SS");
+			Thread.sleep(2000);
+			rt = Runtime.getRuntime();
+			rt.exec("hdfs dfs -mkdir ./Stats" + HdfsFolderName + "/SO");
+			Thread.sleep(2000);
+			rt = Runtime.getRuntime();
+			rt.exec("hdfs dfs -mkdir ./Stats" + HdfsFolderName + "/OS");
+			Thread.sleep(2000);
+			rt = Runtime.getRuntime();
+			rt.exec("hdfs dfs -mkdir ./Stats" + HdfsFolderName + "/OO");
+			Thread.sleep(10000);
+
+			rt.exec("hadoop fs -chmod 777 ./Stats" + HdfsFolderName + "/OO");
+			rt.exec("hadoop fs -chmod 777 ./Stats" + HdfsFolderName + "/OS");
+			rt.exec("hadoop fs -chmod 777 ./Stats" + HdfsFolderName + "/SO");
+			rt.exec("hadoop fs -chmod 777 ./Stats" + HdfsFolderName + "/SS");
+			rt.exec("hadoop fs -chmod 777 ./Stats" + HdfsFolderName + "/Time");
+			rt.exec("hadoop fs -chmod 777 ./Stats" + HdfsFolderName + "/Empty");
+			rt.exec("hadoop fs -chmod 777 ./Stats" + HdfsFolderName);
+			rt.exec("hadoop fs -chmod 777 ./Stats");
+
+			rt.exec("hdfs dfs -put ./EmptyTables.txt ./Stats" + HdfsFolderName + "/Empty");
+			rt.exec("hdfs dfs -put ./ExtVpStats_Time.txt ./Stats" + HdfsFolderName + "/Time");
+			rt.exec("hdfs dfs -put ./ExtVpStats_ss.txt ./Stats" + HdfsFolderName + "/SS");
+			rt.exec("hdfs dfs -put ./ExtVpStats_so.txt ./Stats" + HdfsFolderName + "/SO");
+			rt.exec("hdfs dfs -put ./ExtVpStats_os.txt ./Stats" + HdfsFolderName + "/OS");
+			rt.exec("hdfs dfs -put ./ExtVpStats_oo.txt ./Stats" + HdfsFolderName + "/OO");
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
-	
+		
 	/**
 	 * Store the ExtVP Loader phase statistics and ExtVP table statistics as a table.
 	 * 
@@ -799,7 +840,7 @@ public final class ExtVPLoader extends Loader {
 	 */
 	private void CreateStatsTables(String ExtVPType, String DataSetName) throws FileNotFoundException, IOException, IllegalArgumentException, SQLException{
 		int index = DataSetName.lastIndexOf("/");
-		String HdfsFolderName = DataSetName.substring(index);			
+		String HdfsFolderName = DataSetName.substring(index);	
 		
 		if(ExtVPType=="TIME"){
 			impala.createTable("external_extvp_tableofstats_time").ifNotExists()
@@ -811,7 +852,7 @@ public final class ExtVPLoader extends Loader {
 			.addColumnDefinition("Seconds", DataType.DOUBLE)
 			.fieldTermintor(field_terminator)
 			.lineTermintor(line_terminator)
-			.location("./Stats"+HdfsFolderName+"/Time/") //PATH SHOULD BE ABSOLUTE
+			.location("/user/bakallil/Stats"+HdfsFolderName+"/Time/")
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_time").ifNotExists()
@@ -842,7 +883,7 @@ public final class ExtVPLoader extends Loader {
 			.external()
 			.addColumnDefinition("ExtVPTable_Name", DataType.STRING)
 			.lineTermintor(line_terminator)
-			.location("./Stats"+HdfsFolderName+"/Empty/")
+			.location("/user/bakallil/Stats"+HdfsFolderName+"/Empty/")
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_emptytable").ifNotExists()
@@ -870,7 +911,7 @@ public final class ExtVPLoader extends Loader {
 			.addColumnDefinition("ExtVPTable_SF", DataType.DOUBLE)
 			.fieldTermintor(field_terminator)
 			.lineTermintor(line_terminator)
-			.location("./Stats"+HdfsFolderName+"/"+ExtVPType+"/")
+			.location("/user/bakallil/Stats"+HdfsFolderName+"/"+ExtVPType+"/")
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_"+ExtVPType)
