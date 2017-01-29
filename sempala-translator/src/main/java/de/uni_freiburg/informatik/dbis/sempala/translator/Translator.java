@@ -58,8 +58,8 @@ public class Translator {
 	/** The value of threshold*/
 	public static String threshold;
 	
-	/** The value of result table name*/
-	public String result_table_name;
+	/** The value of result table name */
+	public String result_table_name = "extvp";
 
 	// Define a static logger variable so that it references the corresponding Logger instance
 	private static final Logger logger = Logger.getLogger(Translator.class);
