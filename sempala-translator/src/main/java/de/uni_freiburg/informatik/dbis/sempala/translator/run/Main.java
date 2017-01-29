@@ -1,6 +1,9 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.run;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -114,8 +117,13 @@ public class Main {
 			logger.info("URI prefix expansion is turned on");
 		}
 		
+		//Set Threshold
 		if(commandLine.hasOption(OptionNames.THRESHOLD.toString()))
 			translator.threshold = commandLine.getOptionValue(OptionNames.THRESHOLD.toString());
+		
+		//Set Result Table Name
+		if(commandLine.hasOption(OptionNames.RESULT_TABLE_NAME.toString()))
+			translator.result_table_name = commandLine.getOptionValue(OptionNames.RESULT_TABLE_NAME.toString());
 
 		// Set requested format
 		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
@@ -171,7 +179,9 @@ public class Main {
 		}
 
 		for ( final File file : inputFiles ) {
-
+			long EndTime = 0;
+			String ResultName = "";
+			long NrTuples = 0;
 			// Translate the sparql query
 			translator.setInputFile(file.getAbsolutePath());
 			String sqlString = translator.translateQuery();
@@ -180,8 +190,10 @@ public class Main {
 				// If a connection is set run the query
 				// Build a unique impala conform tablename
 				String resultsTableName = String.format("%s_%d", file.getName(), System.currentTimeMillis());
+				if(translator.getFormat()==Format.EXTVP)
+					resultsTableName = String.format("%s_%s_%d", translator.result_table_name, file.getName(), System.currentTimeMillis());
 				resultsTableName =  resultsTableName.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
-
+				ResultName = resultsTableName;
 				// Run the translated query and put it into the unique results table
 				System.out.print(String.format("%s:", file.getName()));
 
@@ -192,7 +204,8 @@ public class Main {
 					// Execute the query
 					long startTime = System.currentTimeMillis();
 					connection.createStatement().executeUpdate(String.format("CREATE TABLE %s.%s AS (%s);", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlString));
-					System.out.print(String.format(" %s ms", System.currentTimeMillis() - startTime));
+					EndTime = System.currentTimeMillis() - startTime;
+					System.out.print(String.format(" %s ms", EndTime));
 
 					// Sleep a second to give impalad some time to calm down
 					Thread.sleep(10000);
@@ -201,6 +214,7 @@ public class Main {
 					ResultSet result = connection.createStatement().executeQuery(String.format("SELECT COUNT(*) FROM %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
 					result.next();
 					long tableSize = result.getLong(1);
+					NrTuples = tableSize;
 					System.out.println(String.format(" %s pc", tableSize));
 
 					// Sleep a second to give impalad some time to calm down
@@ -229,6 +243,16 @@ public class Main {
 					logger.warn("Cannot open output file: " + file.getAbsolutePath() + ".sql", e);
 				}
 			}
+			
+			if(translator.getFormat()==Format.EXTVP){
+				try (FileWriter fw = new FileWriter("./TableOfResults.txt", true);
+						BufferedWriter bw = new BufferedWriter(fw);
+						PrintWriter Append = new PrintWriter(bw)) {
+					Append.println(String.format("%s\t%s\t%s",ResultName, EndTime, NrTuples));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 
@@ -250,6 +274,7 @@ public class Main {
 		INPUT,
 		OPTIMIZE,
 		PORT,
+		RESULT_TABLE_NAME,
 		THRESHOLD;
 
 		@Override
@@ -298,6 +323,9 @@ public class Main {
 
 		options.addOption("p", OptionNames.PORT.toString(), true,
 				"The port to connect to. (Defaults to 21050)");
+		
+		options.addOption("rn", OptionNames.RESULT_TABLE_NAME.toString(), true,
+				"Result Table Name format if results tables are stored.");
 		
 		options.addOption("t", OptionNames.THRESHOLD.toString(), true,
 				"Threshold of ExtVP if ExtVP format is selected. Default (SF=1)");
