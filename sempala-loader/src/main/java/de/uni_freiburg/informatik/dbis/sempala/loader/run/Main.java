@@ -144,6 +144,9 @@ public class Main {
 			if(commandLine.hasOption(OptionNames.EVALUATION_MODE.toString()))
 				loader.EvaluationMode = commandLine.hasOption(OptionNames.EVALUATION_MODE.toString());
 			
+			if(commandLine.hasOption(OptionNames.USER_HDFS_DIRECTORY.toString()))
+				loader.HdfsUserPath = commandLine.getOptionValue(OptionNames.USER_HDFS_DIRECTORY.toString());
+			
 		// set the option of loader that is responsible for complex property table (spark)
 		} else if (complexPropertyLoader != null) {
 			if (commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
@@ -231,7 +234,8 @@ public class Main {
 		STRIP_DOT, 
 		SHUFFLE, 
 		THRESHOLD, 
-		UNIQUE;
+		UNIQUE,
+		USER_HDFS_DIRECTORY;
 
 		@Override
 		public String toString() {
@@ -311,6 +315,9 @@ public class Main {
 
 		options.addOption("u", OptionNames.UNIQUE.toString(), false,
 				"Detect and ignore duplicates in the input (Memoryintensive!)");
+		
+		options.addOption("ud", OptionNames.USER_HDFS_DIRECTORY.toString(), true,
+				"User's Absolut path of HDFS direcotry (/user/<name>)");
 
 		return options;
 	}
