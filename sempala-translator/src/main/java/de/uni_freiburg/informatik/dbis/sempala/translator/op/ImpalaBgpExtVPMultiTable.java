@@ -77,10 +77,8 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 				} else {
 					int IndexOfTriple = Extvptable_Triple.indexOf(" ");
 					String Extvptable = Extvptable_Triple.substring(0, IndexOfTriple);
-					// if(IsEmpty(Extvptable)){
-					// EmptyResult = true;
-					// return null;
-					// }
+					 if(IsEmpty(Extvptable))
+						 break;
 					String ExtvptableType = Extvptable.substring(Extvptable.length() - 2, Extvptable.length());
 					String Query = String.format(
 							"SELECT extvptable_sf FROM extvp_tableofstats_%s WHERE extvptable_name = '%s';",
@@ -94,7 +92,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 							min_sel = SF;
 						}
 					} catch (Exception e) {
-						e.printStackTrace();
+						break;
 					}
 				}
 			}
