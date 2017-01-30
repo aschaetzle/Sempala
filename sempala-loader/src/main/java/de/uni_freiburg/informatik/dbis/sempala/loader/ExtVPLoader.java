@@ -30,7 +30,7 @@ public final class ExtVPLoader extends Loader {
 	
 	//Default values for threshold, triple table and initial predicate
 	private double SF = 1;
-	private String TT = "test";//tablename_triple_table;
+	private String TT = tablename_triple_table;
 	private int FirstPredicate = 0;
 	
 	/**
@@ -115,12 +115,12 @@ public final class ExtVPLoader extends Loader {
 		System.out.print(String.format("Creating %s \n", "ExtVp Statistic Tables"));
 		long timestampStats = System.currentTimeMillis();
 		try {
-			CreateStatsTables("SS",hdfs_input_directory);
-			CreateStatsTables("SO",hdfs_input_directory);
-			CreateStatsTables("OS",hdfs_input_directory);
-			CreateStatsTables("OO",hdfs_input_directory);
-			CreateStatsTables("TIME",hdfs_input_directory);
-			CreateStatsTables("EMPTY",hdfs_input_directory);
+			CreateStatsTables("SS",hdfs_input_directory,HdfsUserPath);
+			CreateStatsTables("SO",hdfs_input_directory,HdfsUserPath);
+			CreateStatsTables("OS",hdfs_input_directory,HdfsUserPath);
+			CreateStatsTables("OO",hdfs_input_directory,HdfsUserPath);
+			CreateStatsTables("TIME",hdfs_input_directory,HdfsUserPath);
+			CreateStatsTables("EMPTY",hdfs_input_directory,HdfsUserPath);
 		} catch (IllegalArgumentException | IOException e) {
 			System.out.println("Stats tables could not be created. ");
 			e.printStackTrace();
@@ -838,10 +838,10 @@ public final class ExtVPLoader extends Loader {
 	 * @throws IllegalArgumentException
 	 * @throws SQLException
 	 */
-	private void CreateStatsTables(String ExtVPType, String DataSetName) throws FileNotFoundException, IOException, IllegalArgumentException, SQLException{
+	private void CreateStatsTables(String ExtVPType, String DataSetName, String UsersDirectory) throws FileNotFoundException, IOException, IllegalArgumentException, SQLException{
 		int index = DataSetName.lastIndexOf("/");
 		String HdfsFolderName = DataSetName.substring(index);	
-		
+
 		if(ExtVPType=="TIME"){
 			impala.createTable("external_extvp_tableofstats_time").ifNotExists()
 			.external()
@@ -852,7 +852,7 @@ public final class ExtVPLoader extends Loader {
 			.addColumnDefinition("Seconds", DataType.DOUBLE)
 			.fieldTermintor(field_terminator)
 			.lineTermintor(line_terminator)
-			.location("/user/bakallil/Stats"+HdfsFolderName+"/Time/")
+			.location(UsersDirectory+"/Stats"+HdfsFolderName+"/Time/")
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_time").ifNotExists()
@@ -883,7 +883,7 @@ public final class ExtVPLoader extends Loader {
 			.external()
 			.addColumnDefinition("ExtVPTable_Name", DataType.STRING)
 			.lineTermintor(line_terminator)
-			.location("/user/bakallil/Stats"+HdfsFolderName+"/Empty/")
+			.location(UsersDirectory+"/Stats"+HdfsFolderName+"/Empty/")
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_emptytable").ifNotExists()
@@ -911,7 +911,7 @@ public final class ExtVPLoader extends Loader {
 			.addColumnDefinition("ExtVPTable_SF", DataType.DOUBLE)
 			.fieldTermintor(field_terminator)
 			.lineTermintor(line_terminator)
-			.location("/user/bakallil/Stats"+HdfsFolderName+"/"+ExtVPType+"/")
+			.location(UsersDirectory+"/Stats"+HdfsFolderName+"/"+ExtVPType+"/")
 			.execute();
 			
 			impala.createTable("extvp_tableofstats_"+ExtVPType)
