@@ -86,6 +86,9 @@ public abstract class Loader {
 	/** Indicates if Sempala should run in Evaluation Mode */
 	public boolean EvaluationMode;
 	
+	/** Absolut path of users folder in Hdfs */
+	public String HdfsUserPath;
+	
 	/** The constructor */
 	public Loader(Impala wrapper, String hdfsLocation) {
 		impala = wrapper;
