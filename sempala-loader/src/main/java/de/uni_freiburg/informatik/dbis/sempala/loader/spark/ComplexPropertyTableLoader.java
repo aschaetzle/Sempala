@@ -334,13 +334,14 @@ public class ComplexPropertyTableLoader {
 	 * 
 	 * @return The complete CASE statement for this column
 	 */
+
 	private static String prefixHelper(String column_name, Map<String, String> prefix_map) {
 		// For each prefix append a case with a regex_replace stmt
 		StringBuilder case_clause_builder = new StringBuilder();
 		for (Map.Entry<String, String> entry : prefix_map.entrySet()) {
 			case_clause_builder.append(String.format(
 					"\n\t WHEN %1$s LIKE '%2$s%%'"
-							+ "\n\t THEN concat('<', regexp_replace(%1$s, '%2$s', '%3$s'), '>')",
+							+ "\n\t THEN regexp_replace(translate(%1$s, '<>', ''), '%2$s', '%3$s')",
 					column_name, entry.getKey(), entry.getValue()));
 		}
 		return String.format("CASE %s \n\tELSE %s\n\tEND", case_clause_builder.toString(), column_name);
@@ -363,7 +364,7 @@ public class ComplexPropertyTableLoader {
 						System.out.printf("Line in prefix file has invalid format. Skip. ('%s')\n", line);
 						continue;
 					}
-					prefix_map.put(splited[0], splited[1].substring(1, splited[1].length() -1));
+					prefix_map.put(splited[1].substring(1, splited[1].length() - 1), splited[0]);
 				}
 				br.close();
 			} catch (IOException e) {
