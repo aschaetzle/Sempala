@@ -186,9 +186,14 @@ public class ComplexSelect extends SQLStatement {
 			}
 		}
 		if (!this.where.equals("")) {
-			sb.append(" \nWHERE ");
+			// complex properties can't use IS NOT NULL in impala
 			this.removeNullFilters();
-			sb.append(where);
+			// if the where is empty now, don't use it
+			if(where.trim().length() > 0){
+				sb.append(" \nWHERE ");
+				sb.append(where);
+			}
+				
 		}
 		if (!this.order.equals("")) {
 			sb.append("\nORDER BY ");
@@ -217,7 +222,7 @@ public class ComplexSelect extends SQLStatement {
 		else {
 			for (String key : selection.keySet()) {
 				String[] selector = selection.get(key);
-				if (is_complex_column.get(selector[0])) {
+				if (is_complex_column.containsKey(selector[0]) && is_complex_column.get(selector[0])) {
 					contains_complex_vars = true;
 					break;
 				}
