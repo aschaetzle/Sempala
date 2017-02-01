@@ -125,6 +125,7 @@ public class ComplexPropertyTableLoader {
 		this.connection = connection;
 		this.hiveContext = connection.getHiveContext();
 		this.hdfs_input_directory = hdfsLocation;
+		this.strip_dot = false;
 	}
 
 	/**
