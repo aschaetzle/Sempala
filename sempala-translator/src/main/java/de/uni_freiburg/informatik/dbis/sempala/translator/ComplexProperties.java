@@ -42,6 +42,9 @@ public class ComplexProperties {
 			e.printStackTrace();
 		}
 		
+		// add also the name of the subject
+		tempComplexProperties.put(Tags.SUBJECT_COLUMN_NAME, false);
+		
 		isComplexProperty = Collections.unmodifiableMap(tempComplexProperties);
 		
 		return singleton;
