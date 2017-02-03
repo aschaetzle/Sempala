@@ -17,6 +17,12 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.sql.SelectStatement;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.DataType;
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.FileFormat;
 
+/**
+*
+* @author Lis Bakalli <bakallil@informatik.uni-freiburg.de>
+*
+*/
+
 public final class ExtVPLoader extends Loader {
 
 	/** The constructor */
@@ -32,6 +38,7 @@ public final class ExtVPLoader extends Loader {
 	private double SF = 1;
 	private String TT = tablename_triple_table;
 	private int FirstPredicate = 0;
+	private int LastPredicate = 0;
 	
 	/**
 	 * Creates Extended Vertical Partitioning tables from a triple table.
@@ -60,11 +67,12 @@ public final class ExtVPLoader extends Loader {
 		
 		//Set the first predicate from which to start ExtVP calculation
 		FirstPredicate = GetCompletedPredicate(1);
+		LastPredicate = GetLastPredicate(Predicate_Partition);
 		
 		//Create ExtVP tables
 		System.out.print(String.format("Creating %s from '%s' \n", "ExtVps", TT));
 		long timestamptotal = System.currentTimeMillis();
-		for (int i = FirstPredicate; i < ListOfPredicates.size(); i++) {
+		for (int i = FirstPredicate; i < LastPredicate; i++) {
 			String p1 = ListOfPredicates.get(i);
 			SelectStatement leftstmt = SelectPartition(TT, p1);
 			for (int j = i; j < ListOfPredicates.size(); j++) {
@@ -730,22 +738,39 @@ public final class ExtVPLoader extends Loader {
 	 * @return
 	 */
 	private int GetCompletedPredicate(int PredicatOrder){
-		int i=0;
-		int result=0;
-		if(PredicatOrder==2)
-			i=2;
-		try {
-			BufferedReader br = new BufferedReader(new FileReader("./ExtVpCompleted.txt"));
-			String line = br.readLine();
-			String [] CompletedPredicates = line.toLowerCase().split("[,]");
-			result = Integer.parseInt(CompletedPredicates[i]);	
-			br.close();
-		} catch (IOException e) {
-			System.err.println("ExtVpCompleted.txt does not exist or it could not be opened. ExtVPs will start from beginning");
+		if (Predicate_Partition != "All") {
+			String[] Position = Predicate_Partition.split(",");
+			return Integer.parseInt(Position[0]);
+		} 
+		else {
+			int i = 0;
+			int result = 0;
+			if (PredicatOrder == 2)
+				i = 2;
+			try {
+				BufferedReader br = new BufferedReader(new FileReader("./ExtVpCompleted.txt"));
+				String line = br.readLine();
+				String[] CompletedPredicates = line.toLowerCase().split("[,]");
+				result = Integer.parseInt(CompletedPredicates[i]);
+				br.close();
+			} catch (IOException e) {
+				System.err.println(
+						"ExtVpCompleted.txt does not exist or it could not be opened. ExtVPs will start from beginning");
+			}
+			return result;
 		}
-		return result;
 	}
 
+	private int GetLastPredicate(String PredicatePartition){
+		if (PredicatePartition != "All") {
+			String[] Position = Predicate_Partition.split(",");
+			return Integer.parseInt(Position[1]);
+		}
+		else
+			return ListOfPredicates.size();
+	}
+	
+	
 	/**
 	 * Store statistics of ExtVP table in .txt files.
 	 * 
