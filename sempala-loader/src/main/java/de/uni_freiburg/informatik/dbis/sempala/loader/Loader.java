@@ -89,6 +89,9 @@ public abstract class Loader {
 	/** Absolut path of users folder in Hdfs */
 	public String HdfsUserPath;
 	
+	/** The value of threshold*/
+	public String Predicate_Partition = "All";
+	
 	/** The constructor */
 	public Loader(Impala wrapper, String hdfsLocation) {
 		impala = wrapper;
