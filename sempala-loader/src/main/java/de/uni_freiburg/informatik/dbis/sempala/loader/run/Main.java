@@ -147,6 +147,9 @@ public class Main {
 			if(commandLine.hasOption(OptionNames.USER_HDFS_DIRECTORY.toString()))
 				loader.HdfsUserPath = commandLine.getOptionValue(OptionNames.USER_HDFS_DIRECTORY.toString());
 			
+			if(commandLine.hasOption(OptionNames.PREDICATE_PARTITION.toString()))
+				loader.Predicate_Partition = commandLine.getOptionValue(OptionNames.PREDICATE_PARTITION.toString());
+			
 		// set the option of loader that is responsible for complex property table (spark)
 		} else if (complexPropertyLoader != null) {
 			if (commandLine.hasOption(OptionNames.COLUMN_NAME_SUBJECT.toString()))
@@ -230,7 +233,8 @@ public class Main {
 		LIST_OF_PREDICATES, 
 		OUTPUT, 
 		PORT, 
-		PREFIX_FILE, 
+		PREFIX_FILE,
+		PREDICATE_PARTITION,
 		STRIP_DOT, 
 		SHUFFLE, 
 		THRESHOLD, 
@@ -305,6 +309,9 @@ public class Main {
 
 		options.addOption("P", OptionNames.PREFIX_FILE.toString(), true,
 				"The prefix file in TURTLE format.\nUsed to replace namespaces by prefixes.");
+		
+		options.addOption("pp", OptionNames.PREDICATE_PARTITION.toString(), true,
+				"Subset of predicates for which extvp tables to be created. Default all predicates.");
 
 		options.addOption("s", OptionNames.STRIP_DOT.toString(), false, "Strip the dot in the last field (N-Triples)");
 
