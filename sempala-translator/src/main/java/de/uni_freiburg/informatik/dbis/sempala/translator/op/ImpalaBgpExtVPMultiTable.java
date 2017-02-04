@@ -84,7 +84,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 							"SELECT extvptable_sf FROM extvp_tableofstats_%s WHERE extvptable_name = '%s';",
 							ExtvptableType, Extvptable);
 					try {
-						ResultSet result = Main.connection.createStatement().executeQuery(Query);
+						ResultSet result = Main.impalaConnection.createStatement().executeQuery(Query);
 						result.next();
 						SF = Double.parseDouble(result.getString("extvptable_sf"));
 						if (SF <= Threshold && SF < min_sel) {
@@ -309,7 +309,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 		String Query = String.format(
 				"SELECT COUNT(*) AS NrTuples FROM extvp_tableofstats_emptytable WHERE ExtVPTable_Name = '%s';", ExtvpTable);
 		try {
-			ResultSet result = Main.connection.createStatement().executeQuery(Query);
+			ResultSet result = Main.impalaConnection.createStatement().executeQuery(Query);
 			result.next();
 			NrTuples = Double.parseDouble(result.getString("NrTuples"));
 		} catch (Exception e) {

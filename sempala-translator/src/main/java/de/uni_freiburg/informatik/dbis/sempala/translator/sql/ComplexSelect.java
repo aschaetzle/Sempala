@@ -3,6 +3,7 @@ package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 import java.util.HashMap;
 import java.util.Map;
 
+//TODO add comments
 public class ComplexSelect extends SQLStatement {
 
 	protected String from = "";
@@ -10,15 +11,17 @@ public class ComplexSelect extends SQLStatement {
 	protected String order = "";
 	private int limit = -1;
 	private int offset = -1;
+	// <alias, selectors>
+	//TODO see why selectors are []
 	HashMap<String, String[]> selection = new HashMap<String, String[]>();
 	HashMap<String, String> inverted_selection = new HashMap<String, String>();
+	// <column name, is the column complex>
 	HashMap<String, Boolean> is_complex_column = new HashMap<String, Boolean>();
 	private boolean contains_complex_vars = false;
 
 	/*
 	 * Subset of schema
 	 */
-
 	public ComplexSelect(String tablename) {
 		super(tablename);
 	}
@@ -38,6 +41,7 @@ public class ComplexSelect extends SQLStatement {
 		from += s;
 	}
 
+	//TODO change name you do not set complex columns this is a map for all columns + s
 	public void setComplexColumns(HashMap<String, Boolean> is_complex) {
 		is_complex_column = is_complex;
 	}
@@ -56,6 +60,7 @@ public class ComplexSelect extends SQLStatement {
 				if (pos > -1) {
 					// the property is also of complex type
 					if (is_complex_column.get(key)) {
+						// TODO this is not true for spark - change it
 						condition = condition.replaceAll(key, "subT_" + inverted_selection.get(key) + ".ITEM ");
 					} else { // if not, add the reference to t1 (the first reference to the table)
 						condition = condition.substring(0, pos) + "t1." + condition.substring(pos);

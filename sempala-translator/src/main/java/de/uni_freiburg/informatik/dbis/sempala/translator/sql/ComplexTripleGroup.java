@@ -10,9 +10,10 @@ import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.shared.PrefixMapping;
 import com.hp.hpl.jena.sparql.util.FmtUtils;
 
-import de.uni_freiburg.informatik.dbis.sempala.translator.ComplexProperties;
+import de.uni_freiburg.informatik.dbis.sempala.translator.ComplexPropertyTableColumns;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 
+//TODO change comments
 /**
  * Group of triples within a BGP.
  *
@@ -33,8 +34,7 @@ public class ComplexTripleGroup {
 
 	/**
 	 * If the same predicate is selected twice, then a cross join is needed.
-	 */
-
+	 */ 
 	ArrayList<Triple> crossjoin = new ArrayList<Triple>();
 	private Map<String, String[]> crossJoinMapping = new HashMap<String, String[]>();
 
@@ -43,6 +43,9 @@ public class ComplexTripleGroup {
 
 	PrefixMapping prefixMapping;
 
+	// for all variables in the query we add their name and their type
+	// for example if we have ?sVariable p1 ?oVariable
+	// in the mapping we will add <<sVariable, s>, <oVariable, o>>
 	private Map<String, String[]> mapping = new HashMap<String, String[]>();
 
 	public ComplexTripleGroup(String tablename, PrefixMapping mapping,
@@ -57,6 +60,7 @@ public class ComplexTripleGroup {
 			triples.add(triple);
 			mapping.putAll(getMappingVarsOfTriple(triple));
 		} else {
+			//TODO WHY this cross join is needed I think we do not need this 
 			crossjoin.add(triple);
 			crossJoinMapping.putAll(getMappingVarsOfTriple(triple));
 		}
@@ -83,9 +87,10 @@ public class ComplexTripleGroup {
 						new String[] { Tags.OBJECT_COLUMN_NAME });
 			} else {
 				String objectString = object.getName();
-				
 				String predicateString = FmtUtils
 						.stringForNode(predicate, prefixMapping);
+				
+				// TODO ask why are we doing this here. Please add comment
 				if(predicateString.startsWith("<") && predicateString.endsWith(">"))
 					predicateString = predicateString.substring(1, predicateString.length() -1);
 				
@@ -98,7 +103,7 @@ public class ComplexTripleGroup {
 
 	public SQLStatement translate() {
 		ComplexSelect select = new ComplexSelect(this.name);
-		select.setComplexColumns(new HashMap<String,Boolean>(ComplexProperties.getComplexProperties()));
+		select.setComplexColumns(new HashMap<String,Boolean>(ComplexPropertyTableColumns.getColumns()));
 		select.setDistinct(true);
 
 		ArrayList<String> vars = new ArrayList<String>();
@@ -113,6 +118,7 @@ public class ComplexTripleGroup {
 			if (first) {
 				first = false;
 				// only check subject once per group
+				// TODO WHat does it mean that the node is blank
 				if (subject.isURI() || subject.isBlank()) {
 					// subject is bound -> add to Filter
 					String subjectString = FmtUtils
@@ -127,7 +133,10 @@ public class ComplexTripleGroup {
 							+ " IS NOT NULL ");
 				}
 			}
+			
 			if (predicate.isURI()) {
+				
+				// TODO why we do that as we already when we add a new triple check for triples with same predicate
 				// cross join needed?
 				int index = searchTripleSamePredicate(i);
 				while (index != -1) {
@@ -135,23 +144,31 @@ public class ComplexTripleGroup {
 					triples.remove(index);
 					index = searchTripleSamePredicate(i);
 				}
+				
 				// predicate is bound -> add to Filter
 				String predicateString = FmtUtils
 						.stringForNode(predicate, this.prefixMapping);
+				
+				//TODO add comments why we have this
 				if(predicateString.startsWith("<") && predicateString.endsWith(">"))
 					predicateString = predicateString.substring(1, predicateString.length() -1);
+				
 				whereConditions.add(SpecialCharFilter.filter(predicateString)
 						+ " IS NOT NULL");
 
 			} else {
 				String predicateString = predicate.getName();
+				
+				// TODO what is this? add comment
 				if(predicateString.endsWith(">"))
 					predicateString = predicateString.substring(0, predicateString.length() -1);
 				vars.add(predicateString);
 			}
+			
 			if (object.isURI() || object.isLiteral() || object.isBlank()) {
 				String string = FmtUtils.stringForNode(object,
 						this.prefixMapping);
+				
 				if (object.isLiteral()) {
 					string = "" + object.getLiteral().getValue();
 				}
@@ -162,8 +179,11 @@ public class ComplexTripleGroup {
 				} else {
 					String predicateString = FmtUtils
 							.stringForNode(predicate, this.prefixMapping);
+					
+					//TODO what is this? add comment
 					if(predicateString.endsWith(">"))
 						predicateString = predicateString.substring(1, predicateString.length() -1);
+					
 					condition = SpecialCharFilter.filter(predicateString)
 							+ " = '" + string + "'";
 				}
@@ -255,8 +275,13 @@ public class ComplexTripleGroup {
 		return -1;
 	}
 
+	/**
+	 * Search for the triple already in this triple group with the same predicate as the input triple.
+	 * If found, return true; otherwise false.
+	 */
 	public boolean searchTripleSamePredicate(Triple triple) {
 		for (int i = 0; i < this.triples.size(); i++) {
+			// search for a triple with the same predicate
 			if (triples.get(i).getPredicate().equals(triple.getPredicate())) {
 				return true;
 			}

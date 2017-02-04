@@ -1,12 +1,11 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
 							 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
 		<groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
-		<artifactId>sempala-parent</artifactId>	
+		<artifactId>sempala-parent</artifactId>
 		<version>2.0</version>
 	</parent>
 
@@ -20,10 +19,10 @@
 			<url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
 		</repository>
 
-        <repository> <!-- Local repo containing dependencies -->
-            <id>project_repo</id>
-            <url>file://${project.basedir}/../project_repo</url> <!-- ugly but maven -->
-        </repository>
+		<repository> <!-- Local repo containing dependencies -->
+			<id>project_repo</id>
+			<url>file://${project.basedir}/../project_repo</url> <!-- ugly but maven -->
+		</repository>
 	</repositories>
 
 	<dependencies>
@@ -32,7 +31,7 @@
 			<artifactId>commons-cli</artifactId>
 			<version>1.2</version>
 		</dependency>
-		
+
 		<!-- BEGIN: Dependecies necessary for Jena ARQ -->
 		<dependency>
 			<groupId>org.apache.jena</groupId>
@@ -53,49 +52,77 @@
 			<scope>compile</scope>
 		</dependency>
 		<!-- END: Dependecies necessary for Jena ARQ -->
-		
+
 		<!-- BEGIN: Dependecies necessary for Impala JDBC -->
 		<!-- Version and Scope taken from paren POM <dependencyManagement> -->
+		<dependency>
+			<groupId>com.cloudera.impala</groupId>
+			<artifactId>impala-jdbc-4.1-connector</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hive</groupId>
+			<artifactId>hive-metastore</artifactId>
+		</dependency>
+		<!-- contains /org/apache/hive/service/cli/thrift/ aka TCLIServiceClient -->
+		<dependency>
+			<groupId>org.apache.hive</groupId>
+			<artifactId>hive-service</artifactId>
+		</dependency>
+		<!--contains /org/apache/hadoop/hive/ql/plan/api/ aka ql -->
+		<dependency>
+			<groupId>org.apache.hive</groupId>
+			<artifactId>hive-exec</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.thrift</groupId>
+			<artifactId>libfb303</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.thrift</groupId>
+			<artifactId>libthrift</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<scope>compile</scope> <!-- Used in project as well -->
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+		</dependency>
+		<!-- END: Dependecies necessary for Impala JDBC -->
+		
+		 <!-- BEGIN: Dependencies for SPARK --> 
         <dependency>
-            <groupId>com.cloudera.impala</groupId>
-            <artifactId>impala-jdbc-4.1-connector</artifactId>
-        </dependency>
-        <dependency> 
-            <groupId>org.apache.hive</groupId>
-            <artifactId>hive-metastore</artifactId>
-        </dependency>
-        <!-- contains /org/apache/hive/service/cli/thrift/ aka TCLIServiceClient -->
-        <dependency> 
-            <groupId>org.apache.hive</groupId>
-            <artifactId>hive-service</artifactId>
-        </dependency>
-        <!--contains /org/apache/hadoop/hive/ql/plan/api/ aka ql-->
-        <dependency>
-            <groupId>org.apache.hive</groupId>
-            <artifactId>hive-exec</artifactId>
-        </dependency> 
-        <dependency>
-            <groupId>org.apache.thrift</groupId>
-            <artifactId>libfb303</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.thrift</groupId>
-            <artifactId>libthrift</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <scope>compile</scope> <!-- Used in project as well -->
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-        </dependency>
-        <!-- END: Dependecies necessary for Impala JDBC -->   
+  		 <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.10</artifactId>
+            <version>1.6.0-cdh5.9.0</version>
+  		</dependency>
+	  	<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-sql_2.10</artifactId>
+			<version>1.6.0-cdh5.9.0</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.apache.spark</groupId>
+		    <artifactId>spark-hive_2.10</artifactId>
+		    <version>1.6.0-cdh5.9.0</version>
+		</dependency>
+	  	<dependency>
+	  		 <groupId>org.apache.hadoop</groupId>
+	            <artifactId>hadoop-client</artifactId>
+	            <version>2.6.0-mr1-cdh5.9.0</version>
+	  	</dependency>
+	  	<dependency>
+	  		<groupId>org.apache.spark</groupId>
+	  		<artifactId>spark-yarn_2.10</artifactId>
+	  		<version>1.6.0-cdh5.9.0</version>
+	  	</dependency>
+        <!-- END: Dependencies for SPARK -->  
 	</dependencies>
 
 	<build>

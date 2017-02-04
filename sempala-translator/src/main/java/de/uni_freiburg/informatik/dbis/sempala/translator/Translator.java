@@ -40,7 +40,7 @@ public class Translator {
 	/** The format to use to build the output queries against */
 	private Format format = Format.SINGLETABLE;
 
-	/** Indicates if pefixes in the RDF Triples should be expanded or not */
+	/** Indicates if prefixes in the RDF Triples should be expanded or not */
 	private boolean expandPrefixes = false;
 
 	/** Indicates if optimizations of the SPARQL Algebra are enabled */
