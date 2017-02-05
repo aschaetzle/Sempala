@@ -26,7 +26,6 @@ public class ComplexTripleGroup {
 
 	private String name;
 
-	private int subQueries = 0;
 
 	public String getName() {
 		return name;
@@ -56,14 +55,8 @@ public class ComplexTripleGroup {
 	}
 
 	public void add(Triple triple) {
-		if (!searchTripleSamePredicate(triple)) {
-			triples.add(triple);
-			mapping.putAll(getMappingVarsOfTriple(triple));
-		} else {
-			//TODO WHY this cross join is needed I think we do not need this 
-			crossjoin.add(triple);
-			crossJoinMapping.putAll(getMappingVarsOfTriple(triple));
-		}
+		triples.add(triple);
+		mapping.putAll(getMappingVarsOfTriple(triple));
 
 	}
 
@@ -104,7 +97,6 @@ public class ComplexTripleGroup {
 	public SQLStatement translate() {
 		ComplexSelect select = new ComplexSelect(this.name);
 		select.setComplexColumns(new HashMap<String,Boolean>(ComplexPropertyTableColumns.getColumns()));
-		select.setDistinct(true);
 
 		ArrayList<String> vars = new ArrayList<String>();
 		ArrayList<String> whereConditions = new ArrayList<String>();
@@ -213,36 +205,7 @@ public class ComplexTripleGroup {
 			select.addWhereConjunction(where);
 		}
 
-		// cross join is needed
-		if (!crossjoin.isEmpty()) {
-			select.setName(this.name + "_" + subQueries++);
-			ArrayList<SQLStatement> rights = new ArrayList<SQLStatement>();
-			List<String> onStrings = new ArrayList<String>();
-			Map<String, String[]> newMapping = Schema.shiftToParent(
-					this.mapping, select.getName());
-			for (Triple triple : crossjoin) {
-				ComplexTripleGroup group = new ComplexTripleGroup(this.name + "_"
-						+ subQueries++, this.prefixMapping, false);
-				// group.setMapping(mapping);
-				group.add(triple);
-				rights.add(group.translate());
-				onStrings.add(JoinUtil.generateConjunction(JoinUtil
-						.getOnConditions(
-								Schema.shiftToParent(this.mapping,
-										select.getName()),
-								Schema.shiftToParent(group.getMappings(),
-										group.getName()))));
-				newMapping.putAll(Schema.shiftToParent(group.getMappings(),
-						group.getName()));
 
-			}
-
-			this.mapping = newMapping;
-
-			Join join = new Join(this.name, select, rights, onStrings,
-					JoinType.INNER);
-			return join;
-		}
 		return select;
 	}
 
@@ -273,21 +236,6 @@ public class ComplexTripleGroup {
 		}
 
 		return -1;
-	}
-
-	/**
-	 * Search for the triple already in this triple group with the same predicate as the input triple.
-	 * If found, return true; otherwise false.
-	 */
-	public boolean searchTripleSamePredicate(Triple triple) {
-		for (int i = 0; i < this.triples.size(); i++) {
-			// search for a triple with the same predicate
-			if (triples.get(i).getPredicate().equals(triple.getPredicate())) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	public Map<String, String[]> getMappings() {
