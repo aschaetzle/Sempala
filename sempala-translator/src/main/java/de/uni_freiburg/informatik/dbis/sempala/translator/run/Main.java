@@ -10,6 +10,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.cli.BasicParser;
@@ -201,9 +202,7 @@ public class Main {
 		}
 
 		for (final File file : inputFiles) {
-			long executionTime = 0;
-			long nrTuples = 0;
-
+		
 			// Translate the sparql query either for spark or for impala
 			translator.setInputFile(file.getAbsolutePath());
 			String sqlString = translator.translateQuery();
@@ -217,18 +216,19 @@ public class Main {
 
 			System.out.print(String.format("%s:", file.getName()));
 
+			HashMap<String, Long> result = null;
 			// If a connection is set run the query
 			if (impalaConnection != null) {
 				// Run the translated query with impala and put it into the
 				// unique results
 				// table
-				runQueryWithImpala(impalaConnection, sqlString, resultsTableName, executionTime, nrTuples, isBenchmark);
+				result = runQueryWithImpala(impalaConnection, sqlString, resultsTableName, isBenchmark);
 
 			} else if (sparkConnection != null) {
 				// Run the translated query with spark and put it into the
 				// unique results
 				// table
-				runQueryWithSpark(sparkConnection, sqlString, resultsTableName, executionTime, nrTuples, isBenchmark);
+				result = runQueryWithSpark(sparkConnection, sqlString, resultsTableName, isBenchmark);
 			}
 			// if neither impala nor spark connection is initialized
 			else {
@@ -243,6 +243,8 @@ public class Main {
 				}
 			}
 
+			long executionTime = result.get("executionTime");
+			long nrTuples = result.get("nrTuples");
 			// store the result for each query in a file
 			try (FileWriter fw = new FileWriter("./TableOfResults.txt", true);
 					BufferedWriter bw = new BufferedWriter(fw);
@@ -270,9 +272,9 @@ public class Main {
 	 * @param isBenchmark
 	 *            is the query is run with benchmark purposes.
 	 */
-	public static void runQueryWithImpala(Connection impalaConnection, String sqlQuery, String resultsTableName,
-			long executionTime, long nrTuples, boolean isBenchmark) {
-
+	public static HashMap<String, Long> runQueryWithImpala(Connection impalaConnection, String sqlQuery, String resultsTableName, boolean isBenchmark) {
+		long executionTime = 0;
+		long nrTuples = 0;
 		try {
 			// Sleep a second to give impalad some time to calm down
 			Thread.sleep(10000);
@@ -311,6 +313,10 @@ public class Main {
 			e.printStackTrace();
 			System.exit(1);
 		}
+		HashMap<String, Long> results = new HashMap<String, Long>();
+		results.put("executionTime", executionTime);
+		results.put("nrTuples", nrTuples);
+		return results;
 	}
 
 	/**
@@ -329,9 +335,10 @@ public class Main {
 	 * @param isBenchmark
 	 *            is the query is run with benchmark purposes.
 	 */
-	public static void runQueryWithSpark(Spark sparkConnection, String sqlQuery, String resultsTableName,
-			long executionTime, long nrTuples, boolean isBenchmark) {
-
+	public static HashMap<String, Long> runQueryWithSpark(Spark sparkConnection, String sqlQuery, String resultsTableName, boolean isBenchmark) {
+		long executionTime = 0;
+		long nrTuples = 0;
+		
 		// Execute the query
 		long startTime = System.currentTimeMillis();
 
@@ -354,6 +361,10 @@ public class Main {
 					.sql(String.format("DROP TABLE IF EXISTS %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
 		}
 
+		HashMap<String, Long> results = new HashMap<String, Long>();
+		results.put("executionTime", executionTime);
+		results.put("nrTuples", nrTuples);
+		return results;
 	}
 
 	/**
