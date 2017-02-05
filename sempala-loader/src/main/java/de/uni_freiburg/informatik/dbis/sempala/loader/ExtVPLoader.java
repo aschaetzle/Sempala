@@ -57,16 +57,21 @@ public final class ExtVPLoader extends Loader {
 		// Specify ExtVP types to be calculated
 		setExtVPTypes(extvp_types_selected);
 
+		// Set the first predicate from which to start ExtVP calculation
+		FirstPredicate = GetCompletedPredicate(1);
+		
 		// Load the triple table
-		long timestampTT = System.currentTimeMillis();
-		buildTripleTable();
-		AddStats("BUILD TRIPLETABLE"," TIME","","Time",0,0, (double) (System.currentTimeMillis() - timestampTT) / 1000);
+		if (FirstPredicate == 0) {
+			long timestampTT = System.currentTimeMillis();
+			buildTripleTable();
+			AddStats("BUILD TRIPLETABLE", " TIME", "", "Time", 0, 0,
+					(double) (System.currentTimeMillis() - timestampTT) / 1000);
+		}
 		
 		// Get list of predicates given by user
 		setListOfPredicates(TT);
 		
-		//Set the first predicate from which to start ExtVP calculation
-		FirstPredicate = GetCompletedPredicate(1);
+		//Get the last predicate if loading is partitioned
 		LastPredicate = GetLastPredicate(Predicate_Partition);
 		
 		//Create ExtVP tables
@@ -103,7 +108,7 @@ public final class ExtVPLoader extends Loader {
 		}		
 		
 		System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamptotal) / 1000));
-		AddStats("Complete_EXTVP_TABLES"," TIME","","Time",0,0, (double) (System.currentTimeMillis() - timestamptotal) / 1000);
+		AddStats("Complete_EXTVP_TABLES",String.valueOf(FirstPredicate)+"-"+String.valueOf(LastPredicate),"","Time",0,0, (double) (System.currentTimeMillis() - timestamptotal) / 1000);
 		
 		//Store statistic files in HDFS
 		try {
@@ -700,7 +705,7 @@ public final class ExtVPLoader extends Loader {
 	private void StoreEmptyTables(String EmptyTable)
 			throws IllegalArgumentException, SQLException {
 
-		try (FileWriter fw = new FileWriter("./EmptyTables.txt", true);
+		try (FileWriter fw = new FileWriter("./EmptyTables_"+String.valueOf(FirstPredicate)+".txt", true);
 				BufferedWriter bw = new BufferedWriter(fw);
 				PrintWriter Append = new PrintWriter(bw)) {
 			Append.println(EmptyTable);
@@ -760,7 +765,13 @@ public final class ExtVPLoader extends Loader {
 			return result;
 		}
 	}
-
+	
+	/**
+	 * In case loader for ExtVP is executed in separated mode, 
+	 * then get the last predicate for which the ExtVP tables have been to be calculated. 
+	 * @param PredicatePartition
+	 * @return
+	 */
 	private int GetLastPredicate(String PredicatePartition){
 		if (PredicatePartition != "All") {
 			String[] Position = Predicate_Partition.split(",");
@@ -769,7 +780,6 @@ public final class ExtVPLoader extends Loader {
 		else
 			return ListOfPredicates.size();
 	}
-	
 	
 	/**
 	 * Store statistics of ExtVP table in .txt files.
@@ -783,7 +793,7 @@ public final class ExtVPLoader extends Loader {
 	 * @param Selectivity - Selectivity of ExtVP table size compared to partition size.
 	 */
 	private void AddStats(String TableName, String p1, String p2, String ExtVPformat, double ExtVPSize, double VPSize, double Selectivity){
-		try (FileWriter fw = new FileWriter(String.format("./ExtVpStats_%s.txt", ExtVPformat), true);
+		try (FileWriter fw = new FileWriter(String.format("./ExtVpStats_%s_%d.txt", ExtVPformat, FirstPredicate), true);
 				BufferedWriter bw = new BufferedWriter(fw);
 				PrintWriter Append = new PrintWriter(bw)) {
 			Append.println(String.format("%s\t%s_%s\t%f\t%f\t%f",TableName, p1, p2, ExtVPSize, VPSize, Selectivity));
@@ -841,12 +851,12 @@ public final class ExtVPLoader extends Loader {
 			rt.exec("hadoop fs -chmod 777 ./Stats" + HdfsFolderName);
 			rt.exec("hadoop fs -chmod 777 ./Stats");
 
-			rt.exec("hdfs dfs -put ./EmptyTables.txt ./Stats" + HdfsFolderName + "/Empty");
-			rt.exec("hdfs dfs -put ./ExtVpStats_Time.txt ./Stats" + HdfsFolderName + "/Time");
-			rt.exec("hdfs dfs -put ./ExtVpStats_ss.txt ./Stats" + HdfsFolderName + "/SS");
-			rt.exec("hdfs dfs -put ./ExtVpStats_so.txt ./Stats" + HdfsFolderName + "/SO");
-			rt.exec("hdfs dfs -put ./ExtVpStats_os.txt ./Stats" + HdfsFolderName + "/OS");
-			rt.exec("hdfs dfs -put ./ExtVpStats_oo.txt ./Stats" + HdfsFolderName + "/OO");
+			rt.exec("hdfs dfs -put ./EmptyTables_"+String.valueOf(FirstPredicate)+".txt ./Stats" + HdfsFolderName + "/Empty");
+			rt.exec("hdfs dfs -put ./ExtVpStats_Time_"+String.valueOf(FirstPredicate)+".txt ./Stats" + HdfsFolderName + "/Time");
+			rt.exec("hdfs dfs -put ./ExtVpStats_ss_"+String.valueOf(FirstPredicate)+".txt ./Stats" + HdfsFolderName + "/SS");
+			rt.exec("hdfs dfs -put ./ExtVpStats_so_"+String.valueOf(FirstPredicate)+".txt ./Stats" + HdfsFolderName + "/SO");
+			rt.exec("hdfs dfs -put ./ExtVpStats_os_"+String.valueOf(FirstPredicate)+".txt ./Stats" + HdfsFolderName + "/OS");
+			rt.exec("hdfs dfs -put ./ExtVpStats_oo_"+String.valueOf(FirstPredicate)+".txt ./Stats" + HdfsFolderName + "/OO");
 			Thread.sleep(2000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
