@@ -21,6 +21,12 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Select;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 
+/**
+*
+* @author Lis Bakalli <bakallil@informatik.uni-freiburg.de>
+*
+*/
+
 public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 
 	private Map<Triple, List<String>> ListOfExtVPTables;
@@ -177,13 +183,13 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 			} else
 				stmt.setFrom(From);
 			if (T.getSubject().isLiteral())
-				stmt.addWhereConjunction(Tags.SUBJECT_COLUMN_NAME + "=" + T.getSubject().toString());
+				stmt.addWhereConjunction(Tags.SUBJECT_COLUMN_NAME + "=" + T.getSubject().toString().replace("\"", "\'"));
 			else {
 				stmt.addSelector(T.getSubject().getName(), new String[] { Tags.SUBJECT_COLUMN_NAME });
 				onConditions.add(T.getSubject().getName());
 			}
 			if (T.getObject().isLiteral())
-				stmt.addWhereConjunction(Tags.OBJECT_COLUMN_NAME + "=" + T.getObject().toString());
+				stmt.addWhereConjunction(Tags.OBJECT_COLUMN_NAME + "=" + T.getObject().toString().replace("\"", "\'"));
 			else {
 				stmt.addSelector(T.getObject().getName(), new String[] { Tags.OBJECT_COLUMN_NAME });
 				onConditions.add(T.getObject().getName());
