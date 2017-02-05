@@ -27,14 +27,12 @@ public class Spark {
 	 * @param database
 	 *            name of the database that will be used with this Spark
 	 *            connection
-	 * @param master
-	 *            the master URI
 	 */
-	public Spark(String appName, String database, String master) {
+	public Spark(String appName, String database) {
 
 		// TODO check what will happen if there is already in use the same app
 		// name
-		this.sparkConfiguration = new SparkConf().setAppName(appName).setMaster(master);
+		this.sparkConfiguration = new SparkConf().setAppName(appName);
 		this.javaContext = new JavaSparkContext(sparkConfiguration);
 		this.hiveContext = new HiveContext(javaContext);
 		// TODO check what kind of exception can be thrown here if there is a

@@ -39,6 +39,7 @@ public class ComplexPropertyTableLoader {
 	/** The file containing the prefixes. */
 	public String prefix_file;
 	
+	// TODO HOW DO WE NEED THIS AS A PROPERTY OF THE CLASS ????
 	/** A map containing the prefixes **/
 	private Map<String, String> prefix_map;
 
@@ -216,9 +217,15 @@ public class ComplexPropertyTableLoader {
 				.selectExpr(column_name_predicate, "0 AS " + column_name_is_complex)
 				.unionAll(multivaluedProperties.selectExpr(column_name_predicate, "1 AS " + column_name_is_complex));
 		
+		// TODO WHY DONT WE USE getValidName Method????
 		// remove '<' and '>', convert the characters
 		DataFrame cleanedProperties = combinedProperties.withColumn("p", functions.regexp_replace(functions.translate(combinedProperties.col("p"), "<>", ""), 
 				"[[^\\w]+]", "_"));
+		if (cleanedProperties == null ) {
+			System.out.println("EMPTY");
+		} else {
+			System.out.println("NOT EMPTY");
+		}
 		
 		// write the result
 		cleanedProperties.write().mode(SaveMode.Overwrite).saveAsTable(tablename_properties);
@@ -297,6 +304,7 @@ public class ComplexPropertyTableLoader {
 	 */
 	public void load() {
 
+		// TODO I do not like that we invoke this method here why don't we put it into buildTripleTable???
 		buildPrefixMap();
 		
 		buildTripleTable();

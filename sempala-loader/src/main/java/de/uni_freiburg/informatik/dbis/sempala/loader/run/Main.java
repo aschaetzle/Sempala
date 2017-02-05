@@ -71,8 +71,7 @@ public class Main {
 			}
 		} else if (format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())) {
 			// use spark
-			String master = commandLine.getOptionValue(OptionNames.MASTER.toString(), "local");
-			spark = new Spark("sempalaApp", database, master);
+			spark = new Spark("sempalaApp", database);
 		}
 
 		/*
@@ -228,7 +227,6 @@ public class Main {
 		HOST, 
 		INPUT, 
 		KEEP, 
-		MASTER, 
 		LINE_TERMINATOR, 
 		LIST_OF_PREDICATES, 
 		OUTPUT, 
@@ -299,9 +297,6 @@ public class Main {
 
 		options.addOption("L", OptionNames.LINE_TERMINATOR.toString(), true,
 				"The character used to separate the lines in the data. (Defaults to '\\n')");
-
-		options.addOption("m", OptionNames.MASTER.toString(), true,
-				"The link for the spark master (Defaults to local)");
 
 		options.addOption("o", OptionNames.OUTPUT.toString(), true, "Overwrites the name of the output table.");
 
