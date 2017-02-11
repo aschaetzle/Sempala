@@ -65,7 +65,7 @@ public final class ExtVPLoader extends Loader {
 			long timestampTT = System.currentTimeMillis();
 			buildTripleTable();
 			AddStats("BUILD TRIPLETABLE", " TIME", "", "Time", 0, 0,
-					(double) (System.currentTimeMillis() - timestampTT) / 1000);
+					(double) (System.currentTimeMillis() - timestampTT) / 1000,0);
 		}
 		
 		// Get list of predicates given by user
@@ -108,7 +108,7 @@ public final class ExtVPLoader extends Loader {
 		}		
 		
 		System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamptotal) / 1000));
-		AddStats("Complete_EXTVP_TABLES",String.valueOf(FirstPredicate)+"-"+String.valueOf(LastPredicate),"","Time",0,0, (double) (System.currentTimeMillis() - timestamptotal) / 1000);
+		AddStats("Complete_EXTVP_TABLES",String.valueOf(FirstPredicate)+"-"+String.valueOf(LastPredicate),"","Time",0,0, (double) (System.currentTimeMillis() - timestamptotal) / 1000,0);
 		
 		//Store statistic files in HDFS
 		try {
@@ -241,27 +241,27 @@ public final class ExtVPLoader extends Loader {
 		String ExtVPFormat = "so";
 		String TableName_p1p2_SO = TableName(p1, p2, ExtVPFormat);
 		String TableName_p2p1_SO = TableName(p2, p1, ExtVPFormat);
+		double Time = 0;
 		
 		System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_SO, TT));
 		long timestamp = System.currentTimeMillis();
-
-		CreateStatement cstmtSO = CreateTable(p1, p2, ExtVPFormat);
-		cstmtSO.execute();
 
 		SelectStatement mainstmt = impala.select(String.format("t1.%s", column_name_subject));
 		mainstmt.addProjection(String.format("t1.%s", column_name_object));
 		mainstmt.from(String.format("(%s) t1", leftstmt));
 		mainstmt.leftSemiJoin(String.format("(%s) t2", rightstmt),
 				String.format("%s.%s = %s.%s", "t1", column_name_subject, "t2", column_name_object), false);
-
-		impala.insertOverwrite(TableName_p1p2_SO).selectStatement(mainstmt).execute();
-		System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
-		impala.computeStats(TableName_p1p2_SO);
-
+		
+		CreateStatement cstmtSO = CreateTable(p1, p2, ExtVPFormat, mainstmt);
+		cstmtSO.execute();
+		Time = (float) (System.currentTimeMillis() - timestamp) / 1000;
+		System.out.println(String.format(" [%.3fs]", Time));
+		
 		if (!isEmpty(TableName_p1p2_SO)) {
+			impala.computeStats(TableName_p1p2_SO);
 			double ExtVPSize = TableSize(TableName_p1p2_SO);
 			double Selectivity = ExtVPSize/PartitionSizeP1;
-			AddStats(TableName_p1p2_SO,p1, p2, ExtVPFormat, ExtVPSize, PartitionSizeP1, Selectivity);
+			AddStats(TableName_p1p2_SO,p1, p2, ExtVPFormat, ExtVPSize, PartitionSizeP1, Selectivity, Time);
 			if (Selectivity >= SF)
 				impala.dropTable(TableName_p1p2_SO);
 		} 
@@ -273,23 +273,23 @@ public final class ExtVPLoader extends Loader {
 		if (p1 != p2) {
 			System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_SO, TT));
 			timestamp = System.currentTimeMillis();
-			CreateStatement cstmtSO2 = CreateTable(p2, p1, ExtVPFormat);
-			cstmtSO2.execute();
 
 			SelectStatement mainstmt2 = impala.select(String.format("t2.%s", column_name_subject));
 			mainstmt2.addProjection(String.format("t2.%s", column_name_object));
 			mainstmt2.from(String.format("(%s) t1", leftstmt));
 			mainstmt2.rightSemiJoin(String.format("(%s) t2", rightstmt),
 					String.format("%s.%s = %s.%s", "t1", column_name_object, "t2", column_name_subject), false);
-
-			impala.insertOverwrite(TableName_p2p1_SO).selectStatement(mainstmt2).execute();
-			System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
-			impala.computeStats(TableName_p2p1_SO);
+			
+			CreateStatement cstmtSO2 = CreateTable(p2, p1, ExtVPFormat, mainstmt2);
+			cstmtSO2.execute();
+			Time = (float) (System.currentTimeMillis() - timestamp) / 1000;
+			System.out.println(String.format(" [%.3fs]", Time));
 
 			if (!isEmpty(TableName_p2p1_SO)) {
+				impala.computeStats(TableName_p2p1_SO);
 				double ExtVPSize = TableSize(TableName_p2p1_SO);
 				double Selectivity = ExtVPSize/PartitionSizeP2;
-				AddStats(TableName_p2p1_SO,p2, p1, ExtVPFormat, ExtVPSize, PartitionSizeP2, Selectivity);
+				AddStats(TableName_p2p1_SO,p2, p1, ExtVPFormat, ExtVPSize, PartitionSizeP2, Selectivity, Time);
 				if (TableSize(TableName_p2p1_SO) / TableSize(TT, p2) >= SF)
 					impala.dropTable(TableName_p2p1_SO);
 			} else {
@@ -303,11 +303,9 @@ public final class ExtVPLoader extends Loader {
 		String ExtVPFormat = "os";
 		String TableName_p1p2_OS = TableName(p1, p2, ExtVPFormat);
 		String TableName_p2p1_OS = TableName(p2, p1, ExtVPFormat);
-		
+		double Time = 0;
 		System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_OS, TT));
 		long timestamp = System.currentTimeMillis();
-		CreateStatement cstmt = CreateTable(p1, p2, ExtVPFormat);
-		cstmt.execute();
 		
 		SelectStatement mainstm = impala.select(String.format("t1.%s", column_name_subject));
 		mainstm.addProjection(String.format("t1.%s", column_name_object));
@@ -315,15 +313,17 @@ public final class ExtVPLoader extends Loader {
 		mainstm.leftSemiJoin(String.format("(%s) t2", rightstmt),
 				String.format("%s.%s = %s.%s", "t1", column_name_object, "t2", column_name_subject), false);
 
-		impala.insertOverwrite(TableName_p1p2_OS).selectStatement(mainstm).execute();
-		System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
-		impala.computeStats(TableName_p1p2_OS);
-
+		CreateStatement cstmt = CreateTable(p1, p2, ExtVPFormat, mainstm);
+		cstmt.execute();
+		Time = (float) (System.currentTimeMillis() - timestamp) / 1000;
+		System.out.println(String.format(" [%.3fs]", Time));
+		
 		if (!isEmpty(TableName_p1p2_OS)) {
+			impala.computeStats(TableName_p1p2_OS);
 			double ExtVPSize = TableSize(TableName_p1p2_OS);
 			double PartitionSize = TableSize(TT, p1);
 			double Selectivity = ExtVPSize/PartitionSize;
-			AddStats(TableName_p1p2_OS,p1, p2, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity);
+			AddStats(TableName_p1p2_OS,p1, p2, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity, Time);
 			if (Selectivity >= SF)
 				impala.dropTable(TableName_p1p2_OS);
 		} else {
@@ -334,24 +334,24 @@ public final class ExtVPLoader extends Loader {
 		if (p1 != p2) {
 			System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_OS, TT));
 			timestamp = System.currentTimeMillis();
-			CreateStatement cstmt2 = CreateTable(p2, p1, ExtVPFormat);
-			cstmt2.execute();
 
 			SelectStatement mainstm2 = impala.select(String.format("t2.%s", column_name_subject));
 			mainstm2.addProjection(String.format("t2.%s", column_name_object));
 			mainstm2.from(String.format("(%s) t1", leftstmt));
 			mainstm2.rightSemiJoin(String.format("(%s) t2", rightstmt),
 					String.format("%s.%s = %s.%s", "t1", column_name_subject, "t2", column_name_object), false);
-
-			impala.insertOverwrite(TableName_p2p1_OS).selectStatement(mainstm2).execute();
-			System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
-			impala.computeStats(TableName_p2p1_OS);
+			
+			CreateStatement cstmt2 = CreateTable(p2, p1, ExtVPFormat, mainstm2);
+			cstmt2.execute();
+			Time = (float) (System.currentTimeMillis() - timestamp) / 1000;
+			System.out.println(String.format(" [%.3fs]", Time));
 
 			if (!isEmpty(TableName_p2p1_OS)) {
+				impala.computeStats(TableName_p2p1_OS);
 				double ExtVPSize = TableSize(TableName_p2p1_OS);
 				double PartitionSize = TableSize(TT, p2);
 				double Selectivity = ExtVPSize/PartitionSize;
-				AddStats(TableName_p2p1_OS,p2, p1, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity);
+				AddStats(TableName_p2p1_OS,p2, p1, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity, Time);
 				if (Selectivity >= SF)
 					impala.dropTable(TableName_p2p1_OS);
 			} else {
@@ -365,11 +365,11 @@ public final class ExtVPLoader extends Loader {
 		String ExtVPFormat = "ss";
 		String TableName_p1p2_SS = TableName(p1, p2, ExtVPFormat);
 		String TableName_p2p1_SS = TableName(p2, p1, ExtVPFormat);
+		double Time = 0;
+		double Time2 = 0;
 		if (p1 != p2) {
 			System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_SS, TT));
 			long timestamp = System.currentTimeMillis();
-			CreateStatement cstmtSS = CreateTable(p1, p2, ExtVPFormat);
-			cstmtSS.execute();
 			
 			SelectStatement mainstm = impala.select(String.format("t1.%s", column_name_subject));
 			mainstm.addProjection(String.format("t1.%s", column_name_object));
@@ -377,15 +377,15 @@ public final class ExtVPLoader extends Loader {
 			mainstm.leftSemiJoin(String.format("(%s) t2", rightstmt),
 					String.format("%s.%s = %s.%s", "t1", column_name_subject, "t2", column_name_subject), false);
 
-			impala.insertOverwrite(TableName_p1p2_SS).selectStatement(mainstm).execute();
-			System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
-			impala.computeStats(TableName_p1p2_SS);
-
+			CreateStatement cstmtSS = CreateTable(p1, p2, ExtVPFormat, mainstm);
+			cstmtSS.execute();
+			Time = (float) (System.currentTimeMillis() - timestamp) / 1000;
+			System.out.println(String.format(" [%.3fs]", Time));
+			
 			if (!isEmpty(TableName_p1p2_SS)) {
+				impala.computeStats(TableName_p1p2_SS);
 				System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_SS, TT));
 				timestamp = System.currentTimeMillis();
-				CreateStatement cstmtSS2 = CreateTable(p2, p1, ExtVPFormat);
-				cstmtSS2.execute();
 
 				SelectStatement mainstm2 = impala.select(String.format("t2.%s", column_name_subject));
 				mainstm2.addProjection(String.format("t2.%s", column_name_object));
@@ -393,21 +393,23 @@ public final class ExtVPLoader extends Loader {
 				mainstm2.rightSemiJoin(String.format("(%s) t2", rightstmt),
 						String.format("%s.%s = %s.%s", "t1", column_name_subject, "t2", column_name_subject), false);
 
-				impala.insertOverwrite(TableName_p2p1_SS).selectStatement(mainstm2).execute();
-				System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
+				CreateStatement cstmtSS2 = CreateTable(p2, p1, ExtVPFormat, mainstm2);
+				cstmtSS2.execute();
+				Time2 = (float) (System.currentTimeMillis() - timestamp) / 1000;
+				System.out.println(String.format(" [%.3fs]", Time));
 				impala.computeStats(TableName_p2p1_SS);
 				
 				double ExtVPSize = TableSize(TableName_p1p2_SS);
 				double PartitionSize = TableSize(TT, p1);
 				double Selectivity = ExtVPSize/PartitionSize;
-				AddStats(TableName_p1p2_SS,p1, p2, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity);
+				AddStats(TableName_p1p2_SS,p1, p2, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity, Time);
 				if (Selectivity >= SF)
 					impala.dropTable(TableName_p1p2_SS);
 				
 				ExtVPSize = TableSize(TableName_p2p1_SS);
 				PartitionSize = TableSize(TT, p2);
 				Selectivity = ExtVPSize/PartitionSize;
-				AddStats(TableName_p2p1_SS,p2, p1, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity);
+				AddStats(TableName_p2p1_SS,p2, p1, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity, Time2);
 				if (Selectivity >= SF)
 					impala.dropTable(TableName_p2p1_SS);
 
@@ -423,11 +425,11 @@ public final class ExtVPLoader extends Loader {
 		String ExtVPFormat = "oo";
 		String TableName_p1p2_OO = TableName(p1, p2, ExtVPFormat);
 		String TableName_p2p1_OO = TableName(p2, p1, ExtVPFormat);
+		double Time = 0;
+		double Time2 = 0;
 		if (p1 != p2) {
 			System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_OO, TT));
 			long timestamp = System.currentTimeMillis();
-			CreateStatement cstmtOO = CreateTable(p1, p2, ExtVPFormat);
-			cstmtOO.execute();
 
 			SelectStatement mainstm = impala.select(String.format("t1.%s", column_name_subject));
 			mainstm.addProjection(String.format("t1.%s", column_name_object));
@@ -435,15 +437,15 @@ public final class ExtVPLoader extends Loader {
 			mainstm.leftSemiJoin(String.format("(%s) t2", rightstmt),
 					String.format("%s.%s = %s.%s", "t1", column_name_object, "t2", column_name_object), false);
 
-			impala.insertOverwrite(TableName_p1p2_OO).selectStatement(mainstm).execute();
-			System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
-			impala.computeStats(TableName_p1p2_OO);
-
+			CreateStatement cstmtOO = CreateTable(p1, p2, ExtVPFormat, mainstm);
+			cstmtOO.execute();
+			Time = (float) (System.currentTimeMillis() - timestamp) / 1000;
+			System.out.println(String.format(" [%.3fs]", Time));
+			
 			if (!isEmpty(TableName_p1p2_OO)) {
+				impala.computeStats(TableName_p1p2_OO);
 				System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_OO, TT));
 				timestamp = System.currentTimeMillis();
-				CreateStatement cstmtOO2 = CreateTable(p2, p1, ExtVPFormat);
-				cstmtOO2.execute();
 
 				SelectStatement mainstm2 = impala.select(String.format("t2.%s", column_name_subject));
 				mainstm2.addProjection(String.format("t2.%s", column_name_object));
@@ -451,21 +453,23 @@ public final class ExtVPLoader extends Loader {
 				mainstm2.rightSemiJoin(String.format("(%s) t2", rightstmt),
 						String.format("%s.%s = %s.%s", "t1", column_name_object, "t2", column_name_object), false);
 
-				impala.insertOverwrite(TableName_p2p1_OO).selectStatement(mainstm2).execute();
-				System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
+				CreateStatement cstmtOO2 = CreateTable(p2, p1, ExtVPFormat, mainstm2);
+				cstmtOO2.execute();
+				Time2 = (float) (System.currentTimeMillis() - timestamp) / 1000;
+				System.out.println(String.format(" [%.3fs]", Time2));
 				impala.computeStats(TableName_p2p1_OO);
 
 				double ExtVPSize = TableSize(TableName_p1p2_OO);
 				double PartitionSize = TableSize(TT, p1);
 				double Selectivity = ExtVPSize/PartitionSize;
-				AddStats(TableName_p1p2_OO,p1, p2, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity);
+				AddStats(TableName_p1p2_OO,p1, p2, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity, Time);
 				if (Selectivity >= SF)
 					impala.dropTable(TableName_p1p2_OO);
 				
 				ExtVPSize = TableSize(TableName_p2p1_OO);
 				PartitionSize = TableSize(TT, p2);
 				Selectivity = ExtVPSize/PartitionSize;
-				AddStats(TableName_p2p1_OO,p2, p1, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity);
+				AddStats(TableName_p2p1_OO,p2, p1, ExtVPFormat, ExtVPSize, PartitionSize, Selectivity, Time2);
 				if (Selectivity >= SF)
 					impala.dropTable(TableName_p2p1_OO);
 
@@ -484,26 +488,27 @@ public final class ExtVPLoader extends Loader {
 		String TableName_p2p1_OS = TableName(p2, p1, ExtVPFormatOS);
 		String TableName_p1p2_OS = TableName(p1, p2, ExtVPFormatOS);
 		String TableName_p2p1_SO = TableName(p2, p1, ExtVPFormatSO);
+		double Time = 0;
+		double Time2 = 0;
 		System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_SO, TT));
-		long timestamp = System.currentTimeMillis();
-		CreateStatement cstmtSO = CreateTable(p1, p2, ExtVPFormatSO);
-		cstmtSO.execute();
-
+		long timestamp = System.currentTimeMillis();		
+		
 		SelectStatement mainstm = impala.select(String.format("t1.%s", column_name_subject));
 		mainstm.addProjection(String.format("t1.%s", column_name_object));
 		mainstm.from(String.format("(%s) t1", leftstmt));
 		mainstm.leftSemiJoin(String.format("(%s) t2", rightstmt),
 				String.format("%s.%s = %s.%s", "t1", column_name_subject, "t2", column_name_object), false);
-
-		impala.insertOverwrite(TableName_p1p2_SO).selectStatement(mainstm).execute();
-		System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
-		impala.computeStats(TableName_p1p2_SO);
+		
+		CreateStatement cstmtSO = CreateTable(p1, p2, ExtVPFormatSO, mainstm);
+		cstmtSO.execute();
+		Time = (float) (System.currentTimeMillis() - timestamp) / 1000;
+		System.out.println(String.format(" [%.3fs]", Time));
+		
 
 		if (!isEmpty(TableName_p1p2_SO)) {
+			impala.computeStats(TableName_p1p2_SO);
 			System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_OS, TT));
 			timestamp = System.currentTimeMillis();
-			CreateStatement cstmtOS = CreateTable(p2, p1, ExtVPFormatOS);
-			cstmtOS.execute();
 
 			SelectStatement mainstm2 = impala.select(String.format("t2.%s", column_name_subject));
 			mainstm2.addProjection(String.format("t2.%s", column_name_object));
@@ -511,21 +516,23 @@ public final class ExtVPLoader extends Loader {
 			mainstm2.rightSemiJoin(String.format("(%s) t2", rightstmt),
 					String.format("%s.%s = %s.%s", "t1", column_name_subject, "t2", column_name_object), false);
 
-			impala.insertOverwrite(TableName_p2p1_OS).selectStatement(mainstm2).execute();
-			System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
+			CreateStatement cstmtOS = CreateTable(p2, p1, ExtVPFormatOS, mainstm2);
+			cstmtOS.execute();
+			Time2 = (float) (System.currentTimeMillis() - timestamp) / 1000;
+			System.out.println(String.format(" [%.3fs]", Time2));
 			impala.computeStats(TableName_p2p1_OS);
 
 			double ExtVPSize = TableSize(TableName_p1p2_SO);
 			double PartitionSize = TableSize(TT, p1);
 			double Selectivity = ExtVPSize/PartitionSize;
-			AddStats(TableName_p1p2_SO, p1, p2, ExtVPFormatSO, ExtVPSize, PartitionSize, Selectivity);
+			AddStats(TableName_p1p2_SO, p1, p2, ExtVPFormatSO, ExtVPSize, PartitionSize, Selectivity, Time);
 			if (Selectivity >= SF)
 				impala.dropTable(TableName_p1p2_SO);
 
 			ExtVPSize = TableSize(TableName_p2p1_OS);
 			PartitionSize = TableSize(TT, p2);
 			Selectivity = ExtVPSize/PartitionSize;
-			AddStats(TableName_p2p1_OS,p2, p1, ExtVPFormatOS, ExtVPSize, PartitionSize, Selectivity);
+			AddStats(TableName_p2p1_OS,p2, p1, ExtVPFormatOS, ExtVPSize, PartitionSize, Selectivity, Time2);
 			if (Selectivity >= SF)
 				impala.dropTable(TableName_p2p1_OS);
 
@@ -537,24 +544,24 @@ public final class ExtVPLoader extends Loader {
 		if (p1 != p2) {
 			System.out.print(String.format("Creating %s from '%s'", TableName_p1p2_OS, TT));
 			timestamp = System.currentTimeMillis();
-			CreateStatement cstmtOS2 = CreateTable(p1, p2, ExtVPFormatOS);
-			cstmtOS2.execute();
 
 			SelectStatement mainstm3 = impala.select(String.format("t1.%s", column_name_subject));
 			mainstm3.addProjection(String.format("t1.%s", column_name_object));
 			mainstm3.from(String.format("(%s) t1", leftstmt));
 			mainstm3.leftSemiJoin(String.format("(%s) t2", rightstmt),
 					String.format("%s.%s = %s.%s", "t1", column_name_object, "t2", column_name_subject), false);
+			
+			CreateStatement cstmtOS2 = CreateTable(p1, p2, ExtVPFormatOS, mainstm3);
+			cstmtOS2.execute();
+			Time = (float) (System.currentTimeMillis() - timestamp) / 1000;
+			System.out.println(String.format(" [%.3fs]", Time));
 
-			impala.insertOverwrite(TableName_p1p2_OS).selectStatement(mainstm3).execute();
-			System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
-			impala.computeStats(TableName_p1p2_OS);
 
 			if (!isEmpty(TableName_p1p2_OS)) {
+				impala.computeStats(TableName_p1p2_OS);
 				System.out.print(String.format("Creating %s from '%s'", TableName_p2p1_SO, TT));
 				timestamp = System.currentTimeMillis();
-				CreateStatement cstmtSO2 = CreateTable(p2, p1, ExtVPFormatSO);
-				cstmtSO2.execute();
+
 
 				SelectStatement mainstm4 = impala.select(String.format("t2.%s", column_name_subject));
 				mainstm4.addProjection(String.format("t2.%s", column_name_object));
@@ -562,21 +569,23 @@ public final class ExtVPLoader extends Loader {
 				mainstm4.rightSemiJoin(String.format("(%s) t2", rightstmt),
 						String.format("%s.%s = %s.%s", "t1", column_name_object, "t2", column_name_subject), false);
 
-				impala.insertOverwrite(TableName_p2p1_SO).selectStatement(mainstm4).execute();
-				System.out.println(String.format(" [%.3fs]", (float) (System.currentTimeMillis() - timestamp) / 1000));
+				CreateStatement cstmtSO2 = CreateTable(p2, p1, ExtVPFormatSO, mainstm4);
+				cstmtSO2.execute();
+				Time2 = (float) (System.currentTimeMillis() - timestamp) / 1000;
+				System.out.println(String.format(" [%.3fs]", Time2));
 				impala.computeStats(TableName_p2p1_SO);
 
 				double ExtVPSize = TableSize(TableName_p1p2_OS);
 				double PartitionSize = TableSize(TT, p1);
 				double Selectivity = ExtVPSize/PartitionSize;
-				AddStats(TableName_p1p2_OS, p1, p2, ExtVPFormatOS, ExtVPSize, PartitionSize, Selectivity);
+				AddStats(TableName_p1p2_OS, p1, p2, ExtVPFormatOS, ExtVPSize, PartitionSize, Selectivity, Time);
 				if (TableSize(TableName_p1p2_OS) / TableSize(TT, p1) >= SF)
 					impala.dropTable(TableName_p1p2_OS);
 
 				ExtVPSize = TableSize(TableName_p2p1_SO);
 				PartitionSize = TableSize(TT, p2);
 				Selectivity = ExtVPSize/PartitionSize;
-				AddStats(TableName_p2p1_SO,p2, p1, ExtVPFormatSO, ExtVPSize, PartitionSize, Selectivity);
+				AddStats(TableName_p2p1_SO,p2, p1, ExtVPFormatSO, ExtVPSize, PartitionSize, Selectivity, Time2);
 				if (Selectivity >= SF)
 					impala.dropTable(TableName_p2p1_SO);
 
@@ -659,11 +668,10 @@ public final class ExtVPLoader extends Loader {
 	 * @param ExtVPFormat - ExtVP Format.
 	 * @return Create statement for the ExtVP table.
 	 */
-	private CreateStatement CreateTable(String Predicate1, String Predicate2, String ExtVPFormat) {
+	private CreateStatement CreateTable(String Predicate1, String Predicate2, String ExtVPFormat, SelectStatement stmt) {
 		CreateStatement cstmt = impala.createTable(TableName(Predicate1, Predicate2, ExtVPFormat)).ifNotExists();
 		cstmt.storedAs(FileFormat.PARQUET);
-		cstmt.addColumnDefinition(column_name_subject, DataType.STRING);
-		cstmt.addColumnDefinition(column_name_object, DataType.STRING);
+		cstmt.asSelect(stmt);
 		return cstmt;
 	}
 
@@ -775,7 +783,12 @@ public final class ExtVPLoader extends Loader {
 	private int GetLastPredicate(String PredicatePartition){
 		if (PredicatePartition != "All") {
 			String[] Position = Predicate_Partition.split(",");
-			return Integer.parseInt(Position[1]);
+			try {
+				return Integer.parseInt(Position[1]);
+			} catch (Exception e) {
+				return ListOfPredicates.size();
+			}
+			
 		}
 		else
 			return ListOfPredicates.size();
@@ -792,11 +805,11 @@ public final class ExtVPLoader extends Loader {
 	 * @param VPSize - Partition size based on first predicate.
 	 * @param Selectivity - Selectivity of ExtVP table size compared to partition size.
 	 */
-	private void AddStats(String TableName, String p1, String p2, String ExtVPformat, double ExtVPSize, double VPSize, double Selectivity){
+	private void AddStats(String TableName, String p1, String p2, String ExtVPformat, double ExtVPSize, double VPSize, double Selectivity, double Time){
 		try (FileWriter fw = new FileWriter(String.format("./ExtVpStats_%s_%d.txt", ExtVPformat, FirstPredicate), true);
 				BufferedWriter bw = new BufferedWriter(fw);
 				PrintWriter Append = new PrintWriter(bw)) {
-			Append.println(String.format("%s\t%s_%s\t%f\t%f\t%f",TableName, p1, p2, ExtVPSize, VPSize, Selectivity));
+			Append.println(String.format("%s\t%s_%s\t%f\t%f\t%f\t%f",TableName, p1, p2, ExtVPSize, VPSize, Selectivity, Time));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -944,6 +957,7 @@ public final class ExtVPLoader extends Loader {
 			.addColumnDefinition("ExtVPTable_Nr_Tuples", DataType.DOUBLE)
 			.addColumnDefinition("Partition_Nr_Tuples", DataType.DOUBLE)
 			.addColumnDefinition("ExtVPTable_SF", DataType.DOUBLE)
+			.addColumnDefinition("ExtVPTable_Time", DataType.DOUBLE)
 			.fieldTermintor(field_terminator)
 			.lineTermintor(line_terminator)
 			.location(UsersDirectory+"/Stats"+HdfsFolderName+"/"+ExtVPType+"/")
@@ -957,6 +971,7 @@ public final class ExtVPLoader extends Loader {
 			.addColumnDefinition("ExtVPTable_Nr_Tuples", DataType.DOUBLE)
 			.addColumnDefinition("Partition_Nr_Tuples", DataType.DOUBLE)
 			.addColumnDefinition("ExtVPTable_SF", DataType.DOUBLE)
+			.addColumnDefinition("ExtVPTable_Time", DataType.DOUBLE)
 			.execute();
 			
 			impala
@@ -966,6 +981,7 @@ public final class ExtVPLoader extends Loader {
 			.addProjection("ExtVPTable_Nr_Tuples") 
 			.addProjection("Partition_Nr_Tuples") 
 			.addProjection("ExtVPTable_SF") 
+			.addProjection("ExtVPTable_Time")
 			.from("external_extvp_tableofstats_"+ExtVPType))
 			.execute();
 			
