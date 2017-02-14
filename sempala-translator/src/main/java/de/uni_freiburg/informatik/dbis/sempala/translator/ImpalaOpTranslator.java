@@ -20,7 +20,6 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaReduced;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaSequence;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaSlice;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaUnion;
-import de.uni_freiburg.informatik.dbis.sempala.translator.sql.ExecutionPlatform;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Join;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinType;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinUtil;

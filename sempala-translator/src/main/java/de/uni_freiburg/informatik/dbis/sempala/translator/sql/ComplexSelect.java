@@ -52,20 +52,14 @@ public class ComplexSelect extends SQLStatement {
 
 	@Override
 	public void addWhereConjunction(String condition) {
-		System.out.println(condition);
-		System.out.println(contains_complex_vars);
 		if (contains_complex_vars) {
 			// check if it contains a property
 			for (String key : is_complex_column.keySet()) {
 				int pos = condition.indexOf(key);
 				// the property is present in the condition
 				if (pos > -1) {
-					System.out.println("Key:" + key);
-					System.out.println("IS complex:" + is_complex_column.get(key));
 					// the property is also of complex type
 					if (is_complex_column.get(key)) {
-						System.out.println("This is heree");
-						// TODO this is not true for spark - change it
 						condition = condition.replaceAll(key, "subT_" + inverted_selection.get(key) + ".ITEM ");
 					} else { // if not, add the reference to t1 (the first
 								// reference to the table)
@@ -168,7 +162,6 @@ public class ComplexSelect extends SQLStatement {
 				} else {
 					// distinguish the complex properties
 					String subTableName = "subT_" + key;
-
 					sb.append(" " + subTableName + ".ITEM AS " + "\"" + key + "\"");
 
 				}
@@ -226,18 +219,14 @@ public class ComplexSelect extends SQLStatement {
 	@Override
 	public String toString() {
 
-		System.out.println("ToSTring");
 		// if there are complex properties -> complex select is needed
 
 		if (selection.size() == 0) {
-			System.out.println("MAke it true");
 			contains_complex_vars = true;
 		} else {
 			for (String key : selection.keySet()) {
 				String[] selector = selection.get(key);
-				System.out.println("Selector 0 " + selector[0]);
 				if (is_complex_column.containsKey(selector[0]) && is_complex_column.get(selector[0])) {
-					System.out.println("MAke it true");
 					contains_complex_vars = true;
 					break;
 				}
