@@ -22,14 +22,11 @@ public class Spark {
 	 * Initializes a Spark connection. Use it afterwards for execution of Spark
 	 * SQL queries.
 	 * 
-	 * @param appName
-	 *            the name of the app that will be used with this Spark
+	 * @param appName the name of the app that will be used with this Spark
 	 *            connection
-	 * @param database
-	 *            name of the database that will be used with this Spark
+	 * @param database name of the database that will be used with this Spark
 	 *            connection
-	 * @param master
-	 *            the master URI
+	 * @param master the master URI
 	 */
 	public Spark(String appName, String database) {
 
@@ -38,6 +35,9 @@ public class Spark {
 		this.sparkConfiguration = new SparkConf().setAppName(appName);
 		this.javaContext = new JavaSparkContext(sparkConfiguration);
 		this.hiveContext = new HiveContext(javaContext);
+
+		// use the created database
+		this.hiveContext.sql((String.format("USE %s", database)));
 	}
 
 	/**

@@ -12,7 +12,7 @@ public class ComplexSelect extends SQLStatement {
 	private int limit = -1;
 	private int offset = -1;
 	// <alias, selectors>
-	//TODO see why selectors are []
+	// TODO see why selectors are []
 	HashMap<String, String[]> selection = new HashMap<String, String[]>();
 	HashMap<String, String> inverted_selection = new HashMap<String, String>();
 	// <column name, is the column complex>
@@ -29,19 +29,19 @@ public class ComplexSelect extends SQLStatement {
 	@Override
 	public void addSelector(String alias, String[] selector) {
 		selection.put(alias, selector);
-		if(selector.length > 1){
+		if (selector.length > 1) {
 			inverted_selection.put(selector[0] + "." + selector[1], alias);
 		} else {
 			inverted_selection.put(selector[0], alias);
 		}
-		
 	}
 
 	public void appendToFrom(String s) {
 		from += s;
 	}
 
-	//TODO change name you do not set complex columns this is a map for all columns + s
+	// TODO change name you do not set complex columns this is a map for all
+	// columns + s
 	public void setComplexColumns(HashMap<String, Boolean> is_complex) {
 		is_complex_column = is_complex;
 	}
@@ -52,21 +52,27 @@ public class ComplexSelect extends SQLStatement {
 
 	@Override
 	public void addWhereConjunction(String condition) {
+		System.out.println(condition);
+		System.out.println(contains_complex_vars);
 		if (contains_complex_vars) {
 			// check if it contains a property
 			for (String key : is_complex_column.keySet()) {
 				int pos = condition.indexOf(key);
 				// the property is present in the condition
 				if (pos > -1) {
+					System.out.println("Key:" + key);
+					System.out.println("IS complex:" + is_complex_column.get(key));
 					// the property is also of complex type
 					if (is_complex_column.get(key)) {
+						System.out.println("This is heree");
 						// TODO this is not true for spark - change it
 						condition = condition.replaceAll(key, "subT_" + inverted_selection.get(key) + ".ITEM ");
-					} else { // if not, add the reference to t1 (the first reference to the table)
+					} else { // if not, add the reference to t1 (the first
+								// reference to the table)
 						condition = condition.substring(0, pos) + "t1." + condition.substring(pos);
 					}
 				}
-			} 
+			}
 		}
 		if (where.equals("")) {
 			where += condition;
@@ -133,17 +139,17 @@ public class ComplexSelect extends SQLStatement {
 		sb.append("(\nSELECT");
 		if (isDistinct)
 			sb.append(" DISTINCT");
-		
+
 		/**
-		 *  Impala does not allow to select with '*' complex columns
-		 *  Therefore, all the columns are explicitly listed
+		 * Impala does not allow to select with '*' complex columns Therefore,
+		 * all the columns are explicitly listed
 		 */
-		if (selection.size() == 0){
+		if (selection.size() == 0) {
 			int refName = 0;
-			for(String key : is_complex_column.keySet())
-				this.addSelector("v_" + String.valueOf(refName++), new String[]{key});
+			for (String key : is_complex_column.keySet())
+				this.addSelector("v_" + String.valueOf(refName++), new String[] { key });
 		}
-			
+
 		boolean first = true;
 		for (String key : selection.keySet()) {
 			String[] selector = selection.get(key);
@@ -168,9 +174,9 @@ public class ComplexSelect extends SQLStatement {
 				}
 			}
 		}
-		
+
 		sb.append("\nFROM ");
-		sb.append(from  + " t1 ");
+		sb.append(from + " t1 ");
 		sb.append(" \n INNER JOIN ");
 		first = true;
 		for (String key : selection.keySet()) {
@@ -194,11 +200,11 @@ public class ComplexSelect extends SQLStatement {
 			// complex properties can't use IS NOT NULL in impala
 			this.removeNullFilters();
 			// if the where is empty now, don't use it
-			if(where.trim().length() > 0){
+			if (where.trim().length() > 0) {
 				sb.append(" \nWHERE ");
 				sb.append(where);
 			}
-				
+
 		}
 		if (!this.order.equals("")) {
 			sb.append("\nORDER BY ");
@@ -220,20 +226,24 @@ public class ComplexSelect extends SQLStatement {
 	@Override
 	public String toString() {
 
+		System.out.println("ToSTring");
 		// if there are complex properties -> complex select is needed
-		
-		if (selection.size() == 0)
+
+		if (selection.size() == 0) {
+			System.out.println("MAke it true");
 			contains_complex_vars = true;
-		else {
+		} else {
 			for (String key : selection.keySet()) {
 				String[] selector = selection.get(key);
+				System.out.println("Selector 0 " + selector[0]);
 				if (is_complex_column.containsKey(selector[0]) && is_complex_column.get(selector[0])) {
+					System.out.println("MAke it true");
 					contains_complex_vars = true;
 					break;
 				}
 			}
 		}
-		
+
 		if (contains_complex_vars)
 			return complexSelect();
 		else
@@ -277,7 +287,6 @@ public class ComplexSelect extends SQLStatement {
 		}
 
 	}
-	
 
 	public void setName(String string) {
 		this.statementName = string;

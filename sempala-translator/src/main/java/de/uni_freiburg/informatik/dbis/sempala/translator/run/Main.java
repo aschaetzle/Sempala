@@ -37,11 +37,11 @@ public class Main {
 	/** The input file/folder to write to */
 	private static String inputPath = null;
 
-	/** The connection to the impala daemon */
+	/** The connection to the Impala daemon */
 	public static Connection impalaConnection = null;
 
 	/** The object used for connecting to Spark and executing queries. */
-	public static Spark sparkConnection;
+	public static Spark sparkConnection = null;
 
 	// Define a static logger variable so that it references the corresponding
 	// Logger instance
@@ -51,8 +51,7 @@ public class Main {
 	 * The main routine. It parses the commandline arguments and calls the
 	 * Translator.
 	 * 
-	 * @param args
-	 *            commandline arguments
+	 * @param args commandline arguments
 	 */
 	public static void main(String[] args) {
 
@@ -75,7 +74,7 @@ public class Main {
 		}
 
 		String format = commandLine.getOptionValue(OptionNames.FORMAT.toString());
-		// when complex property table is queried by spark
+		// when complex property table is queried with spark
 		if (format.equals(Format.COMPLEX_PROPERTY_TABLE_SPARK.toString())) {
 			// for spark connection only the name of the database is needed
 			if (commandLine.hasOption(OptionNames.DATABASE.toString())) {
@@ -87,8 +86,10 @@ public class Main {
 			}
 			// when Impala is used
 		} else {
-			// If host, port or database is defined, host and database are
-			// required
+			/*
+			 * If host, port or database is defined, host and database are
+			 * required
+			 */
 			if (commandLine.hasOption(OptionNames.HOST.toString()) || commandLine.hasOption(OptionNames.PORT.toString())
 					|| commandLine.hasOption(OptionNames.DATABASE.toString())) {
 				if (commandLine.hasOption(OptionNames.HOST.toString())
@@ -99,7 +100,6 @@ public class Main {
 					String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
 					String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 					String impalad_url = String.format("jdbc:impala://%s:%s/%s", host, port, database);
-
 					impalaConnection = connectToImpala(impalad_url);
 
 				} else {
@@ -112,7 +112,6 @@ public class Main {
 		/*
 		 * Setup translator
 		 */
-
 		Translator translator = new Translator();
 
 		// Enable optimizations if requested
@@ -162,7 +161,6 @@ public class Main {
 		/*
 		 * Run translator
 		 */
-
 		File inputFile = new File(inputPath);
 		if (!inputFile.exists()) {
 			logger.fatal("Input path does not exist.");
@@ -188,10 +186,10 @@ public class Main {
 
 		// if complex_property_table is selected, we need to get the list of
 		// properties and their type (simple/complex) as start up phase
-		if ((impalaConnection != null && format.equals(Format.COMPLEX_PROPERTY_TABLE.toString()))) {
+		if (impalaConnection != null && format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())) {
 			ComplexPropertyTableColumns.getInstance(impalaConnection);
 		}
-		if ((sparkConnection != null && format.equals(Format.COMPLEX_PROPERTY_TABLE_SPARK.toString()))) {
+		if (sparkConnection != null && format.equals(Format.COMPLEX_PROPERTY_TABLE_SPARK.toString())) {
 			ComplexPropertyTableColumns.getInstance(sparkConnection);
 		}
 
@@ -202,32 +200,26 @@ public class Main {
 		}
 
 		for (final File file : inputFiles) {
-		
-			// Translate the sparql query either for spark or for impala
+
+			System.out.print(String.format("%s:", file.getName()));
+
+			// Translate the SPARQL query either for Spark or for Impala
 			translator.setInputFile(file.getAbsolutePath());
 			String sqlString = translator.translateQuery();
 
 			// Construct the name of the new result table for the current query
-			String resultsTableName = String.format("%s_%d", file.getName(), System.currentTimeMillis());
-			if (translator.getFormat() == Format.EXTVP)
-				resultsTableName = String.format("%s_%s_%d", translator.result_table_name, file.getName(),
-						System.currentTimeMillis());
-			resultsTableName = resultsTableName.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
-
-			System.out.print(String.format("%s:", file.getName()));
+			String resultsTableName = constructResultTableName(translator.getFormat(), file.getName(),
+					translator.result_table_name);
 
 			HashMap<String, Long> result = null;
 			// If a connection is set run the query
 			if (impalaConnection != null) {
 				// Run the translated query with impala and put it into the
-				// unique results
-				// table
+				// unique results table
 				result = runQueryWithImpala(impalaConnection, sqlString, resultsTableName, isBenchmark);
-
 			} else if (sparkConnection != null) {
 				// Run the translated query with spark and put it into the
-				// unique results
-				// table
+				// unique results table
 				result = runQueryWithSpark(sparkConnection, sqlString, resultsTableName, isBenchmark);
 			}
 			// if neither impala nor spark connection is initialized
@@ -240,39 +232,68 @@ public class Main {
 					printWriter.close();
 				} catch (Exception e) {
 					logger.warn("Cannot open output file: " + file.getAbsolutePath() + ".sql", e);
+					return;
 				}
 			}
 
 			long executionTime = result.get("executionTime");
 			long nrTuples = result.get("nrTuples");
 			// store the result for each query in a file
-			try (FileWriter fw = new FileWriter("./TableOfResults.txt", true);
-					BufferedWriter bw = new BufferedWriter(fw);
-					PrintWriter Append = new PrintWriter(bw)) {
-				Append.println(String.format("%s\t%s\t%s", resultsTableName, executionTime, nrTuples));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			appendQueryResults("TableOfResults.txt", resultsTableName, executionTime, nrTuples);
 		}
+
+	}
+
+	/**
+	 * Create a new file named as the input parameter fileName and store
+	 * information for an executed query. If such file exists, only append a new
+	 * line for information of the query. For each query we have a line with a
+	 * name of the table where the results of the query are saved, its execution
+	 * time and how many results does it have.
+	 */
+	public static void appendQueryResults(String fileName, String resultsTableName, long executionTime, long nrTuples) {
+		// store the result for each query in a file
+		try (FileWriter fw = new FileWriter("./" + fileName, true);
+				BufferedWriter bw = new BufferedWriter(fw);
+				PrintWriter Append = new PrintWriter(bw)) {
+			Append.println(String.format("%s\t%s\t%s", resultsTableName, executionTime, nrTuples));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Construct the name of a table where the results of a query are stored.
+	 * 
+	 * @param format the data format supported
+	 * @param fileName name of the file from where the query is read
+	 * @param translatorResultTableName
+	 * @return
+	 */
+	public static String constructResultTableName(Format format, String fileName, String translatorResultTableName) {
+		String resultsTableName = String.format("%s_%d", fileName, System.currentTimeMillis());
+		if (format == Format.EXTVP) {
+			resultsTableName = String.format("%s_%s_%d", translatorResultTableName, fileName,
+					System.currentTimeMillis());
+		}
+		resultsTableName = resultsTableName.replaceAll("[<>]", "").trim().replaceAll("[[^\\w]+]", "_");
+		return resultsTableName;
 	}
 
 	/**
 	 * Run a query by Impala.
 	 * 
-	 * @param impalaConnection
-	 *            the connection to impala which is used for running the query
-	 * @param sqlQuery
-	 *            sql query in string format that is run
-	 * @param resultsTableName
-	 *            name of the table where the result of the query is stored.
-	 * @param executionTime
-	 *            how much time the query takes
-	 * @param nrTuples
-	 *            how many tuples the query has
-	 * @param isBenchmark
-	 *            is the query is run with benchmark purposes.
+	 * @param impalaConnection the connection to Impala which is used for
+	 *            running the query
+	 * @param sqlQuery sql query in string format that is run
+	 * @param resultsTableName name of the table where the result of the query
+	 *            is stored.
+	 * @param executionTime how much time the query takes
+	 * @param nrTuples how many tuples the query has
+	 * @param isBenchmark is the query is run with benchmark purposes.
 	 */
-	public static HashMap<String, Long> runQueryWithImpala(Connection impalaConnection, String sqlQuery, String resultsTableName, boolean isBenchmark) {
+	public static HashMap<String, Long> runQueryWithImpala(Connection impalaConnection, String sqlQuery,
+			String resultsTableName, boolean isBenchmark) {
 		long executionTime = 0;
 		long nrTuples = 0;
 		try {
@@ -322,35 +343,36 @@ public class Main {
 	/**
 	 * Run a query by Spark.
 	 * 
-	 * @param sparkConnection
-	 *            connection to spark
-	 * @param sqlQuery
-	 *            sql query in string format that is run
-	 * @param resultsTableName
-	 *            name of the table where the result of the query is stored.
-	 * @param executionTime
-	 *            how much time the query takes
-	 * @param nrTuples
-	 *            how many tuples the query has
-	 * @param isBenchmark
-	 *            is the query is run with benchmark purposes.
+	 * @param sparkConnection connection to spark
+	 * @param sqlQuery sql query in string format that is run
+	 * @param resultsTableName name of the table where the result of the query
+	 *            is stored.
+	 * @param executionTime how much time the query takes
+	 * @param nrTuples how many tuples the query has
+	 * @param isBenchmark is the query is run with benchmark purposes.
 	 */
-	public static HashMap<String, Long> runQueryWithSpark(Spark sparkConnection, String sqlQuery, String resultsTableName, boolean isBenchmark) {
+	public static HashMap<String, Long> runQueryWithSpark(Spark sparkConnection, String sqlQuery,
+			String resultsTableName, boolean isBenchmark) {
 		long executionTime = 0;
 		long nrTuples = 0;
-		
+
+		// remove the initial "("
+		sqlQuery = sqlQuery.substring(1);
+		// remove the final ")"
+		sqlQuery = sqlQuery.substring(0, sqlQuery.length() - 1);
+
 		// Execute the query
 		long startTime = System.currentTimeMillis();
 
 		// execute the query and store the result into a table
 		sparkConnection.sql(
-				String.format("CREATE TABLE %s.%s AS (%s);", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlQuery));
+				String.format("CREATE TABLE %s.%s AS %s", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlQuery));
 
 		executionTime = System.currentTimeMillis() - startTime;
 		System.out.print(String.format(" %s ms", executionTime));
 
 		nrTuples = sparkConnection
-				.sql(String.format("SELECT * FROM %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName)).count();
+				.sql(String.format("SELECT * FROM %s.%s", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName)).count();
 
 		System.out.println(String.format(" %s pc", nrTuples));
 
@@ -358,7 +380,7 @@ public class Main {
 		// benchmark run
 		if (isBenchmark) {
 			sparkConnection
-					.sql(String.format("DROP TABLE IF EXISTS %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
+					.sql(String.format("DROP TABLE IF EXISTS %s.%s", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
 		}
 
 		HashMap<String, Long> results = new HashMap<String, Long>();
@@ -371,8 +393,7 @@ public class Main {
 	 * Connect to Impala and create a database for the tables where the result
 	 * of running queries is stored.
 	 * 
-	 * @param impalaUrl
-	 *            url to Impala
+	 * @param impalaUrl url to Impala
 	 * @return initialized Imapala connection
 	 */
 	public static Connection connectToImpala(String impalaUrl) {
@@ -398,7 +419,7 @@ public class Main {
 	 * Connect to Spark and create a database for result tables. These are the
 	 * tables where the result from queries is stored.
 	 * 
-	 * @param database database  over which queries are executed
+	 * @param database database over which queries are executed
 	 * @return initialized Spark connection
 	 */
 	public static Spark connectToSpark(String database) {
@@ -407,7 +428,7 @@ public class Main {
 		Spark sparkConnection = new Spark("sempalaTranslatorApp", database);
 		// Create a results database
 		sparkConnection.getHiveContext()
-				.sql(String.format("CREATE DATABASE IF NOT EXISTS %s;", Tags.SEMPALA_RESULTS_DB_NAME));
+				.sql(String.format("CREATE DATABASE IF NOT EXISTS %s", Tags.SEMPALA_RESULTS_DB_NAME));
 		return sparkConnection;
 
 	}
@@ -442,10 +463,11 @@ public class Main {
 
 		options.addOption("e", OptionNames.EXPAND.toString(), false, "Expand URI prefixes.");
 
-		options.addOption("d", OptionNames.DATABASE.toString(), true, "The database to use..");
+		options.addOption("d", OptionNames.DATABASE.toString(), true, "The database to use.");
 
 		options.addOption("f", OptionNames.FORMAT.toString(), true, "The database format the query is built for.\n"
 				+ Format.PROPERTYTABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
+				// TODO change the name when the paper is ready
 				+ Format.COMPLEX_PROPERTY_TABLE.toString()
 				+ ": (see Polina and Matteo's Master project paper) Impala Version\n"
 				+ Format.COMPLEX_PROPERTY_TABLE_SPARK.toString()

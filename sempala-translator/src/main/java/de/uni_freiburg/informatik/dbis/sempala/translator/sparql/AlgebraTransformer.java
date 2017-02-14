@@ -33,6 +33,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaReduced;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaSequence;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaSlice;
 import de.uni_freiburg.informatik.dbis.sempala.translator.op.ImpalaUnion;
+import de.uni_freiburg.informatik.dbis.sempala.translator.op.SparkBgpComplexPropertyTable;
 
 /**
  *
@@ -64,6 +65,9 @@ public class AlgebraTransformer extends OpVisitorBase {
 			break;
 		case COMPLEX_PROPERTY_TABLE:
 			stack.push(new ImpalaBgpComplexPropertyTable(opBGP, prefixes));
+			break;
+		case COMPLEX_PROPERTY_TABLE_SPARK:
+			stack.push(new SparkBgpComplexPropertyTable(opBGP, prefixes));
 			break;
 		case SINGLETABLE:
 			stack.push(new ImpalaBgpExtVPSingleTable(opBGP, prefixes));

@@ -59,7 +59,6 @@ public class TripleGroup {
 			crossjoin.add(triple);
 			crossJoinMapping.putAll(getMappingVarsOfTriple(triple));
 		}
-
 	}
 
 	private HashMap<String, String[]> getMappingVarsOfTriple(Triple t) {

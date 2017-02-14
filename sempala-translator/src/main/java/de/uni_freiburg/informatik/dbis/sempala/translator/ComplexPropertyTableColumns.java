@@ -57,9 +57,7 @@ public class ComplexPropertyTableColumns {
 
 		// add also the name of the subject
 		tempColumns.put(Tags.SUBJECT_COLUMN_NAME, false);
-
 		columns = Collections.unmodifiableMap(tempColumns);
-
 		return singleton;
 	}
 
@@ -68,9 +66,9 @@ public class ComplexPropertyTableColumns {
 	 * Spark connection.
 	 */
 	public static ComplexPropertyTableColumns getInstance(Spark connection) {
-		if (singleton != null)
+		if (singleton != null) {
 			return singleton;
-
+		}
 		HashMap<String, Boolean> tempColumns = new HashMap<String, Boolean>();
 
 		Row[] props = connection.sql(String.format("SELECT * FROM %s", Tags.COMPLEX_PROPERTIES_TABLENAME)).collect();
@@ -80,9 +78,7 @@ public class ComplexPropertyTableColumns {
 
 		// add also the name of the subject
 		tempColumns.put(Tags.SUBJECT_COLUMN_NAME, false);
-
 		columns = Collections.unmodifiableMap(tempColumns);
-
 		return singleton;
 	}
 
