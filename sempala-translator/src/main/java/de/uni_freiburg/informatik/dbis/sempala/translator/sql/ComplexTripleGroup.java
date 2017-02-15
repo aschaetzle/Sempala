@@ -97,7 +97,17 @@ public class ComplexTripleGroup {
 	public SQLStatement translate() {
 		ComplexSelect select = new ComplexSelect(this.name);
 		select.setComplexColumns(new HashMap<String,Boolean>(ComplexPropertyTableColumns.getColumns()));
-
+		
+		// if one of the properties is a complex one, set the select accordingly
+		for (int i = 0; i < triples.size(); i++) {
+			String predicateString = FmtUtils.stringForNode(triples.get(i).getPredicate(), this.prefixMapping);
+			if(select.is_complex_column.get(SpecialCharFilter.filter(predicateString))){
+					select.setComplexVariables();
+					break;
+			}
+		
+		}
+		
 		ArrayList<String> vars = new ArrayList<String>();
 		ArrayList<String> whereConditions = new ArrayList<String>();
 		boolean first = true;
