@@ -179,7 +179,7 @@ public class Main {
 			// Run the translator for every file in the folder that matches the
 			// common sparql extensions
 			for (final File fileEntry : inputFile.listFiles()) {
-				if (fileEntry.getName().matches("(.*\\.sq|.*\\.srx|.*\\.sparql)$")) { // Match
+				if (fileEntry.getName().matches("(.*\\.sq|.*\\.srx|.*\\.sparql|.*\\.in)$")) { // Match
 																						// only
 																						// SPARQL
 																						// extensions
