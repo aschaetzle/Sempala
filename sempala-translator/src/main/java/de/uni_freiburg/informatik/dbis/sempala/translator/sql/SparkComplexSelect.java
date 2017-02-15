@@ -38,7 +38,7 @@ public class SparkComplexSelect extends SQLStatement {
 		// selected
 		// unique aliases only
 		//TODO remove this if we do not need flattening of complex properties
-		if (/*joinVars.contains(alias) && */ is_complex_column.get(selector[0])) {
+		if (joinVars.contains(alias) &&  is_complex_column.get(selector[0])) {
 			if (hasJoinOnComplexColumn == false) {
 				hasJoinOnComplexColumn = true;
 			}

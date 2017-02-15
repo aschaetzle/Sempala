@@ -25,6 +25,8 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Format;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 import de.uni_freiburg.informatik.dbis.sempala.translator.spark.Spark;
+import de.uni_freiburg.informatik.dbis.sempala.translator.sql.ExecutionPlatform;
+import de.uni_freiburg.informatik.dbis.sempala.translator.sql.ExecutionPlatform.Platform;
 
 /**
  * Main Class for program start. Parses the commandline arguments and calls the
@@ -80,6 +82,8 @@ public class Main {
 			if (commandLine.hasOption(OptionNames.DATABASE.toString())) {
 				String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 				sparkConnection = connectToSpark(database);
+				//TODO add comments
+				ExecutionPlatform.getInstance(Platform.SPARK);
 			} else {
 				logger.fatal("Database is required when connecting to Spark.");
 				System.exit(1);
@@ -101,6 +105,8 @@ public class Main {
 					String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 					String impalad_url = String.format("jdbc:impala://%s:%s/%s", host, port, database);
 					impalaConnection = connectToImpala(impalad_url);
+					//TODO add comments
+					ExecutionPlatform.getInstance(Platform.IMPALA);
 
 				} else {
 					logger.fatal("If host, port or database is defined, host and database are required");
