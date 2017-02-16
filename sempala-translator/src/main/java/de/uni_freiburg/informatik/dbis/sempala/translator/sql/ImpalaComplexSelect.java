@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 //TODO add comments
-public class ComplexSelect extends SQLStatement {
+public class ImpalaComplexSelect extends SQLStatement {
 
 	protected String from = "";
 	protected String where = "";
@@ -23,7 +23,7 @@ public class ComplexSelect extends SQLStatement {
 	/*
 	 * Subset of schema
 	 */
-	public ComplexSelect(String tablename) {
+	public ImpalaComplexSelect(String tablename) {
 		super(tablename);
 	}
 	

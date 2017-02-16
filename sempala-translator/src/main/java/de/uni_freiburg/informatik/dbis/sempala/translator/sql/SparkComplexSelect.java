@@ -1,10 +1,21 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-//TODO add comments
+
+/**
+ * A Spark SQL select statement. Because the complex property table has columns
+ * which can be of complex type (<array>), this select works if such a column is
+ * part of the select query (included in the selected columns or part of a
+ * join). The differences are:
+ * 
+ * 1) if a complex column is a part of a join it is flatten with "LATERAL VIEW
+ * EXPLODE" statement 2) if a complex column is a part of a selection it is
+ * flatten with "LATERAL VIEW EXPLODE" statement
+ * 
+ * @author Polina Koleva
+ *
+ */
 public class SparkComplexSelect extends SQLStatement {
 
 	public SparkComplexSelect(String name) {
@@ -19,28 +30,27 @@ public class SparkComplexSelect extends SQLStatement {
 
 	// <alias, selectors>
 	HashMap<String, String[]> selection = new HashMap<String, String[]>();
-	// alias of variables which are part of joins
-	private List<String> joinVars = new ArrayList<String>();
-	
+
 	// <complex_propery, view name>
 	private HashMap<String, String> viewProperties = new HashMap<String, String>();
-	
+
 	// <column name, is the column complex>
 	HashMap<String, Boolean> is_complex_column = new HashMap<String, Boolean>();
-	
-	// if there is a complex column which is part of a join
-	private boolean hasJoinOnComplexColumn = false;
+
+	// if there is a complex column which is part of a join or is part of the
+	// selected columns
+	private boolean hasComplexColumn = false;
 
 	@Override
 	public void addSelector(String alias, String[] selector) {
-		
-		// if we join on a complex property and this complex property is
-		// selected
-		// unique aliases only
-		//TODO remove this if we do not need flattening of complex properties
-		if (joinVars.contains(alias) &&  is_complex_column.get(selector[0])) {
-			if (hasJoinOnComplexColumn == false) {
-				hasJoinOnComplexColumn = true;
+		// if we join on a complex property or a complex property is part of
+		// selected columns
+		// we need to use complexSelected and flatten these complex properties
+		// NOTE: because if we join on a complex property it will be always part
+		// of the selected columns, there is no need to check join variables
+		if (is_complex_column.get(selector[0])) {
+			if (hasComplexColumn == false) {
+				hasComplexColumn = true;
 			}
 			int viewPropSize = viewProperties.size();
 			String viewName = "lve_" + (viewPropSize + 1);
@@ -53,10 +63,6 @@ public class SparkComplexSelect extends SQLStatement {
 
 	public void appendToFrom(String s) {
 		from += s;
-	}
-
-	public void setJoinVars(List<String> joinVars) {
-		this.joinVars = joinVars;
 	}
 
 	public void setComplexColumns(HashMap<String, Boolean> is_complex) {
@@ -147,9 +153,9 @@ public class SparkComplexSelect extends SQLStatement {
 					sb.append(", ");
 				}
 				if (selector.length > 1) {
-					sb.append(selector[0] + "." + selector[1] + " AS " + key );
+					sb.append(selector[0] + "." + selector[1] + " AS " + key);
 				} else {
-					sb.append(selector[0] + " AS " + key );
+					sb.append(selector[0] + " AS " + key);
 				}
 			}
 		}
@@ -160,7 +166,8 @@ public class SparkComplexSelect extends SQLStatement {
 		for (Map.Entry<String, String> entry : viewProperties.entrySet()) {
 			String complexPropertyName = entry.getKey();
 			String viewName = entry.getValue();
-			sb.append("\nLATERAL VIEW EXPLODE(" + from.replaceAll("\n", "\n  ")  + "." + complexPropertyName + ")" + " " + viewName + " AS " + (viewName + "_" + complexPropertyName));
+			sb.append("\nLATERAL VIEW EXPLODE(" + from.replaceAll("\n", "\n  ") + "." + complexPropertyName + ")" + " "
+					+ viewName + " AS " + (viewName + "_" + complexPropertyName));
 		}
 		if (!this.where.equals("")) {
 			sb.append(" \nWHERE ");
@@ -185,8 +192,10 @@ public class SparkComplexSelect extends SQLStatement {
 
 	@Override
 	public String toString() {
-		// if has join on complex property
-		if (hasJoinOnComplexColumn) {
+		// if has join on complex property or selection of a complex property
+		// use the select that flattens all complex properties included in a
+		// join or selected
+		if (hasComplexColumn) {
 			return complexSelect();
 		} else {
 			return simpleSelect();

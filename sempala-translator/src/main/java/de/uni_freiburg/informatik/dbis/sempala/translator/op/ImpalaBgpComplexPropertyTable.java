@@ -10,7 +10,7 @@ import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.shared.PrefixMapping;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
 
-import de.uni_freiburg.informatik.dbis.sempala.translator.sql.ComplexTripleGroup;
+import de.uni_freiburg.informatik.dbis.sempala.translator.sql.ImpalaComplexTripleGroup;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Join;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinType;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.JoinUtil;
@@ -30,7 +30,7 @@ public class ImpalaBgpComplexPropertyTable extends ImpalaBGP {
 
 		List<Triple> triples = opBGP.getPattern().getList();
 
-		HashMap<Node, ComplexTripleGroup> tripleGroups = new HashMap<Node, ComplexTripleGroup>();
+		HashMap<Node, ImpalaComplexTripleGroup> tripleGroups = new HashMap<Node, ImpalaComplexTripleGroup>();
 
 		// empty PrefixMapping when prefixes should be expanded
 		if (expandPrefixes) {
@@ -53,14 +53,14 @@ public class ImpalaBgpComplexPropertyTable extends ImpalaBGP {
 			}
 
 			if (!tripleGroups.containsKey(key)) {
-				tripleGroups.put(key, new ComplexTripleGroup(this.resultName + "_"
+				tripleGroups.put(key, new ImpalaComplexTripleGroup(this.resultName + "_"
 						+ tableNumber++, prefixes, fromTripletable));
 			}
 			tripleGroups.get(key).add(triple);
 		}
 
-		ComplexTripleGroup group = null;
-		ArrayList<ComplexTripleGroup> groups = new ArrayList<ComplexTripleGroup>();
+		ImpalaComplexTripleGroup group = null;
+		ArrayList<ImpalaComplexTripleGroup> groups = new ArrayList<ImpalaComplexTripleGroup>();
 		groups.addAll(tripleGroups.values());
 		group = groups.get(0);
 		groups.remove(0);
@@ -74,7 +74,7 @@ public class ImpalaBgpComplexPropertyTable extends ImpalaBGP {
 			Map<String, String[]> group_shifted = Schema.shiftToParent(group.getMappings(), group.getName());
 			while (groups.size() > 0) {
 				int index = findBestJoin(group_shifted, groups);
-				ComplexTripleGroup right = groups.get(index);
+				ImpalaComplexTripleGroup right = groups.get(index);
 				Map<String, String[]> right_shifted = Schema.shiftToParent(right.getMappings(), right.getName());
 				onConditions.add(JoinUtil.generateConjunction(JoinUtil
 						.getOnConditions(group_shifted, right_shifted)));
@@ -101,7 +101,7 @@ public class ImpalaBgpComplexPropertyTable extends ImpalaBGP {
 	 * @param groups
 	 * @return index in list
 	 */
-	public int findBestJoin(Map<String, String[]> group_shifted, ArrayList<ComplexTripleGroup> groups) {
+	public int findBestJoin(Map<String, String[]> group_shifted, ArrayList<ImpalaComplexTripleGroup> groups) {
 		int best = -1;
 		int index = 0;
 		for (int i = 0; i < groups.size(); i++) {

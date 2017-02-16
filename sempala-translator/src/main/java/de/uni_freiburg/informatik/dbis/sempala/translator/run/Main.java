@@ -82,7 +82,7 @@ public class Main {
 			if (commandLine.hasOption(OptionNames.DATABASE.toString())) {
 				String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 				sparkConnection = connectToSpark(database);
-				//TODO add comments
+				// set that the queries will be executed via Spark platform
 				ExecutionPlatform.getInstance(Platform.SPARK);
 			} else {
 				logger.fatal("Database is required when connecting to Spark.");
@@ -105,7 +105,7 @@ public class Main {
 					String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
 					String impalad_url = String.format("jdbc:impala://%s:%s/%s", host, port, database);
 					impalaConnection = connectToImpala(impalad_url);
-					//TODO add comments
+					// set that the queries will be executed via Impala platform
 					ExecutionPlatform.getInstance(Platform.IMPALA);
 
 				} else {
@@ -180,9 +180,9 @@ public class Main {
 			// common sparql extensions
 			for (final File fileEntry : inputFile.listFiles()) {
 				if (fileEntry.getName().matches("(.*\\.sq|.*\\.srx|.*\\.sparql|.*\\.in)$")) { // Match
-																						// only
-																						// SPARQL
-																						// extensions
+					// only
+					// SPARQL
+					// extensions
 					inputFiles.add(fileEntry);
 				}
 			}

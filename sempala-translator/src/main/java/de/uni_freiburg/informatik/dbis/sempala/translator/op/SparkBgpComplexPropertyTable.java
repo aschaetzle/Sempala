@@ -17,13 +17,19 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SQLStatement;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Schema;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.SparkComplexTripleGroup;
 
-//TODO add comments
+/**
+ * The main point of translating the BGP for Spark. It groups all triples by a
+ * subject and finds joins between them if some is needed.
+ * 
+ * @author Polina Koleva
+ *
+ */
 public class SparkBgpComplexPropertyTable extends ImpalaBGP {
 
-	 public SparkBgpComplexPropertyTable(OpBGP opBGP, PrefixMapping prefixes) {
+	public SparkBgpComplexPropertyTable(OpBGP opBGP, PrefixMapping prefixes) {
 		super(opBGP, prefixes);
 	}
-	 
+
 	@Override
 	public SQLStatement translate(String resultName) {
 		this.resultName = resultName;
@@ -52,8 +58,8 @@ public class SparkBgpComplexPropertyTable extends ImpalaBGP {
 			}
 
 			if (!tripleGroups.containsKey(key)) {
-				tripleGroups.put(key, new SparkComplexTripleGroup(this.resultName + "_"
-						+ tableNumber++, prefixes, fromTripletable));
+				tripleGroups.put(key,
+						new SparkComplexTripleGroup(this.resultName + "_" + tableNumber++, prefixes, fromTripletable));
 			}
 			tripleGroups.get(key).add(triple);
 		}
@@ -64,36 +70,23 @@ public class SparkBgpComplexPropertyTable extends ImpalaBGP {
 		group = groups.get(0);
 		groups.remove(0);
 
-
 		// joins are necessary - if more than 1 subject
 		if (groups.size() > 0) {
 			ArrayList<String> onConditions = new ArrayList<String>();
 			ArrayList<SQLStatement> rights = new ArrayList<SQLStatement>();
 			// Greedy approach: Find join partner with most shared vars.
 			Map<String, String[]> group_shifted = Schema.shiftToParent(group.getMappings(), group.getName());
-			ArrayList<String> joinVarsGroup = new ArrayList<String>();
 			while (groups.size() > 0) {
 				int index = findBestJoin(group_shifted, groups);
 				SparkComplexTripleGroup right = groups.get(index);
 				Map<String, String[]> right_shifted = Schema.shiftToParent(right.getMappings(), right.getName());
-				// for all shared variable join conditions will be added
-				ArrayList<String> joinSharedVars = JoinUtil.getSharedVars(group_shifted, right_shifted);
-				onConditions.add(JoinUtil.generateConjunction(JoinUtil
-						.getOnConditions(group_shifted, right_shifted)));
-				// if there is at least one join is needed, set the used join variables to the triple group
+				onConditions.add(JoinUtil.generateConjunction(JoinUtil.getOnConditions(group_shifted, right_shifted)));
 				group_shifted.putAll(right_shifted);
-				if (!joinSharedVars.isEmpty()) {
-					right.setJoinVars(joinSharedVars);
-					joinVarsGroup.addAll(joinSharedVars);
-				}
 				rights.add(right.translate());
 				groups.remove(index);
 
 			}
 			this.resultSchema = group_shifted;
-			if (!joinVarsGroup.isEmpty()) {
-				group.setJoinVars(joinVarsGroup);
-			}
 			Join join = new Join(getResultName(), group.translate(), rights, onConditions, JoinType.INNER);
 			join.setDistinct(true);
 			return join;
@@ -104,9 +97,10 @@ public class SparkBgpComplexPropertyTable extends ImpalaBGP {
 		this.resultSchema = group.getMappings();
 		return res;
 	}
-	
+
 	/**
 	 * Finds index of best join partner.
+	 * 
 	 * @param group_shifted
 	 * @param groups
 	 * @return index in list
@@ -116,7 +110,7 @@ public class SparkBgpComplexPropertyTable extends ImpalaBGP {
 		int index = 0;
 		for (int i = 0; i < groups.size(); i++) {
 			int sharedVars = JoinUtil.getSharedVars(group_shifted, groups.get(i).getMappings()).size();
-			if(sharedVars > best){
+			if (sharedVars > best) {
 				best = sharedVars;
 				index = i;
 			}

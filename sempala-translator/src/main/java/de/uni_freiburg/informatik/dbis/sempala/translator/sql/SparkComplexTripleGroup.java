@@ -13,22 +13,24 @@ import com.hp.hpl.jena.sparql.util.FmtUtils;
 import de.uni_freiburg.informatik.dbis.sempala.translator.ComplexPropertyTableColumns;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 
-//TODO add comments
+/**
+ * A class representing group of triples with the same subject. From them
+ * conditions in the where clause of a select are constructed. If a complex
+ * property is part of the where clause "array_contains" function is used.
+ * 
+ * @author Polina Koleva
+ *
+ */
 public class SparkComplexTripleGroup {
-	
+
 	private List<Triple> triples = new ArrayList<Triple>();
-	private List<String> joinVars = new ArrayList<String>();
-	
+
 	private String name;
 
 	public String getName() {
 		return name;
 	}
 
-	public void setJoinVars(List<String> joinVars){
-		this.joinVars = joinVars;
-	}
-	
 	// choose triplestore as predicate unbound
 	private boolean selectFromTripleStore = false;
 
@@ -76,9 +78,8 @@ public class SparkComplexTripleGroup {
 
 	public SQLStatement translate() {
 		SparkComplexSelect select = new SparkComplexSelect(this.name);
-		select.setComplexColumns(new HashMap<String,Boolean>(ComplexPropertyTableColumns.getColumns()));
-		select.setJoinVars(joinVars);
-		
+		select.setComplexColumns(new HashMap<String, Boolean>(ComplexPropertyTableColumns.getColumns()));
+
 		ArrayList<String> vars = new ArrayList<String>();
 		ArrayList<String> whereConditions = new ArrayList<String>();
 
@@ -89,7 +90,7 @@ public class SparkComplexTripleGroup {
 			Node predicate = triple.getPredicate();
 			Node object = triple.getObject();
 
-			// subject
+			/* Subject */
 			if (subjectFirstCheck) {
 				subjectFirstCheck = false;
 				// only check subject once per group
@@ -105,7 +106,7 @@ public class SparkComplexTripleGroup {
 				}
 			}
 
-			// predicate
+			/* Predicate */
 			if (predicate.isURI()) {
 				// predicate is bound -> add to Filter
 				String predicateString = FmtUtils.stringForNode(predicate, this.prefixMapping);
@@ -116,7 +117,7 @@ public class SparkComplexTripleGroup {
 				vars.add(predicateString);
 			}
 
-			// object
+			/* Object */
 			if (object.isURI() || object.isLiteral() || object.isBlank()) {
 				String stringObject = FmtUtils.stringForNode(object, this.prefixMapping);
 
@@ -128,7 +129,8 @@ public class SparkComplexTripleGroup {
 				String condition = "";
 				if (selectFromTripleStore) {
 					condition = Tags.OBJECT_COLUMN_NAME + " = '" + stringObject + "'";
-					// is complex type
+					// is complex property search using array_contains function
+					// array_contains(<complex column>,<searchedString>)
 				} else if (ComplexPropertyTableColumns.getColumns().get(predicateStringFiltered)) {
 					condition = "array_contains(" + predicateStringFiltered + ", '" + stringObject + "')";
 				} else {
@@ -168,7 +170,7 @@ public class SparkComplexTripleGroup {
 		temp.putAll(this.mapping);
 		return temp;
 	}
-	
+
 	public void setMapping(Map<String, String[]> mapping) {
 		this.mapping = mapping;
 	}

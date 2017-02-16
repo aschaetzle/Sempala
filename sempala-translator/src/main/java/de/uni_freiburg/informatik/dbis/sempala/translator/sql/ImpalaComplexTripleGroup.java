@@ -20,7 +20,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
  * @author neua
  *
  */
-public class ComplexTripleGroup {
+public class ImpalaComplexTripleGroup {
 
 	private List<Triple> triples = new ArrayList<Triple>();
 
@@ -47,7 +47,7 @@ public class ComplexTripleGroup {
 	// in the mapping we will add <<sVariable, s>, <oVariable, o>>
 	private Map<String, String[]> mapping = new HashMap<String, String[]>();
 
-	public ComplexTripleGroup(String tablename, PrefixMapping mapping,
+	public ImpalaComplexTripleGroup(String tablename, PrefixMapping mapping,
 			boolean selectFromTripleStore) {
 		this.name = tablename;
 		this.prefixMapping = mapping;
@@ -95,7 +95,7 @@ public class ComplexTripleGroup {
 	}
 
 	public SQLStatement translate() {
-		ComplexSelect select = new ComplexSelect(this.name);
+		ImpalaComplexSelect select = new ImpalaComplexSelect(this.name);
 		select.setComplexColumns(new HashMap<String,Boolean>(ComplexPropertyTableColumns.getColumns()));
 		
 		// if one of the properties is a complex one, set the select accordingly
@@ -219,7 +219,7 @@ public class ComplexTripleGroup {
 		return select;
 	}
 
-	public int getSharedVars(ComplexTripleGroup other) {
+	public int getSharedVars(ImpalaComplexTripleGroup other) {
 		return JoinUtil.getSharedVars(this.mapping, other.getMappings()).size();
 	}
 
@@ -227,7 +227,7 @@ public class ComplexTripleGroup {
 	 * Join with another TripleGroup.
 	 */
 
-	public void join(ComplexTripleGroup other) {
+	public void join(ImpalaComplexTripleGroup other) {
 		for (String entry : other.mapping.keySet()) {
 			if (!mapping.containsKey(entry)) {
 				mapping.put(entry, other.mapping.get(entry));
