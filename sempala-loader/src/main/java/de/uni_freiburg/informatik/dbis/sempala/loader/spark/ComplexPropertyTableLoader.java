@@ -135,59 +135,14 @@ public class ComplexPropertyTableLoader {
 	 */
 	public void buildTripleTable() {
 
-		// create initial table from a rdf file
-		final String tablename_external_tripletable = "external_tripletable";
-		String createExternalTable = String.format(
+		String createTripleTable = String.format(
 				"CREATE EXTERNAL TABLE %s(%s STRING, %s STRING, %s STRING) ROW FORMAT DELIMITED"
 						+ " FIELDS TERMINATED BY '%s'  LINES TERMINATED BY '%s' LOCATION '%s'",
-				tablename_external_tripletable, column_name_subject, column_name_predicate, column_name_object,
+						tablename_triple_table, column_name_subject, column_name_predicate, column_name_object,
 				field_terminator, line_terminator, hdfs_input_directory);
 
-		this.hiveContext.sql(createExternalTable);
+		this.hiveContext.sql(createTripleTable);
 
-		// Strip point if necessary (four slashes: one escape for java one for
-		// sql
-		String column_name_object_dot_stripped = (strip_dot)
-				? String.format("regexp_replace(%s, '\\\\s*\\\\.\\\\s*$', '')", column_name_object)
-				: column_name_object;
-
-		// select from the initial triple table replacing the prefixes
-		StringBuilder selectStatement = new StringBuilder();
-		selectStatement.append("SELECT ");
-		if (unique) {
-			selectStatement.append("DISTINCT ");
-		}
-
-		String projectionSubject = null;
-		String projectionObject = null;
-		String projectionPredicate = null;
-
-		// Replace prefixes
-		if (prefix_map != null) {
-			// Build a select statement _WITH_ prefix replaced values
-			projectionSubject = prefixHelper(column_name_subject, prefix_map);
-			projectionObject = prefixHelper(column_name_object_dot_stripped, prefix_map);
-			projectionPredicate = prefixHelper(column_name_predicate, prefix_map);
-
-		} else {
-			// Build a select statement _WITH_OUT_ prefix replaced values
-			projectionSubject = column_name_subject;
-			projectionObject = column_name_object_dot_stripped;
-			projectionPredicate = column_name_predicate;
-		}
-		selectStatement.append(projectionSubject + " AS " + column_name_subject + ", ");
-		selectStatement.append(projectionPredicate + " AS " + column_name_predicate + ", ");
-		selectStatement.append(projectionObject + " AS " + column_name_object);
-		selectStatement.append(" FROM " + tablename_external_tripletable);
-		DataFrame triples = this.hiveContext.sql(selectStatement.toString());
-
-		// save triples with prefixes replaced
-		triples.write().mode(SaveMode.Overwrite).saveAsTable(tablename_triple_table);
-
-		// Drop intermediate tables
-		if (!keep) {
-			dropTables(tablename_external_tripletable);
-		}
 	}
 
 	/**
