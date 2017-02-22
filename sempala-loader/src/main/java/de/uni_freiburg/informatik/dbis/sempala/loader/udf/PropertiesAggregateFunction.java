@@ -146,7 +146,7 @@ public class PropertiesAggregateFunction extends UserDefinedAggregateFunction {
 
 			String key1 = sortedKeys1[i];
 			String key2 = sortedKeys2[j];
-			int comparisonKeys = key1.compareTo(key1);
+			int comparisonKeys = key1.compareTo(key2);
 
 			// the two list for the same key have to be merged (duplicates
 			// inside the lists ignored)
