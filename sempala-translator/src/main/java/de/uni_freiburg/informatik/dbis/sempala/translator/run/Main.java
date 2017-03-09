@@ -204,6 +204,12 @@ public class Main {
 		if (commandLine.hasOption(OptionNames.BENCHMARK.toString())) {
 			isBenchmark = true;
 		}
+		
+		// check if the results should be stored or just counted
+		boolean isCount = false;
+		if (commandLine.hasOption(OptionNames.COUNT.toString())) {
+			isCount = true;
+		}
 
 		for (final File file : inputFiles) {
 
@@ -212,7 +218,6 @@ public class Main {
 			// Translate the SPARQL query either for Spark or for Impala
 			translator.setInputFile(file.getAbsolutePath());
 			String sqlString = translator.translateQuery();
-
 			// Construct the name of the new result table for the current query
 			String resultsTableName = constructResultTableName(translator.getFormat(), file.getName(),
 					translator.result_table_name);
@@ -222,7 +227,7 @@ public class Main {
 			if (impalaConnection != null) {
 				// Run the translated query with impala and put it into the
 				// unique results table
-				result = runQueryWithImpala(impalaConnection, sqlString, resultsTableName, isBenchmark);
+				result = runQueryWithImpala(impalaConnection, sqlString, resultsTableName, isBenchmark, isCount);
 			} else if (sparkConnection != null) {
 				// Run the translated query with spark and put it into the
 				// unique results table
@@ -247,7 +252,6 @@ public class Main {
 			// store the result for each query in a file
 			appendQueryResults("TableOfResults.txt", resultsTableName, executionTime, nrTuples);
 		}
-
 	}
 
 	/**
@@ -299,39 +303,60 @@ public class Main {
 	 * @param isBenchmark is the query is run with benchmark purposes.
 	 */
 	public static HashMap<String, Long> runQueryWithImpala(Connection impalaConnection, String sqlQuery,
-			String resultsTableName, boolean isBenchmark) {
+			String resultsTableName, boolean isBenchmark, boolean isCount) {
 		long executionTime = 0;
 		long nrTuples = 0;
+
 		try {
 			// Sleep a second to give impalad some time to calm down
-			Thread.sleep(10000);
+			Thread.sleep(3000);
+			if(isCount){
+				// Execute the query
+				long startTime = System.currentTimeMillis();
+				ResultSet result = impalaConnection.createStatement().executeQuery(String.format("SELECT COUNT (*) FROM (%s) tabletemp ;",
+						sqlQuery));
+				executionTime = System.currentTimeMillis() - startTime;
+				System.out.print(String.format(" %s ms", executionTime));
 
-			// Execute the query
-			long startTime = System.currentTimeMillis();
-			impalaConnection.createStatement().executeUpdate(String.format("CREATE TABLE %s.%s AS (%s);",
-					Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlQuery));
-			executionTime = System.currentTimeMillis() - startTime;
-			System.out.print(String.format(" %s ms", executionTime));
+				// Sleep a second to give impalad some time to calm down
+				Thread.sleep(3000);
+				result.next();
+				
+				long tableSize = result.getLong(1);
+				nrTuples = tableSize;
+				System.out.println(String.format(" %s pc", tableSize));
 
-			// Sleep a second to give impalad some time to calm down
-			Thread.sleep(10000);
+				// Sleep a second to give impalad some time to calm down
+				Thread.sleep(3000);
+			}
+			else {
 
-			// Count the results
-			ResultSet result = impalaConnection.createStatement().executeQuery(
-					String.format("SELECT COUNT(*) FROM %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
-			result.next();
-			long tableSize = result.getLong(1);
-			nrTuples = tableSize;
-			System.out.println(String.format(" %s pc", tableSize));
+				// Execute the query
+				long startTime = System.currentTimeMillis();
+				impalaConnection.createStatement().execute(String.format("CREATE TABLE %s.%s AS %s", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlQuery));
+				executionTime = System.currentTimeMillis() - startTime;
+				System.out.print(String.format(" %s ms", executionTime));
 
-			// Sleep a second to give impalad some time to calm down
-			Thread.sleep(10000);
+				// Sleep a second to give impalad some time to calm down
+				Thread.sleep(3000);
 
-			// Immediately delete the results if this is just a
-			// benchmark run
-			if (isBenchmark) {
-				impalaConnection.createStatement().executeUpdate(
-						String.format("DROP TABLE IF EXISTS %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
+				// Count the results
+				ResultSet result = impalaConnection.createStatement().executeQuery(
+						String.format("SELECT COUNT(*) FROM %s.%s;", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
+				result.next();
+				long tableSize = result.getLong(1);
+				nrTuples = tableSize;
+				System.out.println(String.format(" %s pc", tableSize));
+
+				// Sleep a second to give impalad some time to calm down
+				Thread.sleep(3000);
+
+				// Immediately delete the results if this is just a
+				// benchmark run
+				if (isBenchmark) {
+					impalaConnection.createStatement().executeUpdate(String.format("DROP TABLE IF EXISTS %s.%s;",
+							Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
+				}
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -340,6 +365,7 @@ public class Main {
 			e.printStackTrace();
 			System.exit(1);
 		}
+
 		HashMap<String, Long> results = new HashMap<String, Long>();
 		results.put("executionTime", executionTime);
 		results.put("nrTuples", nrTuples);
@@ -448,7 +474,7 @@ public class Main {
 	 * Impala output script file
 	 */
 	public enum OptionNames {
-		BENCHMARK, EXPAND, DATABASE, FORMAT, HELP, HOST, INPUT, OPTIMIZE, PORT, RESULT_TABLE_NAME, THRESHOLD;
+		BENCHMARK, COUNT, EXPAND, DATABASE, FORMAT, HELP, HOST, INPUT, OPTIMIZE, PORT, RESULT_TABLE_NAME, THRESHOLD;
 
 		@Override
 		public String toString() {
@@ -466,6 +492,8 @@ public class Main {
 		Options options = new Options();
 
 		options.addOption("b", OptionNames.BENCHMARK.toString(), false, "Just print runtimes and delete results.");
+		
+		options.addOption("c", OptionNames.COUNT.toString(), false, "COUNT result without storing the table.");
 
 		options.addOption("e", OptionNames.EXPAND.toString(), false, "Expand URI prefixes.");
 
