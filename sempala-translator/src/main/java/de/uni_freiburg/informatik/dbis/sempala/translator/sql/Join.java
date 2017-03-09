@@ -25,13 +25,13 @@ public class Join extends SQLStatement {
 		HashSet<String> added = new HashSet<String>();
 		this.wrapper = new Select(tablename);
 		for (String key: left.getSelectors().keySet()) {
-//			String[] selector = left.getSelectors().get(key);
-//			String name = "";
-//			if(selector.length > 1){
-//				name = selector[1];
-//			} else{
-//				name = selector[0];
-//			}
+			String[] selector = left.getSelectors().get(key);
+			String name = "";
+			if(selector.length > 1){
+				name = selector[1];
+			} else{
+				name = selector[0];
+			}
 			if (!added.contains(key)) {
 				added.add(key);
 				wrapper.addSelector(key, new String[] { left.getName() ,key });
@@ -39,13 +39,13 @@ public class Join extends SQLStatement {
 		}
 		for (SQLStatement right : rights) {
 			for (String key: right.getSelectors().keySet()) {
-//				String[] selector = right.getSelectors().get(key);
-//				String name = "";
-//				if(selector.length > 1){
-//					name = selector[1];
-//				} else{
-//					name = selector[0];
-//				}
+				String[] selector = right.getSelectors().get(key);
+				String name = "";
+				if(selector.length > 1){
+					name = selector[1];
+				} else{
+					name = selector[0];
+				}
 				if (!added.contains(key)) {
 					added.add(key);
 					wrapper.addSelector(key, new String[] { right.getName(), key });
