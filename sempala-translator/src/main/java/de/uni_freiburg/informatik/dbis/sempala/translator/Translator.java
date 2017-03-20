@@ -56,7 +56,10 @@ public class Translator {
 	private boolean filterOptimizer = true;
 	
 	/** The value of threshold*/
-	public static String threshold;
+	public static double threshold;
+	
+	/** The value of threshold*/
+	public static boolean StraighJoin = false;
 	
 	/** The value of result table name */
 	public String result_table_name = "extvp";
@@ -263,4 +266,20 @@ public class Translator {
 	public void setFormat(Format format) {
 		this.format = format;
 	}
+	
+	public void setStraightJoin(boolean StraightJoin) {
+		this.StraighJoin = StraightJoin;
+	}
+	
+	public void setThreshold(String Threshold) {
+		try {
+			threshold = Double.parseDouble(Threshold);
+			if (threshold <= 0)
+				throw new IllegalArgumentException();
+		} catch (Exception e) {
+			System.out.print(String.format("Threshold '%s' is not a proper value as threshold", threshold));
+			System.exit(1);
+		}
+	}
+	
 }
