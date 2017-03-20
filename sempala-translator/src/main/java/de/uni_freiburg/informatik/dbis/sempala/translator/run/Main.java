@@ -134,7 +134,11 @@ public class Main {
 
 		// Set Threshold
 		if (commandLine.hasOption(OptionNames.THRESHOLD.toString()))
-			translator.threshold = commandLine.getOptionValue(OptionNames.THRESHOLD.toString());
+			translator.setThreshold(commandLine.getOptionValue(OptionNames.THRESHOLD.toString()));;
+		
+		// Set Join Order
+		if (commandLine.hasOption(OptionNames.STRAIGHJOIN.toString()))
+			translator.setStraightJoin(true);
 
 		// Set Result Table Name
 		if (commandLine.hasOption(OptionNames.RESULT_TABLE_NAME.toString()))
@@ -474,7 +478,7 @@ public class Main {
 	 * Impala output script file
 	 */
 	public enum OptionNames {
-		BENCHMARK, COUNT, EXPAND, DATABASE, FORMAT, HELP, HOST, INPUT, OPTIMIZE, PORT, RESULT_TABLE_NAME, THRESHOLD;
+		BENCHMARK, COUNT, EXPAND, DATABASE, FORMAT, HELP, HOST, INPUT, OPTIMIZE, PORT, RESULT_TABLE_NAME, THRESHOLD, STRAIGHJOIN;
 
 		@Override
 		public String toString() {
@@ -522,7 +526,10 @@ public class Main {
 
 		options.addOption("rn", OptionNames.RESULT_TABLE_NAME.toString(), true,
 				"Result Table Name format if results tables are stored.");
-
+		
+		options.addOption("s", OptionNames.STRAIGHJOIN.toString(), false,
+				"Executes query with Straight join. Default (Impala sets the join order of tables)");
+		
 		options.addOption("t", OptionNames.THRESHOLD.toString(), true,
 				"Threshold of ExtVP if ExtVP format is selected. Default (SF=1)");
 
