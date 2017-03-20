@@ -1,6 +1,7 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.op;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -22,10 +23,11 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.sql.Select;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 
 /**
-*
-* @author Lis Bakalli <bakallil@informatik.uni-freiburg.de>
-*
-*/
+ * Impala BgpExtVPMultiTable class selects the best ExtVP table for each triple pattern and 
+ * joins these tables based on their correlation.
+ * @author Lis Bakalli <bakallil@informatik.uni-freiburg.de>
+ *
+ */
 
 public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 
@@ -33,7 +35,8 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	private Map<Triple, String> ListOfExtVPTriples = new HashMap<Triple, String>();
 	private Map<String, List<String>> invertedVarIndex;
 	private List<Triple> QueryTriples;
-	double Threshold = 1.0;	
+	double Threshold = Translator.threshold;
+	Join join = null;
 
 	public ImpalaBgpExtVPMultiTable(OpBGP opBGP, PrefixMapping prefixes) {
 		super(opBGP, prefixes);
@@ -44,7 +47,6 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 		long startTimeFindExtvp = System.currentTimeMillis();
 		this.resultName = resultName;
 
-		setThreshold(Translator.threshold);
 		QueryTriples = opBGP.getPattern().getList();
 		// empty PrefixMapping when prefixes should be expanded
 		if (expandPrefixes)
@@ -83,8 +85,8 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 				} else {
 					int IndexOfTriple = Extvptable_Triple.indexOf(" ");
 					String Extvptable = Extvptable_Triple.substring(0, IndexOfTriple);
-					 if(IsEmpty(Extvptable))
-						 break;
+					if (IsEmpty(Extvptable))
+						break;
 					String ExtvptableType = Extvptable.substring(Extvptable.length() - 2, Extvptable.length());
 					String Query = String.format(
 							"SELECT extvptable_sf FROM extvp_tableofstats_%s WHERE extvptable_name = '%s';",
@@ -98,7 +100,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 							min_sel = SF;
 						}
 					} catch (Exception e) {
-						break;
+//						break;
 					}
 				}
 			}
@@ -113,9 +115,12 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	}
 
 	/**
-	 * Create On Conditions for join between ExtVP tables depending on the triples.
-	 *  
-	 * @param TripleConditions - Use Conditions between triples to build the inverted index of variables.
+	 * Create On Conditions for join between ExtVP tables depending on the
+	 * triples.
+	 * 
+	 * @param TripleConditions
+	 *            - Use Conditions between triples to build the inverted index
+	 *            of variables.
 	 * @return
 	 */
 	private List<String> CreateonConditions(Map<String, List<String>> TripleConditions) {
@@ -143,13 +148,16 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 				}
 			}
 		}
+		Collections.sort(onCondition);
 		return onCondition;
 	}
-	
+
 	/**
-	 * Get only the ExtVP table or triple table without the corresponding triple of join.
+	 * Get only the ExtVP table or triple table without the corresponding triple
+	 * of join.
 	 * 
-	 * @param Table - Table which is modified.
+	 * @param Table
+	 *            - Table which is modified.
 	 * @return
 	 */
 	private String RemoveTripleNumber(String Table) {
@@ -171,6 +179,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 		SQLStatement first = null;
 		List<SQLStatement> rights = new ArrayList<>();
 		Map<String, List<String>> TripleConditions = new HashMap<String, List<String>>();
+		
 
 		for (int i = 0; i < QueryTriples.size(); i++) {
 			List<String> onConditions = new ArrayList<>();
@@ -178,42 +187,55 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 			Triple T = QueryTriples.get(i);
 			String From = RemoveTripleNumber(ListOfExtVPTriples.get(T));
 			if (!From.startsWith("extvp_")) {
-				stmt.addWhereConjunction(Tags.PREDICATE_COLUMN_NAME + "='" + From + "'");
+				if (From.contains("http://")) {
+					int index = From.lastIndexOf("/");
+					From = From.substring(index + 1);
+					stmt.addWhereConjunction(Tags.PREDICATE_COLUMN_NAME + "='" + From + "'");
+				} else
+					stmt.addWhereConjunction(Tags.PREDICATE_COLUMN_NAME + "='" + From + "'");
 				stmt.setFrom(Tags.TABLENAME_TRIPLE_TABLE);
 			} else
 				stmt.setFrom(From);
 			if (T.getSubject().isLiteral())
-				stmt.addWhereConjunction(Tags.SUBJECT_COLUMN_NAME + "=" + T.getSubject().toString().replace("\"", "\'"));
+				stmt.addWhereConjunction(Tags.SUBJECT_COLUMN_NAME + "='"
+						+ T.getSubject().toString().substring(1, T.getSubject().toString().length() - 1) + "'");
 			else {
 				stmt.addSelector(T.getSubject().getName(), new String[] { Tags.SUBJECT_COLUMN_NAME });
 				onConditions.add(T.getSubject().getName());
 			}
 			if (T.getObject().isLiteral())
-				stmt.addWhereConjunction(Tags.OBJECT_COLUMN_NAME + "=" + T.getObject().toString().replace("\"", "\'"));
+				stmt.addWhereConjunction(Tags.OBJECT_COLUMN_NAME + "='"
+						+ T.getObject().toString().substring(1, T.getObject().toString().length() - 1) + "'");
 			else {
 				stmt.addSelector(T.getObject().getName(), new String[] { Tags.OBJECT_COLUMN_NAME });
 				onConditions.add(T.getObject().getName());
 			}
-			if (i == 0)
+			if (i == 0){
 				first = stmt;
-			else
+				TripleConditions.put("T" + String.valueOf(i), onConditions);
+			}
+			else {
 				rights.add(stmt);
-			TripleConditions.put("T" + String.valueOf(i), onConditions);
+				TripleConditions.put("T" + String.valueOf(i), onConditions);
+			}
 		}
-		Join join = new Join("extvp", first, rights, CreateonConditions(TripleConditions), JoinType.INNEREXTVP);
-
+		if (!Translator.StraighJoin)
+			join = new Join("extvp", first, rights, CreateonConditions(TripleConditions), JoinType.INNEREXTVP);
+		else
+			join = new Join("extvp", first, rights, CreateonConditions(TripleConditions), JoinType.STRAIGHEXTVP);
 		this.resultName = join.getName();
 		for (String var : invertedVarIndex.keySet())
 			this.resultSchema.put(var, new String[0]);
 
 		return join;
 	}
-	
+
 	/**
-	 * Use defined prefixes for making predicates compatible with 
-	 * ExtVP table naming.
+	 * Use defined prefixes for making predicates compatible with ExtVP table
+	 * naming.
 	 * 
-	 * @param Predicate - Predicate to be renamed.
+	 * @param Predicate
+	 *            - Predicate to be renamed.
 	 * @return
 	 */
 	private String PrefixforExtVP(Node Predicate) {
@@ -224,22 +246,29 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 		String URI = URIPredicate.substring(0, index + 1);
 		String Pred = URIPredicate.substring(index + 1, URIPredicate.length());
 		String Prefix = prefixes.getNsURIPrefix(URI);
-		if(Prefix==null){
-			String RenamedURI = URI.replaceAll("[<>/.`~,\\s\\-:\\?]", "_");
-			return RenamedURI + Pred;
-		}
-		else
-		return Prefix + "_" + Pred;
+		if (Prefix == null) {
+			if (URI.contains("http"))
+				return "_" + Pred + "_".replaceAll("[<>/.`~,\\s\\-:\\?]", "_");
+			else {
+				String RenamedURI = URI.replaceAll("[<>/.`~,\\s\\-:\\?]", "_");
+				return RenamedURI + Pred;
+			}
+		} else
+			return Prefix + "_" + Pred;
 	}
-	
+
 	/**
 	 * Compare two triples to see if they are joined by Subject or Object.
 	 * Returns list of possible ExtVP tables to be seleced in query.
 	 * 
-	 * @param T1 - First triple.
-	 * @param i - Position of first triple in list of triples.
-	 * @param T2 - Second triple.
-	 * @param j - Position of second triple in list of triples.
+	 * @param T1
+	 *            - First triple.
+	 * @param i
+	 *            - Position of first triple in list of triples.
+	 * @param T2
+	 *            - Second triple.
+	 * @param j
+	 *            - Position of second triple in list of triples.
 	 */
 	private void CompareTriples(Triple T1, int i, Triple T2, int j) {
 		ArrayList<String> ExtVpsT1 = new ArrayList<String>();
@@ -291,29 +320,17 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	}
 
 	/**
-	 * Read value of threshold from CLI.
-	 */
-	private void setThreshold(String threshold) {
-		try {
-			Threshold = Double.parseDouble(threshold);
-			if (Threshold <= 0)
-				throw new IllegalArgumentException();
-		} catch (Exception e) {
-			System.out.print(String.format("Threshold '%s' is not a proper value as threshold", threshold));
-			System.exit(1);
-		}
-	}
-
-	/**
 	 * Define what happens when empty possible ExtVP tables are found.
 	 * 
-	 * @param ExtvpTable - ExtVP table to be checked if empty.
+	 * @param ExtvpTable
+	 *            - ExtVP table to be checked if empty.
 	 * @return
 	 */
-	private boolean IsEmpty(String ExtvpTable){
-		double NrTuples=1;
+	private boolean IsEmpty(String ExtvpTable) {
+		double NrTuples = 1;
 		String Query = String.format(
-				"SELECT COUNT(*) AS NrTuples FROM extvp_tableofstats_emptytable WHERE ExtVPTable_Name = '%s';", ExtvpTable);
+				"SELECT COUNT(*) AS NrTuples FROM extvp_tableofstats_emptytable WHERE ExtVPTable_Name = '%s';",
+				ExtvpTable);
 		try {
 			ResultSet result = Main.impalaConnection.createStatement().executeQuery(Query);
 			result.next();
@@ -321,7 +338,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		if(NrTuples != 0)
+		if (NrTuples != 0)
 			return true;
 		else
 			return false;
