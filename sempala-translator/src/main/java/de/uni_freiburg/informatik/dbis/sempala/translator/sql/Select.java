@@ -3,6 +3,7 @@ package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 import java.util.HashMap;
 import java.util.Map;
 
+import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 import de.uni_freiburg.informatik.dbis.sempala.translator.sql.ExecutionPlatform.Platform;
 
 public class Select extends SQLStatement {
@@ -52,6 +53,9 @@ public class Select extends SQLStatement {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("");
+		if(Translator.StraighJoin)
+			sb.append("(\nSELECT STRAIGHT_JOIN");
+		else
 		sb.append("(\nSELECT");
 		if (isDistinct)
 			sb.append(" DISTINCT");
