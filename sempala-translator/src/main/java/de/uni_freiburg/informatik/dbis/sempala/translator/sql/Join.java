@@ -58,7 +58,7 @@ public class Join extends SQLStatement {
 	public String toString() {
 		StringBuilder sb = new StringBuilder("");
 		sb.append(left.toNamedString());
-		if (this.type == JoinType.INNEREXTVP) {
+		if (this.type == JoinType.INNER) {
 			for (int i = 0; i < rights.size(); i++) {
 				SQLStatement right = rights.get(i);
 				sb.append(" JOIN ");
@@ -76,7 +76,34 @@ public class Join extends SQLStatement {
 					sb.append(" ");
 				}
 			}
-		} else {
+		}
+		else if (this.type == JoinType.INNEREXTVP) {
+			for (int i = 0; i < rights.size(); i++) {
+				SQLStatement right = rights.get(i);
+				sb.append(" JOIN ");
+				sb.append(right.toNamedString());
+			}
+			for (int i = 0; i < onStrings.size(); i++) {
+				String onString = onStrings.get(i);
+				if (i == 0) {
+					sb.append(" ON ");
+					sb.append(onString);
+					sb.append(" ");
+				} else {
+					sb.append(" AND ");
+					sb.append(onString);
+					sb.append(" ");
+				}
+			}
+		}
+		else if (this.type == JoinType.STRAIGHEXTVP) {
+			for (int i = 0; i < rights.size(); i++) {
+				SQLStatement right = rights.get(i);
+				sb.append(" INNER JOIN ");
+				sb.append(right.toNamedString());
+			}
+		}
+		else {
 			for (int i = 0; i < rights.size(); i++) {
 				SQLStatement right = rights.get(i);
 				String onString = onStrings.get(i);
