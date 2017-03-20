@@ -4,5 +4,6 @@ public enum JoinType {
 	INNER,
 	LEFT,
 	CROSS,
-	INNEREXTVP
+	INNEREXTVP,
+	STRAIGHEXTVP
 }
