@@ -1,6 +1,7 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,11 +14,12 @@ import com.hp.hpl.jena.sparql.util.FmtUtils;
 import de.uni_freiburg.informatik.dbis.sempala.translator.ComplexPropertyTableColumns;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
 
-//TODO change comments
+
 /**
- * Group of triples within a BGP.
+ * Group of triples within a BGP (same subject). Every Triple Group when translated produces a single query.
+ * It exposes information about the variables that could be joined with other groups.
  *
- * @author neua
+ * @author Matteo Cossu
  *
  */
 public class ImpalaComplexTripleGroup {
@@ -30,12 +32,6 @@ public class ImpalaComplexTripleGroup {
 	public String getName() {
 		return name;
 	}
-
-	/**
-	 * If the same predicate is selected twice, then a cross join is needed.
-	 */ 
-	ArrayList<Triple> crossjoin = new ArrayList<Triple>();
-	private Map<String, String[]> crossJoinMapping = new HashMap<String, String[]>();
 
 	// choose triplestore as predicate unbound
 	private boolean selectFromTripleStore = false;
@@ -60,6 +56,47 @@ public class ImpalaComplexTripleGroup {
 
 	}
 
+	/*
+	 * Jena tries to return full URI, even if prefix are not used 
+	 * it tries to add itself a path that is unknown in the loading phase.
+	 * The function solves this problem by extracting the correct values from
+	 * the queries.
+	 */
+	private String getPropertyFromURI(String uri, boolean isNotColumnName) {
+		String property = uri;
+		
+		// strip the base of the URI
+		if (uri.contains("/")){
+			String[] splitted = uri.split("/");
+			property = splitted[splitted.length - 1];
+			
+			// return the object with the brackets if is not a property
+			if (property.endsWith(">") && isNotColumnName)
+				return "<" + property;
+		}
+		
+		// safety check
+		if (isNotColumnName)
+			return property;
+		
+		// strip the brackets if present
+		if(property.startsWith("<") && !isNotColumnName)
+			property = property.substring(1);
+		if(property.endsWith(">") && !isNotColumnName)
+			property = property.substring(0, property.length() -1);
+		
+		// transform  all the invalid characters with underscore
+		return SpecialCharFilter.filter(property);
+		
+	}
+	
+	/**
+	 * From a triple the method extracts the variable names 
+	 * and the columns to be selected from the table referring to that variable.
+	 * 
+	 * @param t
+	 * @return
+	 */
 	private HashMap<String, String[]> getMappingVarsOfTriple(Triple t) {
 		HashMap<String, String[]> result = new HashMap<String, String[]>();
 		Node subject = t.getSubject();
@@ -80,12 +117,9 @@ public class ImpalaComplexTripleGroup {
 						new String[] { Tags.OBJECT_COLUMN_NAME });
 			} else {
 				String objectString = object.getName();
-				String predicateString = FmtUtils
-						.stringForNode(predicate, prefixMapping);
+				String predicateString = getPropertyFromURI(FmtUtils
+						.stringForNode(predicate, prefixMapping), false);
 				
-				// TODO ask why are we doing this here. Please add comment
-				if(predicateString.startsWith("<") && predicateString.endsWith(">"))
-					predicateString = predicateString.substring(1, predicateString.length() -1);
 				
 				result.put(objectString, new String[] { SpecialCharFilter
 						.filter(predicateString) });
@@ -94,14 +128,21 @@ public class ImpalaComplexTripleGroup {
 		return result;
 	}
 
+	
+	/*
+	 * Produce the SQL query for the TripleGroup
+	 */
 	public SQLStatement translate() {
 		ImpalaComplexSelect select = new ImpalaComplexSelect(this.name);
+		
+		// give the information about the complex columns to the select
 		select.setComplexColumns(new HashMap<String,Boolean>(ComplexPropertyTableColumns.getColumns()));
 		
 		// if one of the properties is a complex one, set the select accordingly
 		for (int i = 0; i < triples.size(); i++) {
-			String predicateString = FmtUtils.stringForNode(triples.get(i).getPredicate(), this.prefixMapping);
-			if(select.is_complex_column.get(SpecialCharFilter.filter(predicateString))){
+			String predicateString = getPropertyFromURI(FmtUtils
+					.stringForNode(triples.get(i).getPredicate(), prefixMapping), false);
+			if(select.is_complex_column.get(predicateString)){
 					select.setComplexVariables();
 					break;
 			}
@@ -111,16 +152,17 @@ public class ImpalaComplexTripleGroup {
 		ArrayList<String> vars = new ArrayList<String>();
 		ArrayList<String> whereConditions = new ArrayList<String>();
 		boolean first = true;
+		
+		// for each triple collect variables and nodes to be selected or
+		// filtered in the query
 		for (int i = 0; i < triples.size(); i++) {
 			Triple triple = triples.get(i);
 			Node subject = triple.getSubject();
 			Node predicate = triple.getPredicate();
 			Node object = triple.getObject();
-
 			if (first) {
 				first = false;
 				// only check subject once per group
-				// TODO WHat does it mean that the node is blank
 				if (subject.isURI() || subject.isBlank()) {
 					// subject is bound -> add to Filter
 					String subjectString = FmtUtils
@@ -137,64 +179,99 @@ public class ImpalaComplexTripleGroup {
 			}
 			
 			if (predicate.isURI()) {
+				boolean deleteActualTriple = false;
 				
-				// TODO why we do that as we already when we add a new triple check for triples with same predicate
-				// cross join needed?
+				// the same predicate is requested twice -> need to have CROSS JOINS 
 				int index = searchTripleSamePredicate(i);
 				while (index != -1) {
-					crossjoin.add(triples.get(index));
-					triples.remove(index);
+					
+					Triple otherTriple = triples.get(index);
+					Node otherObject = otherTriple.getObject();
+					Node otherPredicate = otherTriple.getPredicate();
+					
+					// if a duplicate triple is found and is not a variable
+					// delete it from the list but add it to the cross join list
+					if (otherObject.isURI() || otherObject.isLiteral() || otherObject.isBlank()){
+						String objectString =  getPropertyFromURI(
+								FmtUtils.stringForNode(otherObject, this.prefixMapping), true)	;
+						String predString = getPropertyFromURI(FmtUtils
+								.stringForNode(otherPredicate, prefixMapping), false);
+						if (select.crossProperties.containsKey(predString))
+							select.crossProperties.get(predString).add(objectString);
+						else
+							select.crossProperties.put(predString, new ArrayList<String>(Arrays.asList(objectString)));
+						triples.remove(index);	
+					}
+					// if the actual triple is not a variable 
+					// delete it from the list but add it to the cross join list
+					if (object.isURI() || object.isLiteral() || object.isBlank()){
+						// add to the special list to be crossjoined
+						String objectString =  getPropertyFromURI(
+								FmtUtils.stringForNode(object, this.prefixMapping), true);
+						
+						String predString = getPropertyFromURI(FmtUtils
+								.stringForNode(predicate, prefixMapping), false);
+						if (select.crossProperties.containsKey(predString))
+							select.crossProperties.get(predString).add(objectString);
+						else
+							select.crossProperties.put(predString, new ArrayList<String>(Arrays.asList(objectString)));
+						triples.remove(i);
+						deleteActualTriple = true;
+						break;
+					} 
+					
 					index = searchTripleSamePredicate(i);
+					
 				}
-				
+				// if actual triple was deleted, adjust the loop accordingly
+				// otherwise one element will be skipped
+				if(deleteActualTriple){
+					i--;
+					continue;
+				}
+					
 				// predicate is bound -> add to Filter
-				String predicateString = FmtUtils
-						.stringForNode(predicate, this.prefixMapping);
-				
-				//TODO add comments why we have this
-				if(predicateString.startsWith("<") && predicateString.endsWith(">"))
-					predicateString = predicateString.substring(1, predicateString.length() -1);
+				String predicateString = getPropertyFromURI(FmtUtils
+						.stringForNode(predicate, this.prefixMapping), false);
 				
 				whereConditions.add(SpecialCharFilter.filter(predicateString)
 						+ " IS NOT NULL");
 
 			} else {
 				String predicateString = predicate.getName();
-				
-				// TODO what is this? add comment
-				if(predicateString.endsWith(">"))
-					predicateString = predicateString.substring(0, predicateString.length() -1);
 				vars.add(predicateString);
 			}
 			
 			if (object.isURI() || object.isLiteral() || object.isBlank()) {
-				String string = FmtUtils.stringForNode(object,
-						this.prefixMapping);
+				String string =  getPropertyFromURI(FmtUtils.stringForNode(object,
+						this.prefixMapping),  true);
 				
+				/**
+				 * this is commented because getValue() of a literal removes the language tag
+				 * that is instead registered in the input complex property table.
+				 * Could be solved in a more general way in future.
 				if (object.isLiteral()) {
 					string = "" + object.getLiteral().getValue();
-				}
+				} 
+				*/
+				
 				String condition = "";
 				if (selectFromTripleStore) {
 					condition = Tags.OBJECT_COLUMN_NAME + " = '"
 							+ string + "'";
 				} else {
-					String predicateString = FmtUtils
-							.stringForNode(predicate, this.prefixMapping);
+					String predicateString = getPropertyFromURI((FmtUtils
+							.stringForNode(predicate, this.prefixMapping)), false);
 					
-					//TODO what is this? add comment
-					if(predicateString.endsWith(">"))
-						predicateString = predicateString.substring(1, predicateString.length() -1);
-					
-					condition = SpecialCharFilter.filter(predicateString)
-							+ " = '" + string + "'";
+					condition = predicateString	+ " = '" + string + "'";
 				}
 				whereConditions.add(condition);
-			} else {
+			} else { 
+				// then the triple object is a variable
 				vars.add(object.getName());
 			}
 		}
-
+		// SELECT (list of variables)
 		for (String var : vars) {
 			String[] mapsTo = mapping.get(var);
 			if (mapsTo.length > 1) {
@@ -236,11 +313,14 @@ public class ImpalaComplexTripleGroup {
 
 	}
 
+	// search for another triple with the same predicate
+	// return the index if exists
 	public int searchTripleSamePredicate(int index) {
 		for (int i = 0; i < this.triples.size(); i++) {
 			if (i != index
 					&& triples.get(index).getPredicate()
 					.equals(triples.get(i).getPredicate())) {
+				
 				return i;
 			}
 		}
@@ -248,11 +328,13 @@ public class ImpalaComplexTripleGroup {
 		return -1;
 	}
 
+	/*
+	 * retrieve the mapping, the variables selected with 
+	 * the corresponding column name
+	 */
 	public Map<String, String[]> getMappings() {
 		Map<String, String[]> temp = new HashMap<String, String[]>();
-		// Merge both mappings
 		temp.putAll(this.mapping);
-		temp.putAll(crossJoinMapping);
 		return temp;
 	}
 

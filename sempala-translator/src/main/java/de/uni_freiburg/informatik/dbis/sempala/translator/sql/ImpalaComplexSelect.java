@@ -1,9 +1,17 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-//TODO add comments
+
+/**
+ * This class represents a single select query for Impala 
+ * where complex types could be present.
+ * 
+ * @author Matteo Cossu
+ *
+ */
 public class ImpalaComplexSelect extends SQLStatement {
 
 	protected String from = "";
@@ -13,16 +21,17 @@ public class ImpalaComplexSelect extends SQLStatement {
 	private int offset = -1;
 	// <alias, selectors>
 	HashMap<String, String[]> selection = new HashMap<String, String[]>();
+	// <selector, alias>
 	HashMap<String, String> inverted_selection = new HashMap<String, String>();
+	// properties that need to be considered in case of cross joins 
+	public HashMap<String, ArrayList<String>> crossProperties = new HashMap<String, ArrayList<String>>();
+
 	HashMap<String, String> complexColumns = new HashMap<String, String>();
 	// <column name, is the column complex>
 	HashMap<String, Boolean> is_complex_column = new HashMap<String, Boolean>();
 	private boolean contains_complex_vars = false;
 	private int whereClauseCounter = 1;
-
-	/*
-	 * Subset of schema
-	 */
+	
 	public ImpalaComplexSelect(String tablename) {
 		super(tablename);
 	}
@@ -46,7 +55,6 @@ public class ImpalaComplexSelect extends SQLStatement {
 		from += s;
 	}
 
-	//TODO change name you do not set complex columns this is a map for all columns + s
 	public void setComplexColumns(HashMap<String, Boolean> is_complex) {
 		is_complex_column = is_complex;
 	}
@@ -94,6 +102,7 @@ public class ImpalaComplexSelect extends SQLStatement {
 		this.order = by;
 	}
 
+	// when all the properties involved are not complex, this method is invoked
 	public String simpleSelect() {
 		StringBuilder sb = new StringBuilder("");
 		sb.append("(\nSELECT");
@@ -141,7 +150,7 @@ public class ImpalaComplexSelect extends SQLStatement {
 		return sb.toString();
 	}
 
-	// needed if some of the variables are complex
+	// used if some of the variables are of complex type
 	public String complexSelect() {
 		StringBuilder sb = new StringBuilder("");
 		sb.append("(\nSELECT");
@@ -150,14 +159,15 @@ public class ImpalaComplexSelect extends SQLStatement {
 		
 		/**
 		 *  Impala does not allow to select with '*' complex columns
-		 *  Therefore, all the columns are explicitly listed
+		 *  Therefore, in this case all the columns are explicitly listed
 		 */
 		if (selection.size() == 0){
 			int refName = 0;
 			for(String key : is_complex_column.keySet())
 				this.addSelector("v_" + String.valueOf(refName++), new String[]{key});
 		}
-			
+		
+		// build the selection string	
 		boolean first = true;
 		for (String key : selection.keySet()) {
 			String[] selector = selection.get(key);
@@ -201,14 +211,27 @@ public class ImpalaComplexSelect extends SQLStatement {
 				}
 				
 				sb.append(" t1." + selector + " subT_" + key);
-
 			}
 		}
+
+		// add also additional cross joins on the same predicate if are needed
+		for (String key : crossProperties.keySet()) {
+			ArrayList<String> selectors = crossProperties.get(key);
+			for(int i = 0; i < selectors.size(); i++){
+				sb.append(", ");
+				sb.append(" t1." + key + " subT_" + key + String.valueOf(i));
+				
+				// and add it also to the where condition
+				this.where += "\nAND subT_" + key + String.valueOf(i) + ".ITEM = '" + selectors.get(i) +"'";
+			}
+		}
+		
 		if (!this.where.equals("")) {
-			// if the where is empty now, don't use it
+			// if the where is empty now, do not use it
 			if(where.trim().length() > 0){
 				sb.append(" \nWHERE ");
 				sb.append(where);
+				
 			}
 				
 		}
@@ -233,7 +256,6 @@ public class ImpalaComplexSelect extends SQLStatement {
 	public String toString() {
 
 		// if there are complex properties -> complex select is needed
-		
 		if (selection.size() == 0)
 			contains_complex_vars = true;
 		else {
@@ -259,7 +281,6 @@ public class ImpalaComplexSelect extends SQLStatement {
 	@Override
 	public void updateSelection(Map<String, String[]> resultSchema) {
 		for (String key : resultSchema.keySet()) {
-			// should this be not containsKey?
 			if (this.selection.containsKey(key)) {
 				String[] entry;
 				if (selection.get(key).length > 1) {
