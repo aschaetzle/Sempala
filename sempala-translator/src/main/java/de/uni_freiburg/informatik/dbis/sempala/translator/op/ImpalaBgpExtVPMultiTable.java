@@ -25,6 +25,7 @@ import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
 /**
  * Impala BgpExtVPMultiTable class selects the best ExtVP table for each triple pattern and 
  * joins these tables based on their correlation.
+ * 
  * @author Lis Bakalli <bakallil@informatik.uni-freiburg.de>
  *
  */
@@ -115,12 +116,10 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	}
 
 	/**
-	 * Create On Conditions for join between ExtVP tables depending on the
-	 * triples.
+	 * Create On Conditions for join operation between ExtVP tables depending on the
+	 * triple patterns.
 	 * 
-	 * @param TripleConditions
-	 *            - Use Conditions between triples to build the inverted index
-	 *            of variables.
+	 * @param TripleConditions - Use Conditions between triples to build the inverted index of variables.
 	 * @return
 	 */
 	private List<String> CreateonConditions(Map<String, List<String>> TripleConditions) {
@@ -153,11 +152,9 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	}
 
 	/**
-	 * Get only the ExtVP table or triple table without the corresponding triple
-	 * of join.
+	 * Get only the ExtVP table name or triple table name without the without the extra annotation.
 	 * 
-	 * @param Table
-	 *            - Table which is modified.
+	 * @param Table - Table which name is modified.
 	 * @return
 	 */
 	private String RemoveTripleNumber(String Table) {
@@ -190,7 +187,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 				if (From.contains("http://")) {
 					int index = From.lastIndexOf("/");
 					From = From.substring(index + 1);
-					stmt.addWhereConjunction(Tags.PREDICATE_COLUMN_NAME + "='" + From + "'");
+					stmt.addWhereConjunction(Tags.PREDICATE_COLUMN_NAME + "='<" + From + ">'");
 				} else
 					stmt.addWhereConjunction(Tags.PREDICATE_COLUMN_NAME + "='" + From + "'");
 				stmt.setFrom(Tags.TABLENAME_TRIPLE_TABLE);
@@ -231,11 +228,9 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 	}
 
 	/**
-	 * Use defined prefixes for making predicates compatible with ExtVP table
-	 * naming.
+	 * Use defined prefixes for making predicates compatible with ExtVP table naming.
 	 * 
-	 * @param Predicate
-	 *            - Predicate to be renamed.
+	 * @param Predicate - Predicate to be renamed.
 	 * @return
 	 */
 	private String PrefixforExtVP(Node Predicate) {
@@ -259,7 +254,7 @@ public class ImpalaBgpExtVPMultiTable extends ImpalaBGP {
 
 	/**
 	 * Compare two triples to see if they are joined by Subject or Object.
-	 * Returns list of possible ExtVP tables to be seleced in query.
+	 * Returns list of possible ExtVP tables to be selected in query.
 	 * 
 	 * @param T1
 	 *            - First triple.
