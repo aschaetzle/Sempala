@@ -18,7 +18,9 @@ import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.DataTy
 import de.uni_freiburg.informatik.dbis.sempala.loader.sql.CreateStatement.FileFormat;
 
 /**
-*
+ * ExtVPLoader class creates the ExtVP tables from triples which are stored in initial Triple Table.
+ * Computation of Triple Table is also executed in this class.
+ * 
 * @author Lis Bakalli <bakallil@informatik.uni-freiburg.de>
 *
 */
