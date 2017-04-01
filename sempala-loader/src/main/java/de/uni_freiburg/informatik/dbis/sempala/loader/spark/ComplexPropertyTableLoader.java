@@ -126,6 +126,7 @@ public class ComplexPropertyTableLoader {
 		this.hiveContext = connection.getHiveContext();
 		this.hdfs_input_directory = hdfsLocation;
 		this.strip_dot = false;
+		this.keep = false;
 	}
 
 	/**
@@ -234,6 +235,8 @@ public class ComplexPropertyTableLoader {
 	private String getValidColumnName(String columnName) {
 		return columnName.replaceAll("[^a-zA-Z0-9_]", "_");
 	}
+	
+
 
 	/**
 	 * Method that contains the full process of creating of complex property
