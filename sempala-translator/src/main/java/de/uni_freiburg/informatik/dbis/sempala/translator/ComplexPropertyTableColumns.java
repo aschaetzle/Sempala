@@ -70,7 +70,7 @@ public class ComplexPropertyTableColumns {
 			return singleton;
 		}
 		HashMap<String, Boolean> tempColumns = new HashMap<String, Boolean>();
-
+	
 		Row[] props = connection.sql(String.format("SELECT * FROM %s", Tags.COMPLEX_PROPERTIES_TABLENAME)).collect();
 		for (int i = 0; i < props.length; i++) {
 			tempColumns.put(props[i].getString(0), props[i].getInt(1) == 1);

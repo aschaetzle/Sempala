@@ -1,6 +1,7 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +70,8 @@ public class SparkComplexTripleGroup {
 				result.put(object.getName(), new String[] { Tags.OBJECT_COLUMN_NAME });
 			} else {
 				String objectString = object.getName();
-				String predicateString = FmtUtils.stringForNode(predicate, prefixMapping);
+				String predicateString = getPropertyFromURI(FmtUtils
+						.stringForNode(predicate, prefixMapping), false);
 				result.put(objectString, new String[] { SpecialCharFilter.filter(predicateString) });
 			}
 		}
@@ -108,8 +110,60 @@ public class SparkComplexTripleGroup {
 
 			/* Predicate */
 			if (predicate.isURI()) {
+
+				boolean deleteActualTriple = false;
+
+				// the same predicate is requested twice -> need to have CROSS
+				// JOINS
+				int index = searchTripleSamePredicate(i);
+				while (index != -1) {
+
+					Triple otherTriple = triples.get(index);
+					Node otherObject = otherTriple.getObject();
+					Node otherPredicate = otherTriple.getPredicate();
+
+					// if a duplicate triple is found and is not a variable
+					// delete it from the list but add it to the cross join list
+					if (otherObject.isURI() || otherObject.isLiteral() || otherObject.isBlank()) {
+						String objectString = getPropertyFromURI(
+								FmtUtils.stringForNode(otherObject, this.prefixMapping), true);
+						String predString = getPropertyFromURI(FmtUtils.stringForNode(otherPredicate, prefixMapping),
+								false);
+						if (select.crossProperties.containsKey(predString))
+							select.crossProperties.get(predString).add(objectString);
+						else
+							select.crossProperties.put(predString, new ArrayList<String>(Arrays.asList(objectString)));
+						triples.remove(index);
+					}
+					// if the actual triple is not a variable
+					// delete it from the list but add it to the cross join list
+					if (object.isURI() || object.isLiteral() || object.isBlank()) {
+						// add to the special list to be crossjoined
+						String objectString = getPropertyFromURI(FmtUtils.stringForNode(object, this.prefixMapping),
+								true);
+
+						String predString = getPropertyFromURI(FmtUtils.stringForNode(predicate, prefixMapping), false);
+						if (select.crossProperties.containsKey(predString))
+							select.crossProperties.get(predString).add(objectString);
+						else
+							select.crossProperties.put(predString, new ArrayList<String>(Arrays.asList(objectString)));
+						triples.remove(i);
+						deleteActualTriple = true;
+						break;
+					}
+
+					index = searchTripleSamePredicate(i);
+
+				}
+				// if actual triple was deleted, adjust the loop accordingly
+				// otherwise one element will be skipped
+				if (deleteActualTriple) {
+					i--;
+					continue;
+				}
+
 				// predicate is bound -> add to Filter
-				String predicateString = FmtUtils.stringForNode(predicate, this.prefixMapping);
+				String predicateString = getPropertyFromURI(FmtUtils.stringForNode(predicate, this.prefixMapping), false);
 				whereConditions.add(SpecialCharFilter.filter(predicateString) + " IS NOT NULL");
 			} else {
 				// mark the predicate as a variable
@@ -119,12 +173,10 @@ public class SparkComplexTripleGroup {
 
 			/* Object */
 			if (object.isURI() || object.isLiteral() || object.isBlank()) {
-				String stringObject = FmtUtils.stringForNode(object, this.prefixMapping);
-
-				if (object.isLiteral()) {
-					stringObject = "" + object.getLiteral().getValue();
-				}
-				String predicateString = FmtUtils.stringForNode(predicate, this.prefixMapping);
+				String stringObject = getPropertyFromURI(FmtUtils.stringForNode(object,
+						this.prefixMapping),  true);
+				String predicateString =  getPropertyFromURI((FmtUtils
+						.stringForNode(predicate, this.prefixMapping)), false);
 				String predicateStringFiltered = SpecialCharFilter.filter(predicateString);
 				String condition = "";
 				if (selectFromTripleStore) {
@@ -155,7 +207,7 @@ public class SparkComplexTripleGroup {
 		if (selectFromTripleStore) {
 			select.setFrom(Tags.IMPALA_TABLENAME_TRIPLESTORE);
 		} else {
-			select.setFrom(Tags.COMPLEX_PROPERTYTABLE_TABLENAME);
+			select.setFrom(Tags.CACHED_COMPLEX_PROPERTYTABLE_TABLENAME);
 		}
 		// WHERE
 		for (String where : whereConditions) {
@@ -163,6 +215,53 @@ public class SparkComplexTripleGroup {
 		}
 
 		return select;
+	}
+
+	/*
+	 * Jena tries to return full URI, even if prefix are not used 
+	 * it tries to add itself a path that is unknown in the loading phase.
+	 * The function solves this problem by extracting the correct values from
+	 * the queries.
+	 */
+	private String getPropertyFromURI(String uri, boolean isNotColumnName) {
+		String property = uri;
+		
+		// strip the base of the URI
+		if (uri.contains("/")){
+			String[] splitted = uri.split("/");
+			property = splitted[splitted.length - 1];
+			
+			// return the object with the brackets if is not a property
+			if (property.endsWith(">") && isNotColumnName)
+				return "<" + property;
+		}
+		
+		// safety check
+		if (isNotColumnName)
+			return property;
+		
+		// strip the brackets if present
+		if(property.startsWith("<") && !isNotColumnName)
+			property = property.substring(1);
+		if(property.endsWith(">") && !isNotColumnName)
+			property = property.substring(0, property.length() -1);
+		
+		// transform  all the invalid characters with underscore
+		return SpecialCharFilter.filter(property);
+		
+	}
+	
+	// search for another triple with the same predicate
+	// return the index if exists
+	public int searchTripleSamePredicate(int index) {
+		for (int i = 0; i < this.triples.size(); i++) {
+			if (i != index && triples.get(index).getPredicate().equals(triples.get(i).getPredicate())) {
+
+				return i;
+			}
+		}
+
+		return -1;
 	}
 
 	public Map<String, String[]> getMappings() {

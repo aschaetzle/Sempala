@@ -1,7 +1,10 @@
 package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import de.uni_freiburg.informatik.dbis.sempala.translator.ComplexPropertyTableColumns;
 
 /**
  * A Spark SQL select statement. Because the complex property table has columns
@@ -36,6 +39,9 @@ public class SparkComplexSelect extends SQLStatement {
 
 	// <column name, is the column complex>
 	HashMap<String, Boolean> is_complex_column = new HashMap<String, Boolean>();
+
+	// properties that need to be considered in case of cross joins
+	public HashMap<String, ArrayList<String>> crossProperties = new HashMap<String, ArrayList<String>>();
 
 	// if there is a complex column which is part of a join or is part of the
 	// selected columns
@@ -169,6 +175,17 @@ public class SparkComplexSelect extends SQLStatement {
 			sb.append("\nLATERAL VIEW EXPLODE(" + from.replaceAll("\n", "\n  ") + "." + complexPropertyName + ")" + " "
 					+ viewName + " AS " + (viewName + "_" + complexPropertyName));
 		}
+		
+		// add also additional cross joins on the same predicate if are needed
+		for (String predicate : crossProperties.keySet()) {
+			ArrayList<String> selectors = crossProperties.get(predicate);
+			for (int i = 0; i < selectors.size(); i++) {
+				String condition = "array_contains(" + predicate + ", '" + selectors.get(i) + "')";
+				// and add it also to the where condition
+				this.where += "\nAND " + condition;
+			}
+		}
+
 		if (!this.where.equals("")) {
 			sb.append(" \nWHERE ");
 			sb.append(where);

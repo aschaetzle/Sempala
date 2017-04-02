@@ -16,6 +16,8 @@ public final class Tags {
 	// tables produced by the complex property table loading process
 	public static final String COMPLEX_TRIPLETABLE_TABLENAME = "tripletable";
 	public static final String COMPLEX_PROPERTYTABLE_TABLENAME = "complex_property_table";
+	// spark caches the complex_property_table under this table
+	public static final String CACHED_COMPLEX_PROPERTYTABLE_TABLENAME = "cached_complex_property_table";
 	public static final String COMPLEX_PROPERTIES_TABLENAME = "properties";
 	
 	//tables produced by the ExtVP loading process

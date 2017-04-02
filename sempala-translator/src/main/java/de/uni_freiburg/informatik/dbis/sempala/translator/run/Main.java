@@ -20,6 +20,8 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
+import org.apache.spark.sql.DataFrame;
+
 import de.uni_freiburg.informatik.dbis.sempala.translator.ComplexPropertyTableColumns;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Format;
 import de.uni_freiburg.informatik.dbis.sempala.translator.Tags;
@@ -81,7 +83,8 @@ public class Main {
 			// for spark connection only the name of the database is needed
 			if (commandLine.hasOption(OptionNames.DATABASE.toString())) {
 				String database = commandLine.getOptionValue(OptionNames.DATABASE.toString());
-				sparkConnection = connectToSpark(database);
+				String partitions = commandLine.getOptionValue(OptionNames.SPARKPARTITIONS.toString());
+				sparkConnection = connectToSpark(database, partitions);
 				// set that the queries will be executed via Spark platform
 				ExecutionPlatform.getInstance(Platform.SPARK);
 			} else {
@@ -134,8 +137,9 @@ public class Main {
 
 		// Set Threshold
 		if (commandLine.hasOption(OptionNames.THRESHOLD.toString()))
-			translator.setThreshold(commandLine.getOptionValue(OptionNames.THRESHOLD.toString()));;
-		
+			translator.setThreshold(commandLine.getOptionValue(OptionNames.THRESHOLD.toString()));
+		;
+
 		// Set Join Order
 		if (commandLine.hasOption(OptionNames.STRAIGHJOIN.toString()))
 			translator.setStraightJoin(true);
@@ -208,7 +212,7 @@ public class Main {
 		if (commandLine.hasOption(OptionNames.BENCHMARK.toString())) {
 			isBenchmark = true;
 		}
-		
+
 		// check if the results should be stored or just counted
 		boolean isCount = false;
 		if (commandLine.hasOption(OptionNames.COUNT.toString())) {
@@ -235,7 +239,7 @@ public class Main {
 			} else if (sparkConnection != null) {
 				// Run the translated query with spark and put it into the
 				// unique results table
-				result = runQueryWithSpark(sparkConnection, sqlString, resultsTableName, isBenchmark);
+				result = runQueryWithSpark(sparkConnection, sqlString, resultsTableName, isBenchmark, isCount);
 			}
 			// if neither impala nor spark connection is initialized
 			else {
@@ -256,6 +260,7 @@ public class Main {
 			// store the result for each query in a file
 			appendQueryResults("TableOfResults.txt", resultsTableName, executionTime, nrTuples);
 		}
+		sparkConnection.unpersistCachedTables();
 	}
 
 	/**
@@ -314,30 +319,30 @@ public class Main {
 		try {
 			// Sleep a second to give impalad some time to calm down
 			Thread.sleep(3000);
-			if(isCount){
+			if (isCount) {
 				// Execute the query
 				long startTime = System.currentTimeMillis();
-				ResultSet result = impalaConnection.createStatement().executeQuery(String.format("SELECT COUNT (*) FROM (%s) tabletemp ;",
-						sqlQuery));
+				ResultSet result = impalaConnection.createStatement()
+						.executeQuery(String.format("SELECT COUNT (*) FROM (%s) tabletemp ;", sqlQuery));
 				executionTime = System.currentTimeMillis() - startTime;
 				System.out.print(String.format(" %s ms", executionTime));
 
 				// Sleep a second to give impalad some time to calm down
 				Thread.sleep(3000);
 				result.next();
-				
+
 				long tableSize = result.getLong(1);
 				nrTuples = tableSize;
 				System.out.println(String.format(" %s pc", tableSize));
 
 				// Sleep a second to give impalad some time to calm down
 				Thread.sleep(3000);
-			}
-			else {
+			} else {
 
 				// Execute the query
 				long startTime = System.currentTimeMillis();
-				impalaConnection.createStatement().execute(String.format("CREATE TABLE %s.%s AS %s", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlQuery));
+				impalaConnection.createStatement().execute(String.format("CREATE TABLE %s.%s AS %s",
+						Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlQuery));
 				executionTime = System.currentTimeMillis() - startTime;
 				System.out.print(String.format(" %s ms", executionTime));
 
@@ -385,10 +390,13 @@ public class Main {
 	 *            is stored.
 	 * @param executionTime how much time the query takes
 	 * @param nrTuples how many tuples the query has
-	 * @param isBenchmark is the query is run with benchmark purposes.
+	 * @param isBenchmark is the query is run with benchmark purposes
+	 * @param isOnlyCount if true only how many rows the query will returned is
+	 *            counted. Otherwise, the result of the query is stored in a
+	 *            table
 	 */
 	public static HashMap<String, Long> runQueryWithSpark(Spark sparkConnection, String sqlQuery,
-			String resultsTableName, boolean isBenchmark) {
+			String resultsTableName, boolean isBenchmark, boolean isOnlyCount) {
 		long executionTime = 0;
 		long nrTuples = 0;
 
@@ -400,15 +408,22 @@ public class Main {
 		// Execute the query
 		long startTime = System.currentTimeMillis();
 
-		// execute the query and store the result into a table
-		sparkConnection.sql(
-				String.format("CREATE TABLE %s.%s AS %s", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName, sqlQuery));
+		// executes query
+		DataFrame result = sparkConnection.sql(sqlQuery);
+		if (isOnlyCount) {
+			nrTuples = result.count();
+		} else {
+			// store the result into a table
+			result.write().saveAsTable(String.format("%s.%s", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName));
+		}
 
 		executionTime = System.currentTimeMillis() - startTime;
 		System.out.print(String.format(" %s ms", executionTime));
 
-		nrTuples = sparkConnection
-				.sql(String.format("SELECT * FROM %s.%s", Tags.SEMPALA_RESULTS_DB_NAME, resultsTableName)).count();
+		// if the result was stored in a table, retrieve its count
+		if (!isOnlyCount) {
+			nrTuples = result.count();
+		}
 
 		System.out.println(String.format(" %s pc", nrTuples));
 
@@ -456,15 +471,21 @@ public class Main {
 	 * tables where the result from queries is stored.
 	 * 
 	 * @param database database over which queries are executed
+	 * @param partitions the number of partitions for spark data frame
 	 * @return initialized Spark connection
 	 */
-	public static Spark connectToSpark(String database) {
+	public static Spark connectToSpark(String database, String partitions) {
 		System.out.println("Connecting to spark");
 		// Connect to spark
 		Spark sparkConnection = new Spark("sempalaTranslatorApp", database);
 		// Create a results database
 		sparkConnection.getHiveContext()
 				.sql(String.format("CREATE DATABASE IF NOT EXISTS %s", Tags.SEMPALA_RESULTS_DB_NAME));
+		
+		if (partitions != null) {
+			int sp = Integer.parseInt(partitions);
+			sparkConnection.setDfPartitions(sp);
+		}
 		return sparkConnection;
 
 	}
@@ -478,7 +499,7 @@ public class Main {
 	 * Impala output script file
 	 */
 	public enum OptionNames {
-		BENCHMARK, COUNT, EXPAND, DATABASE, FORMAT, HELP, HOST, INPUT, OPTIMIZE, PORT, RESULT_TABLE_NAME, THRESHOLD, STRAIGHJOIN;
+		BENCHMARK, COUNT, EXPAND, DATABASE, FORMAT, HELP, HOST, INPUT, OPTIMIZE, PORT, RESULT_TABLE_NAME, THRESHOLD, STRAIGHJOIN, SPARKPARTITIONS;
 
 		@Override
 		public String toString() {
@@ -496,7 +517,7 @@ public class Main {
 		Options options = new Options();
 
 		options.addOption("b", OptionNames.BENCHMARK.toString(), false, "Just print runtimes and delete results.");
-		
+
 		options.addOption("c", OptionNames.COUNT.toString(), false, "COUNT result without storing the table.");
 
 		options.addOption("e", OptionNames.EXPAND.toString(), false, "Expand URI prefixes.");
@@ -526,12 +547,15 @@ public class Main {
 
 		options.addOption("rn", OptionNames.RESULT_TABLE_NAME.toString(), true,
 				"Result Table Name format if results tables are stored.");
-		
+
 		options.addOption("s", OptionNames.STRAIGHJOIN.toString(), false,
 				"Executes query with Straight join. Default (Impala sets the join order of tables)");
-		
+
 		options.addOption("t", OptionNames.THRESHOLD.toString(), true,
 				"Threshold of ExtVP if ExtVP format is selected. Default (SF=1)");
+
+		options.addOption("sp", OptionNames.SPARKPARTITIONS.toString(), true,
+				"Number of partitions in Spark. See DataFrame#partitions.");
 
 		return options;
 	}
