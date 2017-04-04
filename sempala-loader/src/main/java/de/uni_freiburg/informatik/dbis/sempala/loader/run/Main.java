@@ -274,9 +274,8 @@ public class Main {
 		options.addOption("f", OptionNames.FORMAT.toString(), true,
 				"The format to use to create the table. (case insensitive)\n" + Format.SIMPLE_PROPERTY_TABLE.toString()
 						+ ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
-						// TODO change this when the final paper is ready
 						+ Format.COMPLEX_PROPERTY_TABLE.toString()
-						+ ": (see Polina and Matteo's Master project paper) \n" + Format.EXTVP.toString()
+						+ ": see Sempala Complex Property Table Master project paper \n" + Format.EXTVP.toString()
 						+ ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
 						+ Format.SINGLE_TABLE.toString()
 						+ ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon");

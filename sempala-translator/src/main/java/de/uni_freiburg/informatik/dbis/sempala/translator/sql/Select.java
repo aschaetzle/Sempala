@@ -72,7 +72,7 @@ public class Select extends SQLStatement {
 						sb.append(",");
 					}
 					if (selector.length > 1) {
-						//TODO add comments
+						// if the underlying execution platform is Spark, do not use ""
 						if (ExecutionPlatform.getPlatform().equals(Platform.IMPALA)) {
 							sb.append(" " + selector[0] + "." + selector[1] + " AS " + "\"" + key + "\"");
 						} else if (ExecutionPlatform.getPlatform().equals(Platform.SPARK)) {

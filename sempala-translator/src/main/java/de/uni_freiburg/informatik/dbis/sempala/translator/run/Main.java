@@ -526,11 +526,10 @@ public class Main {
 
 		options.addOption("f", OptionNames.FORMAT.toString(), true, "The database format the query is built for.\n"
 				+ Format.PROPERTYTABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
-				// TODO change the name when the paper is ready
 				+ Format.COMPLEX_PROPERTY_TABLE.toString()
-				+ ": (see Polina and Matteo's Master project paper) Impala Version\n"
+				+ ": see Sempala Complex Property Table Master project paper (Impala Version) \n"
 				+ Format.COMPLEX_PROPERTY_TABLE_SPARK.toString()
-				+ ": (see Polina and Matteo's Master project paper) Spark Version\n" + Format.SINGLETABLE.toString()
+				+ ": see Sempala Complex Property Table Master project paper (Spark Version) \n" + Format.SINGLETABLE.toString()
 				+ ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon \n" + Format.EXTVP.toString()
 				+ ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n");
 
