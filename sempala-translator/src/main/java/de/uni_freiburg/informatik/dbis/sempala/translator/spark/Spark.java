@@ -56,7 +56,10 @@ public class Spark {
 		Properties properties = new Properties();
 		properties.setProperty("spark.sql.parquet.filterPushdown", "true");
 		properties.setProperty("spark.sql.inMemoryColumnarStorage.batchSize", "20000");
-		properties.setProperty("spark.sql.shuffle.partitions", "100");
+		if(dfPartitions != 0){
+			properties.setProperty("spark.sql.shuffle.partitions", Integer.toString(dfPartitions));
+		}
+		
 		hiveContext.setConf(properties);
 	}
 	
