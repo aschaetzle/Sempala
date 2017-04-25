@@ -6,6 +6,7 @@ import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
@@ -264,21 +265,25 @@ public class Main {
 		options.addOption("co", OptionNames.COLUMN_NAME_OBJECT.toString(), true,
 				"Overwrites the column name to use. (object)");
 
-		options.addOption("d", OptionNames.DATABASE.toString(), true, "The database to use.");
+		Option databaseOption = new Option("d", OptionNames.DATABASE.toString(), true, "The database to use.");
+		databaseOption.setRequired(true);
+		options.addOption(databaseOption);
 
 		options.addOption("e", OptionNames.EXTVP_TYPES.toString(), true,
 				"Formats of ExtVP to be computed. By default all four formats of ExtVP (SS/SO/OS/OO) are computed");
 
 		options.addOption("em", OptionNames.EVALUATION_MODE.toString(), false, "Executes Sempala in Evaluation Mode");
-		
-		options.addOption("f", OptionNames.FORMAT.toString(), true,
+
+		Option formatOption = new Option("f", OptionNames.FORMAT.toString(), true,
 				"The format to use to create the table. (case insensitive)\n" + Format.SIMPLE_PROPERTY_TABLE.toString()
-						+ ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
-						+ Format.COMPLEX_PROPERTY_TABLE.toString()
-						+ ": see Sempala Complex Property Table Master project paper \n" + Format.EXTVP.toString()
-						+ ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
-						+ Format.SINGLE_TABLE.toString()
-						+ ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon");
+				+ ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
+				+ Format.COMPLEX_PROPERTY_TABLE.toString()
+				+ ": see Sempala Complex Property Table Master project paper \n" + Format.EXTVP.toString()
+				+ ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n"
+				+ Format.SINGLE_TABLE.toString()
+				+ ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon");
+		formatOption.setRequired(true);
+		options.addOption(formatOption);
 
 		options.addOption("F", OptionNames.FIELD_TERMINATOR.toString(), true,
 				"The character used to separate the fields in the data. (Defaults to '\\t')");
@@ -287,8 +292,10 @@ public class Main {
 
 		options.addOption("H", OptionNames.HOST.toString(), true, "The host to connect to.");
 
-		options.addOption("i", OptionNames.INPUT.toString(), true, "The HDFS location of the RDF data (N-Triples).");
-
+		Option inputOption = new Option("i", OptionNames.INPUT.toString(), true, "The HDFS location of the RDF data (N-Triples).");
+		inputOption.setRequired(true);
+		options.addOption(inputOption);
+		
 		options.addOption("k", OptionNames.KEEP.toString(), false, "Do not drop temporary tables.");
 
 		options.addOption("lp", OptionNames.LIST_OF_PREDICATES.toString(), true,

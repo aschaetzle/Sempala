@@ -17,6 +17,7 @@ import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
@@ -515,16 +516,15 @@ public class Main {
 	public static Options buildOptions() {
 
 		Options options = new Options();
-
 		options.addOption("b", OptionNames.BENCHMARK.toString(), false, "Just print runtimes and delete results.");
-
 		options.addOption("c", OptionNames.COUNT.toString(), false, "COUNT result without storing the table.");
-
 		options.addOption("e", OptionNames.EXPAND.toString(), false, "Expand URI prefixes.");
-
-		options.addOption("d", OptionNames.DATABASE.toString(), true, "The database to use.");
-
-		options.addOption("f", OptionNames.FORMAT.toString(), true, "The database format the query is built for.\n"
+		
+		Option databaseOption = new Option("d", OptionNames.DATABASE.toString(), true, "The database to use.");
+		databaseOption.setRequired(true);
+		options.addOption(databaseOption);
+	
+		Option formatOption = new Option("f", OptionNames.FORMAT.toString(), true, "The database format the query is built for.\n"
 				+ Format.PROPERTYTABLE.toString() + ": (see 'Sempala: Interactive SPARQL Query Processing on Hadoop')\n"
 				+ Format.COMPLEX_PROPERTY_TABLE.toString()
 				+ ": see Sempala Complex Property Table Master project paper (Impala Version) \n"
@@ -532,13 +532,17 @@ public class Main {
 				+ ": see Sempala Complex Property Table Master project paper (Spark Version) \n" + Format.SINGLETABLE.toString()
 				+ ": see ExtVP Bigtable, Master's Thesis: S2RDF, Skilevic Simon \n" + Format.EXTVP.toString()
 				+ ": see Extended Vertical Partitioning, Master's Thesis: S2RDF, Skilevic Simon\n");
-
+		formatOption.setRequired(true);
+		options.addOption(formatOption);
+		
 		options.addOption("h", OptionNames.HELP.toString(), false, "Print this help.");
-
+		
 		options.addOption("H", OptionNames.HOST.toString(), true, "The host to connect to.");
-
-		options.addOption("i", OptionNames.INPUT.toString(), true,
+		
+		Option inputOption = new Option("i", OptionNames.INPUT.toString(), true,
 				"SPARQL query file to translate or folder containing sparql query files.");
+		inputOption.setRequired(true);
+		options.addOption(inputOption);
 
 		options.addOption("opt", OptionNames.OPTIMIZE.toString(), false, "turn on SPARQL algebra optimization");
 
