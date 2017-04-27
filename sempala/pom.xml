@@ -1,37 +1,37 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/maven-v4_0_0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+	<modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
-        <artifactId>sempala-parent</artifactId>
-        <version>2.0</version>
-    </parent>
+	<parent>
+		<groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
+		<artifactId>sempala-parent</artifactId>
+		<version>2.0</version>
+	</parent>
 
-    <artifactId>sempala</artifactId>
-    <packaging>jar</packaging>
-    <name>Sempala</name>
+	<artifactId>sempala</artifactId>
+	<packaging>jar</packaging>
+	<name>Sempala</name>
 	<url>http://dbis.informatik.uni-freiburg.de/Sempala</url>
 
-    <dependencies>
-        <dependency>
-            <groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
-            <artifactId>sempala-loader</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
-            <artifactId>sempala-translator</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
+	<dependencies>
+		<dependency>
+			<groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
+			<artifactId>sempala-loader</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>de.uni_freiburg.informatik.dbis.sempala</groupId>
+			<artifactId>sempala-translator</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+	</dependencies>
 
 	<build>
 		<plugins>
 
-			<!-- Build a jar, set main class and class path in manifest and put jar in ./dist/ -->
+			<!-- Build a jar, set main class and class path in manifest and put jar 
+				in ./dist/ -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -85,46 +85,21 @@
 				</configuration>
 			</plugin>
 
-			<!-- Build a jar with dependencies 
-			
-			Maven shade makes major problems with log4j. I have not really a clue
-			why and since it is not strictly a goal of my project I will stop 
-			trying it, although it would be nice to have e stressless jar to
-			pass/scp around in the cluster.
-			I will leave the section commented, if someone wants to continue to 
-			work on it. 
-			If you are the one, start with the crooked classpath in the final
-			uberjar that is somehow copied from the two dependencies. (loader, 
-			translator)
-			
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>2.4.3</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<outputDirectory>${project.basedir}/dist</outputDirectory>
-					<createDependencyReducedPom>false</createDependencyReducedPom>
-					<shadedArtifactAttached>true</shadedArtifactAttached>
-					<shadedClassifierName>jar-with-dependencies</shadedClassifierName>
-					<minimizeJar>true</minimizeJar>
-					<transformers>
-						<transformer
-							implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-							<manifestEntries>
-								<mainClass>de.uni_freiburg.informatik.dbis.sempala.single_jar.Main</mainClass>
-							</manifestEntries>
-						</transformer>
-					</transformers>
-				</configuration>
-			</plugin>-->
+			<!-- Build a jar with dependencies Maven shade makes major problems with 
+				log4j. I have not really a clue why and since it is not strictly a goal of 
+				my project I will stop trying it, although it would be nice to have e stressless 
+				jar to pass/scp around in the cluster. I will leave the section commented, 
+				if someone wants to continue to work on it. If you are the one, start with 
+				the crooked classpath in the final uberjar that is somehow copied from the 
+				two dependencies. (loader, translator) <plugin> <groupId>org.apache.maven.plugins</groupId> 
+				<artifactId>maven-shade-plugin</artifactId> <version>2.4.3</version> <executions> 
+				<execution> <phase>package</phase> <goals> <goal>shade</goal> </goals> </execution> 
+				</executions> <configuration> <outputDirectory>${project.basedir}/dist</outputDirectory> 
+				<createDependencyReducedPom>false</createDependencyReducedPom> <shadedArtifactAttached>true</shadedArtifactAttached> 
+				<shadedClassifierName>jar-with-dependencies</shadedClassifierName> <minimizeJar>true</minimizeJar> 
+				<transformers> <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"> 
+				<manifestEntries> <mainClass>de.uni_freiburg.informatik.dbis.sempala.single_jar.Main</mainClass> 
+				</manifestEntries> </transformer> </transformers> </configuration> </plugin> -->
 
 		</plugins>
 	</build>

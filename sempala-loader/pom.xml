@@ -72,37 +72,32 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-log4j12</artifactId>
 		</dependency>
-		<!-- END: Dependencies necessary for Impala JDBC -->   
-        
-        <!-- BEGIN: Dependencies for SPARK --> 
-        <dependency>
-  		 <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.10</artifactId>
-            <version>1.6.0-cdh5.9.0</version>
-  		</dependency>
-	  	<dependency>
+		<!-- END: Dependencies necessary for Impala JDBC -->
+
+		<!-- BEGIN: Dependencies for SPARK -->
+		<dependency>
 			<groupId>org.apache.spark</groupId>
-			<artifactId>spark-sql_2.10</artifactId>
-			<version>1.6.0-cdh5.9.0</version>
+			<artifactId>spark-core_2.10</artifactId>
 		</dependency>
 		<dependency>
-		    <groupId>org.apache.spark</groupId>
-		    <artifactId>spark-hive_2.10</artifactId>
-		    <version>1.6.0-cdh5.9.0</version>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-sql_2.10</artifactId>
 		</dependency>
-	  	<dependency>
-	  		 <groupId>org.apache.hadoop</groupId>
-	            <artifactId>hadoop-client</artifactId>
-	            <version>2.6.0-mr1-cdh5.9.0</version>
-	  	</dependency>
-	  	<dependency>
-	  		<groupId>org.apache.spark</groupId>
-	  		<artifactId>spark-yarn_2.10</artifactId>
-	  		<version>1.6.0-cdh5.9.0</version>
-	  	</dependency>
-        <!-- END: Dependencies for SPARK -->  
-          
-    </dependencies>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-hive_2.10</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-yarn_2.10</artifactId>
+		</dependency>
+		<!-- END: Dependencies for SPARK -->
+
+	</dependencies>
 
 	<build>
 		<plugins>
@@ -121,8 +116,8 @@
 					</archive>
 					<outputDirectory>${project.basedir}/dist</outputDirectory>
 				</configuration>
-			</plugin> 
-			
+			</plugin>
+
 			<!-- Add ./dist to clean phase -->
 			<plugin>
 				<artifactId>maven-clean-plugin</artifactId>
