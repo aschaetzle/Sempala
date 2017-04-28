@@ -197,26 +197,48 @@
 				<version>2.3</version>
 				<executions>
 					<execution>
+						<id>copy-into-the-project</id>
 						<phase>package</phase>
 						<goals>
 							<goal>shade</goal>
 						</goals>
+						<configuration>
+							<filters>
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
+							<outputDirectory>${project.basedir}/dist</outputDirectory>
+							<finalName>spark-${project.artifactId}-${project.version}</finalName>
+						</configuration>
+					</execution>
+					<execution>
+					<id>copy-in-sempala-lib</id>
+					<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<filters>
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
+							<outputDirectory>../sempala/dist/lib</outputDirectory>
+							<finalName>spark-${project.artifactId}-${project.version}</finalName>
+						</configuration>
 					</execution>
 				</executions>
-				<configuration>
-					<filters>
-						<filter>
-							<artifact>*:*</artifact>
-							<excludes>
-								<exclude>META-INF/*.SF</exclude>
-								<exclude>META-INF/*.DSA</exclude>
-								<exclude>META-INF/*.RSA</exclude>
-							</excludes>
-						</filter>
-					</filters>
-					<outputDirectory>${project.basedir}/dist</outputDirectory>
-					<finalName>spark-${project.artifactId}-${project.version}</finalName>
-				</configuration>
 			</plugin>
 
 		</plugins>

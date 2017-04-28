@@ -4,6 +4,8 @@ Then simply run "mvn package" from the root directory.
 It will build 'sempala-loader', 'sempala-translator' and finally 'sempala'.
 You can also build 'sepala-loader' or 'sempala-translator' only by
 running "mvn package" from the corresponding subdirectory.
+NOTE: Two jars are generated for sempala translator - one for Impala (sempala-translator) 
+and one for Spark (spark-sempala-translator)
 
 
 ### PURPOSE OF project_repo DIRECTORY
