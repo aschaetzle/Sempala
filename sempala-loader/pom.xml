@@ -75,6 +75,7 @@
 		<!-- END: Dependencies necessary for Impala JDBC -->
 
 		<!-- BEGIN: Dependencies for SPARK -->
+		<!-- Version and Scope taken from parent POM <dependencyManagement> -->
 		<dependency>
 			<groupId>org.apache.spark</groupId>
 			<artifactId>spark-core_2.10</artifactId>

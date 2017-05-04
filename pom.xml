@@ -113,6 +113,7 @@
 				<scope>runtime</scope>
 			</dependency>
 			<!-- END: Dependecies necessary for Impala JDBC -->
+			
 			<!-- BEGIN: Dependencies for SPARK -->
 			<dependency>
 				<groupId>org.apache.spark</groupId>
