@@ -59,6 +59,10 @@ public class Main {
 		Spark spark = null;
 		if (format.equals(Format.EXTVP.toString()) || format.equals(Format.SIMPLE_PROPERTY_TABLE.toString()) || format.equals(Format.SINGLE_TABLE.toString())) {
 			// Connect to the impala daemon
+			if(!commandLine.hasOption(OptionNames.USER_HDFS_DIRECTORY.toString())){
+				System.err.println("For ExtVP format user's absolut path of HDFS direcotry -ud is also required.");
+				System.exit(1);
+			}
 			try {
 				String host = commandLine.getOptionValue(OptionNames.HOST.toString());
 				String port = commandLine.getOptionValue(OptionNames.PORT.toString(), "21050");
@@ -67,7 +71,7 @@ public class Main {
 				// Set compression codec to snappy
 				impala.set(QueryOption.COMPRESSION_CODEC, "SNAPPY");
 			} catch (SQLException e) {
-				System.err.println(e.getLocalizedMessage());
+				System.err.println("For ExtVP format the Host -H is also required");
 				System.exit(1);
 			}
 		} else if (format.equals(Format.COMPLEX_PROPERTY_TABLE.toString())) {
