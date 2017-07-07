@@ -3,6 +3,9 @@ package de.uni_freiburg.informatik.dbis.sempala.translator.sql;
 import java.util.HashMap;
 import java.util.Map;
 
+import de.uni_freiburg.informatik.dbis.sempala.translator.Translator;
+import de.uni_freiburg.informatik.dbis.sempala.translator.sql.ExecutionPlatform.Platform;
+
 public class Select extends SQLStatement {
 
 	protected String from = "";
@@ -50,8 +53,11 @@ public class Select extends SQLStatement {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("");
+		if(Translator.StraighJoin)
+			sb.append("(\nSELECT STRAIGHT_JOIN");
+		else
 		sb.append("(\nSELECT");
-		if(isDistinct)
+		if (isDistinct)
 			sb.append(" DISTINCT");
 		if (selection.size() == 0) {
 			sb.append(" *");
@@ -59,16 +65,25 @@ public class Select extends SQLStatement {
 			boolean first = true;
 			for (String key : selection.keySet()) {
 				String[] selector = selection.get(key);
-				if (selector!= null) {
+				if (selector != null) {
 					if (first) {
 						first = false;
 					} else {
 						sb.append(",");
 					}
 					if (selector.length > 1) {
-						sb.append(" " + selector[0] + "." + selector[1] +  " AS " + "\"" + key + "\"");
+						// if the underlying execution platform is Spark, do not use ""
+						if (ExecutionPlatform.getPlatform().equals(Platform.IMPALA)) {
+							sb.append(" " + selector[0] + "." + selector[1] + " AS " + "\"" + key + "\"");
+						} else if (ExecutionPlatform.getPlatform().equals(Platform.SPARK)) {
+							sb.append(" " + selector[0] + "." + selector[1] + " AS " + key);
+						}
 					} else {
-						sb.append(" " + selector[0] + " AS " + "\"" + key + "\"");
+						if (ExecutionPlatform.getPlatform().equals(Platform.IMPALA)) {
+							sb.append(" " + selector[0] + " AS " + "\"" + key + "\"");
+						} else if (ExecutionPlatform.getPlatform().equals(Platform.SPARK)) {
+							sb.append(" " + selector[0] + " AS " + key);
+						}
 					}
 				}
 			}
@@ -83,11 +98,11 @@ public class Select extends SQLStatement {
 			sb.append("\nORDER BY ");
 			sb.append(order);
 		}
-		if(this.limit != -1){
+		if (this.limit != -1) {
 			sb.append("\nLIMIT ");
 			sb.append(this.limit);
 		}
-		if(this.offset != -1){
+		if (this.offset != -1) {
 			sb.append("\nOFFSET ");
 			sb.append(this.offset);
 		}
@@ -105,10 +120,10 @@ public class Select extends SQLStatement {
 		for (String key : resultSchema.keySet()) {
 			if (this.selection.containsKey(key)) {
 				String[] entry;
-				if(selection.get(key).length >1){
-					entry = new String[]{selection.get(key)[0], resultSchema.get(key)[1]};
-				} else{
-					entry = new String[]{ resultSchema.get(key)[0]};
+				if (selection.get(key).length > 1) {
+					entry = new String[] { selection.get(key)[0], resultSchema.get(key)[1] };
+				} else {
+					entry = new String[] { resultSchema.get(key)[0] };
 				}
 				this.selection.put(key, entry);
 			}
@@ -118,15 +133,15 @@ public class Select extends SQLStatement {
 
 	@Override
 	public void removeNullFilters() {
-		String[] filters =  where.split(" AND ");
-		for(int i = 0; i < filters.length; i++){
-			if(filters[i].toLowerCase().contains("IS NOT NULL")){
+		String[] filters = where.split(" AND ");
+		for (int i = 0; i < filters.length; i++) {
+			if (filters[i].toLowerCase().contains("IS NOT NULL")) {
 				filters[i] = "";
 			}
 		}
 		this.where = "";
-		for(String filter : filters){
-			if(!filter.equals(""))
+		for (String filter : filters) {
+			if (!filter.equals(""))
 				this.addWhereConjunction(filter);
 		}
 
@@ -137,9 +152,8 @@ public class Select extends SQLStatement {
 
 	}
 
-
 	@Override
-	public String getName(){
+	public String getName() {
 		return this.statementName;
 	}
 
@@ -151,7 +165,7 @@ public class Select extends SQLStatement {
 
 	@Override
 	public boolean addOffset(int i) {
-		if(!this.order.equals("")){
+		if (!this.order.equals("")) {
 			this.offset = i;
 			return true;
 		}

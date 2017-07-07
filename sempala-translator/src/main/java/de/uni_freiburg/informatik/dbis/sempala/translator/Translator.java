@@ -40,7 +40,7 @@ public class Translator {
 	/** The format to use to build the output queries against */
 	private Format format = Format.SINGLETABLE;
 
-	/** Indicates if pefixes in the RDF Triples should be expanded or not */
+	/** Indicates if prefixes in the RDF Triples should be expanded or not */
 	private boolean expandPrefixes = false;
 
 	/** Indicates if optimizations of the SPARQL Algebra are enabled */
@@ -54,7 +54,16 @@ public class Translator {
 
 	/** Indicates if filter optimizations are enabled */
 	private boolean filterOptimizer = true;
-
+	
+	/** The value of threshold*/
+	public static double threshold;
+	
+	/** The value of threshold*/
+	public static boolean StraighJoin = false;
+	
+	/** The value of result table name */
+	public String result_table_name = "extvp";
+	
 	// Define a static logger variable so that it references the corresponding Logger instance
 	private static final Logger logger = Logger.getLogger(Translator.class);
 
@@ -257,4 +266,20 @@ public class Translator {
 	public void setFormat(Format format) {
 		this.format = format;
 	}
+	
+	public void setStraightJoin(boolean StraightJoin) {
+		this.StraighJoin = StraightJoin;
+	}
+	
+	public void setThreshold(String Threshold) {
+		try {
+			threshold = Double.parseDouble(Threshold);
+			if (threshold <= 0)
+				throw new IllegalArgumentException();
+		} catch (Exception e) {
+			System.out.print(String.format("Threshold '%s' is not a proper value as threshold", threshold));
+			System.exit(1);
+		}
+	}
+	
 }

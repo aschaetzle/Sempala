@@ -13,6 +13,16 @@ public final class Tags {
 	public static final String IMPALA_SINGLETABLE_TABLENAME = "singletable";
 	public static final String IMPALA_TABLENAME_TRIPLESTORE = "triplestore_parquet";
 
+	// tables produced by the complex property table loading process
+	public static final String COMPLEX_TRIPLETABLE_TABLENAME = "tripletable";
+	public static final String COMPLEX_PROPERTYTABLE_TABLENAME = "complex_property_table";
+	// spark caches the complex_property_table under this table
+	public static final String CACHED_COMPLEX_PROPERTYTABLE_TABLENAME = "cached_complex_property_table";
+	public static final String COMPLEX_PROPERTIES_TABLENAME = "properties";
+	
+	//tables produced by the ExtVP loading process
+	public static final String TABLENAME_TRIPLE_TABLE = "tripletable";
+	
 	public static final String SEMPALA_RESULTS_DB_NAME = "sempala_results";
 
 	public static final String BGP = "BGP";

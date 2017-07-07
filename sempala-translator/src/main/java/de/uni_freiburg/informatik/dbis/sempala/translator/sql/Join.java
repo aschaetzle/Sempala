@@ -25,13 +25,13 @@ public class Join extends SQLStatement {
 		HashSet<String> added = new HashSet<String>();
 		this.wrapper = new Select(tablename);
 		for (String key: left.getSelectors().keySet()) {
-//			String[] selector = left.getSelectors().get(key);
-//			String name = "";
-//			if(selector.length > 1){
-//				name = selector[1];
-//			} else{
-//				name = selector[0];
-//			}
+			String[] selector = left.getSelectors().get(key);
+			String name = "";
+			if(selector.length > 1){
+				name = selector[1];
+			} else{
+				name = selector[0];
+			}
 			if (!added.contains(key)) {
 				added.add(key);
 				wrapper.addSelector(key, new String[] { left.getName() ,key });
@@ -39,13 +39,13 @@ public class Join extends SQLStatement {
 		}
 		for (SQLStatement right : rights) {
 			for (String key: right.getSelectors().keySet()) {
-//				String[] selector = right.getSelectors().get(key);
-//				String name = "";
-//				if(selector.length > 1){
-//					name = selector[1];
-//				} else{
-//					name = selector[0];
-//				}
+				String[] selector = right.getSelectors().get(key);
+				String name = "";
+				if(selector.length > 1){
+					name = selector[1];
+				} else{
+					name = selector[0];
+				}
 				if (!added.contains(key)) {
 					added.add(key);
 					wrapper.addSelector(key, new String[] { right.getName(), key });
@@ -58,24 +58,70 @@ public class Join extends SQLStatement {
 	public String toString() {
 		StringBuilder sb = new StringBuilder("");
 		sb.append(left.toNamedString());
-		for (int i = 0; i < rights.size(); i++) {
-			SQLStatement right = rights.get(i);
-			String onString = onStrings.get(i);
-			if(onString.equals("") || this.type == JoinType.CROSS){
-				sb.append(" CROSS JOIN ");
+		if (this.type == JoinType.INNER) {
+			for (int i = 0; i < rights.size(); i++) {
+				SQLStatement right = rights.get(i);
+				sb.append(" JOIN ");
+				sb.append(right.toNamedString());
 			}
-			else if(this.type == JoinType.LEFT){
-			sb.append(" LEFT JOIN ");
-			} else{
-				sb.append(" JOIN ");	
+			for (int i = 0; i < onStrings.size(); i++) {
+				String onString = onStrings.get(i);
+				if (i == 0) {
+					sb.append(" ON ");
+					sb.append(onString);
+					sb.append(" ");
+				} else {
+					sb.append(" AND ");
+					sb.append(onString);
+					sb.append(" ");
+				}
 			}
-			sb.append(right.toNamedString());
-			if(!onString.equals("") && this.type != JoinType.CROSS){
-			sb.append(" ON(");
-			sb.append(onString);
-			sb.append(")");
-			} else if(!onString.equals("") && this.type == JoinType.CROSS){
-				wrapper.addWhereConjunction(onString);
+		}
+		else if (this.type == JoinType.INNEREXTVP) {
+			for (int i = 0; i < rights.size(); i++) {
+				SQLStatement right = rights.get(i);
+				sb.append(" JOIN ");
+				sb.append(right.toNamedString());
+			}
+			for (int i = 0; i < onStrings.size(); i++) {
+				String onString = onStrings.get(i);
+				if (i == 0) {
+					sb.append(" ON ");
+					sb.append(onString);
+					sb.append(" ");
+				} else {
+					sb.append(" AND ");
+					sb.append(onString);
+					sb.append(" ");
+				}
+			}
+		}
+		else if (this.type == JoinType.STRAIGHEXTVP) {
+			for (int i = 0; i < rights.size(); i++) {
+				SQLStatement right = rights.get(i);
+				sb.append(" INNER JOIN ");
+				sb.append(right.toNamedString());
+			}
+		}
+		else {
+			for (int i = 0; i < rights.size(); i++) {
+				SQLStatement right = rights.get(i);
+				String onString = onStrings.get(i);
+				if (onString.equals("") || this.type == JoinType.CROSS) {
+					sb.append(" CROSS JOIN ");
+				} else if (this.type == JoinType.LEFT) {
+					sb.append(" LEFT JOIN ");
+				} else {
+					sb.append(" JOIN ");
+				}
+				sb.append(right.toNamedString());
+				if (!onString.equals("") && this.type != JoinType.CROSS) {
+					sb.append(" ON(");
+					sb.append(onString);
+					sb.append(")");
+				} else if (!onString.equals("") && this.type == JoinType.CROSS) {
+					wrapper.addWhereConjunction(onString);
+				}
 			}
 		}
 		wrapper.setFrom(sb.toString());
