@@ -24,6 +24,7 @@ you can install a newer version of it and update the POM of sempala-parent
 To do this, get the JDBC driver by downloading it from cloudera.com [1]
 and install it with the maven install plugin. This will take care of checksums:
 
+```
   mvn install:install-file
     -DlocalRepositoryPath=project_repo
     -DcreateChecksum=true
@@ -32,6 +33,7 @@ and install it with the maven install plugin. This will take care of checksums:
     -DgroupId=com.cloudera.impala
     -DartifactId=impala-jdbc-4.1-connector
     -Dversion=<version>
+```
 
 
 ### Official guide to installing 3rd party JARs
@@ -44,18 +46,24 @@ Apache Maven. To make this easier, and less error prone, we have provide a goal
 in the maven-install-plugin which should make this relatively painless. To
 install a JAR in the local repository use the following command:
 
+```
   mvn install:install-file -Dfile=<path-to-file> -DgroupId=<group-id> \
     -DartifactId=<artifact-id> -Dversion=<version> -Dpackaging=<packaging>
+```
 
 If there's a pom-file as well, you can install it with the following command:
 
+```
   mvn install:install-file -Dfile=<path-to-file> -DpomFile=<path-to-pomfile>
+```
 
 With version 2.5 of the maven-install-plugin it gets even better. If the JAR was
 built by Apache Maven, it'll contain a pom.xml in a subfolder of the META-INF
 directory, which will be read by default. In that case, all you need to do is:
 
+```
   mvn install:install-file -Dfile=<path-to-file>
+```
 
 (Source: https://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html)
 
