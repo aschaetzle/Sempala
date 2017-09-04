@@ -1,5 +1,9 @@
 # Sempala
 
+### LICENSE
+Unless explicitly stated otherwise all files in this repository are licensed under the Apache Software License 2.0
+
+
 ### BUILD project
 You need to have Maven installed on your system.
 Then simply run "mvn package" from the root directory.
