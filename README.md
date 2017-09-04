@@ -1,5 +1,11 @@
 # Sempala
 
+
+Sempala is a SPARQL-over-SQL approach to provide interactive-time SPARQL query processing on Hadoop. It stores RDF data in a columnar layout (Parquet) on HDFS and uses either Impala or Spark as the execution layer on top of it. SPARQL queries are translated into Impala/Spark SQL for execution.
+
+http://dbis.informatik.uni-freiburg.de/forschung/projekte/DiPoS/Sempala.html
+
+
 ### LICENSE
 Unless explicitly stated otherwise all files in this repository are licensed under the Apache Software License 2.0
 
