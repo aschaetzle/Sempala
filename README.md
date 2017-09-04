@@ -3,8 +3,22 @@
 ### LICENSE
 Unless explicitly stated otherwise all files in this repository are licensed under the Apache Software License 2.0
 
+>   Copyright 2017 University of Freiburg
+>
+>   Licensed under the Apache License, Version 2.0 (the "License");
+>   you may not use this file except in compliance with the License.
+>   You may obtain a copy of the License at
+>
+>       http://www.apache.org/licenses/LICENSE-2.0
+>
+>   Unless required by applicable law or agreed to in writing, software
+>   distributed under the License is distributed on an "AS IS" BASIS,
+>   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+>   See the License for the specific language governing permissions and
+>   limitations under the License.
 
-### BUILD project
+
+## BUILD project
 You need to have Maven installed on your system.
 Then simply run "mvn package" from the root directory.
 It will build 'sempala-loader', 'sempala-translator' and finally 'sempala'.
@@ -14,7 +28,7 @@ NOTE: Two jars are generated for sempala translator - one for Impala (sempala-tr
 and one for Spark (spark-sempala-translator)
 
 
-### PURPOSE OF project_repo DIRECTORY
+## PURPOSE OF project_repo DIRECTORY
 
 Cloudera Impala JDBC connector ships with several libraries. All but the 
 connector itself are available in the maven or cloudera central repositories
@@ -40,7 +54,7 @@ and install it with the maven install plugin. This will take care of checksums:
 ```
 
 
-### Official guide to installing 3rd party JARs
+## Official guide to installing 3rd party JARs
 
 Although rarely, but sometimes you will have 3rd party JARs that you need to put
 in your local repository for use in your builds, since they don't exist in any
